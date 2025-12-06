@@ -1,0 +1,15 @@
+global:
+  rustlog: "info"
+  packages: 
+    Linux: ""
+# jobs:
+#   coverage:
+#     matrix:
+#       features:
+#         - default
+#         - gpg
+#   clippy:
+#     matrix:
+#       features:
+#         - default
+#         - gpg

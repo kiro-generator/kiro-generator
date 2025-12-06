@@ -1,0 +1,32 @@
+name: release
+permissions:
+  contents: write
+  checks: write
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "version to release"
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - rc
+          - minor
+          - beta
+          - alpha
+          - major
+          - release
+      runner:
+        description: "Runner to use"
+        required: false
+jobs:
+  releaser:
+    name: release
+    uses: carteramesh/ci/.github/workflows/rust-release.yml@main
+    secrets: inherit
+    with:
+      runner: ${{ vars.RUNNER }}
+      version: ${{ inputs.version }}
+      package: "CHANGEME"
