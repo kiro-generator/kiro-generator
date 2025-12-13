@@ -2,23 +2,43 @@
 name = "kiro-generator"
 version = "0.1.0"
 edition = "2024"
-description = "Kiro CLI agent config generator"
-repository = "https://github.com/CarteraMesh/kiro-generator"
+description = "Kiro CLI configuration management"
+repository = "https://github.com/CarteraMesh/q-generator"
 license = "MIT"
 authors = ["gh@cartera-mesh.com"]
-documentation = "https://docs.rs/kiro-generator"
-homepage = "https://github.com/CarteraMesh/kiro-generator"
-keywords = []
-categories = []
+documentation = "https://docs.rs/q-generator"
+homepage = "https://github.com/CarteraMesh/q-generator"
+keywords = ["kiro", "cli", "agents", "AI"]
+categories = ["command-line-interface", "config"]
 readme = "README.md"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "kg"
+path = "src/main.rs"
 
 [dependencies]
+clap = { version = "4", features = ["cargo", "derive", "env", "unicode"] }
+color-eyre = { version = "0.6", features = ["issue-url"] }
+config = { version = "0.15" }
+dirs = "6"
+enum-iterator = "2.3.0"
+futures = "0.3"
+jsonschema = { version = "0.37", default-features = false, features = ["resolve-async", "resolve-file"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+super-table = { version = "1", features = ["custom_styling"] }
+tempfile = "3"
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
+toml = { version = "0.9" }
 tracing = { version = "0.1" }
+tracing-error = "0.2.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
-anyhow = { version = "1" }
-tracing-subscriber = { version = "0.3", features = ["env-filter", "serde"] }
-tokio = { version = "1", features = [ "full"] }
-dotenvy= "0.15"
-lazy_static = "1.4.0"
+test-log = { version = "0.2", default-features = false, features = ["trace"] }
+
+[profile.release]
+strip = false          # Keep symbols for better backtraces
+debug = 1              # Line numbers only (smaller than full debug=2)
+lto = "thin"           # Faster builds than "fat", still good optimization
+codegen-units = 16     # Default, balances compile time vs optimization

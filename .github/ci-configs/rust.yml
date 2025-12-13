@@ -1,7 +1,26 @@
 global:
-  rustlog: "info"
-  packages: 
+  rustlog: "debug"
+  packages:
     Linux: ""
+jobs:
+  semver:
+    if: false
+    continue-on-error: false
+  extra:
+    if: true
+    continue-on-error: false
+    name: "cli test"
+    run: |
+      cargo run -- version
+      cargo run -- --version
+      cargo run -- validate
+      cargo run -- v
+      cargo run -- validate -d
+
+    matrix:
+      os: []
+      toolchains: ["stable"]
+      features: ["default"]
 # jobs:
 #   coverage:
 #     matrix:

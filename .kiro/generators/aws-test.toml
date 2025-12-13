@@ -1,0 +1,37 @@
+name = "aws-test"
+description = "all the AWS tools you want"
+prompt = "you are an AWS expert"
+allowedTools = ["@awsdocs"]
+resources = ["file://AGENTS.md", "file://README.md", "file://.amazonq/rules/**/*.md"]
+includeMcpJson = false
+
+[hooks.agentSpawn.whoami]
+command = "aws sts get-caller-identity"
+timeout_ms = 4000
+cache_ttl_seconds = 300
+
+[toolsSettings]
+[toolsSettings.aws]
+allowedServices = ["ec2", "s3"]
+deniedServices = ["iam"]
+autoAllowReadonly = true
+
+[mcpServers]
+[mcpServers.awsbilling]
+command = "uvx"
+args = ["awslabs.billing-cost-management-mcp-server@latest"]
+disabled = false
+autoApprove = []
+
+[mcpServers.awsbilling.env]
+FASTMCP_LOG_LEVEL = "ERROR"
+
+[mcpServers.awsdocs]
+command = "uvx"
+args = ["awslabs.aws-documentation-mcp-server@latest"]
+disabled = false
+autoApprove = []
+
+[mcpServers.awsdocs.env]
+FASTMCP_LOG_LEVEL = "ERROR"
+AWS_DOCUMENTATION_PARTITION = "aws"

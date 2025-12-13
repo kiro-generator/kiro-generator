@@ -1,0 +1,33 @@
+name = "alone"
+description = "I am alone"
+tools = ["*"]
+allowedTools = ["read", "@cargo", "@artifacthub", "@gnome", "knowledge", "@rustdocs", "@fetch", "@awsdocs", "@iam", "@awscosts", "@awsbilling", "@cloudwatch", "@awspricing"]
+resources = ["file:///home/dchimento/.config/rc/AmazonQ.md", "file://README.md", "file://.amazonq/rules/**/*.md", "file://.cursor/rules/**/*.mdc"]
+includeMcpJson = false
+
+[mcpServers]
+
+[toolAliases]
+
+[hooks]
+userPromptSubmit = {}
+
+[hooks.agentSpawn.whoami]
+command = "aws sts get-caller-identity"
+timeout_ms = 4000
+cache_ttl_seconds = 300
+
+[hooks.agentSpawn.echo]
+command = "echo -e'# AWS cli environment variables\n\n';  env  | grep AWS_"
+timeout_ms = 1000
+cache_ttl_seconds = 300
+
+[toolsSettings]
+[toolsSettings.shell]
+allowedCommands = ["git status", "git fetch", "git diff .*", "git pull .*", "yarn .*", "pulumi preview .*", "kubectl .*", "pdf2.*", "ps .*", "timeout.*", "pgrep.*"]
+deniedCommands = ["git commit .*", "git push .*", "kubectl .*delete*", ".*delete.*", "pulumi up.*", "^rm .*", ".*destroy.*", ".*rollout.*", ".*kill.*"]
+autoAllowReadonly = true
+[toolsSettings.aws]
+allowedServices = []
+deniedServices = []
+autoAllowReadonly = true

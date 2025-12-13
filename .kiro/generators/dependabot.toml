@@ -1,0 +1,8 @@
+name = "dependabot"
+description = "I make life painful for developers"
+
+[toolsSettings]
+shell = { forceAllowedCommands = ["git commit .*", "git push .*"] }
+read = { forceAllowedPaths = [".*Cargo.toml.*"] }
+write = { forceAllowedPaths = [".*Cargo.toml.*"] }
+aws = { autoAllowReadonly = true }
