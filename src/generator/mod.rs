@@ -1,46 +1,65 @@
 use {
     crate::{
         Result,
-        agent::{KgAgent, ToolMerge, ToolTarget},
-        merging_format::MergingTomlFormat,
+        agent::{Agent, KgAgent, ToolMerge, ToolTarget},
         os::Fs,
     },
     color_eyre::eyre::{Context, eyre},
-    config::{Config, FileSourceString},
+    config::Config,
     serde::{Deserialize, Serialize},
     std::{
         collections::{HashMap, HashSet},
         fmt::{self, Debug},
         path::PathBuf,
     },
-    super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
 };
 mod config_location;
 mod discover;
 mod merge;
-mod source;
 pub use config_location::ConfigLocation;
-use source::*;
+
+use crate::source::*;
 
 pub struct AgentResult {
+    pub kiro_agent: Agent,
     pub agent: KgAgent,
     pub writable: bool,
     pub destination: PathBuf,
 }
 
-impl From<AgentResult> for Row {
-    fn from(agent_result: AgentResult) -> Row {
-        let mut row = Row::new();
-        let dest = if agent_result.agent.skeleton() {
-            Cell::new(format!("{} skeleton", "💀"))
-        } else if agent_result.destination.is_absolute() {
-            Cell::new("$HOME/.kiro/agents")
-        } else {
-            Cell::new(".kiro/agents")
-        };
-        row.add_cell(Cell::new(agent_result.agent.name));
-        row.add_cell(dest);
-        row
+impl AgentResult {
+    pub fn forced(&self, target: &ToolTarget) -> Vec<String> {
+        match target {
+            ToolTarget::Read => self
+                .agent
+                .get_tool_read()
+                .force_allowed_paths
+                .0
+                .iter()
+                .cloned()
+                .collect(),
+            ToolTarget::Write => self
+                .agent
+                .get_tool_write()
+                .force_allowed_paths
+                .0
+                .iter()
+                .cloned()
+                .collect(),
+            ToolTarget::Shell => self
+                .agent
+                .get_tool_shell()
+                .force_allowed_commands
+                .0
+                .iter()
+                .cloned()
+                .collect(),
+            _ => vec![],
+        }
+    }
+
+    pub fn resources(&self) -> Vec<String> {
+        self.agent.resources.0.iter().cloned().collect()
     }
 }
 
@@ -67,6 +86,8 @@ pub struct Generator {
     local_agents: HashSet<String>, // Agents defined in local kg.toml
     #[serde(skip)]
     fs: Fs,
+    #[serde(skip)]
+    format: crate::output::OutputFormat,
 }
 
 impl Debug for Generator {
@@ -83,14 +104,19 @@ impl Debug for Generator {
 
 impl Generator {
     /// Create a new Generator with explicit configuration location
-    pub fn new(fs: Fs, location: ConfigLocation) -> Result<Self> {
+    pub fn new(
+        fs: Fs,
+        location: ConfigLocation,
+        format: crate::output::OutputFormat,
+    ) -> Result<Self> {
         let global_path = location.global();
-        let (agents, local_agents) = discover::agents(&fs, &location)?;
+        let (agents, local_agents) = discover::agents(&fs, &location, &format)?;
         Ok(Self {
             global_path,
             agents,
             local_agents,
             fs,
+            format,
         })
     }
 
@@ -113,9 +139,11 @@ impl Generator {
     pub async fn write_all(&self, dry_run: bool) -> Result<Vec<AgentResult>> {
         let agents = self.merge()?;
         let mut results = Vec::with_capacity(agents.len());
-        let only_global = self.local_agents.is_empty();
+        // If no local agents defined, write all (global) agents
+        // If local agents exist, only write those
+        let write_all_agents = self.local_agents.is_empty();
         for agent in agents {
-            if only_global || self.is_local(&agent.name) {
+            if write_all_agents || self.is_local(&agent.name) {
                 results.push(self.write(agent, dry_run).await?);
             }
         }
@@ -126,18 +154,35 @@ impl Generator {
     pub(crate) async fn write(&self, agent: KgAgent, dry_run: bool) -> Result<AgentResult> {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
+            kiro_agent: Agent::from(&agent),
             writable: !agent.skeleton(),
             destination,
             agent,
         };
+        result.kiro_agent.validate()?;
         if dry_run {
             return Ok(result);
         }
         if !self.fs.exists(&result.destination) {
-            self.fs.create_dir_all(&result.destination).await?;
+            self.fs
+                .create_dir_all(&result.destination)
+                .await
+                .with_context(|| {
+                    format!(
+                        "failed to create directory {}",
+                        result.destination.display()
+                    )
+                })?;
         }
         if result.writable {
-            result.agent.write(&self.fs, &result.destination).await?;
+            let out = result
+                .destination
+                .join(format!("{}.json", result.agent.name));
+
+            self.fs
+                .write(&out, serde_json::to_string_pretty(&result.kiro_agent)?)
+                .await
+                .with_context(|| format!("failed to write file {}", out.display()))?;
         }
         Ok(result)
     }
@@ -147,13 +192,9 @@ impl Generator {
 mod tests {
     use {
         super::*,
-        crate::agent::{
-            Agent,
-            AwsTool,
-            ExecuteShellTool,
-            ToolTarget,
-            WriteTool,
-            hook::HookTrigger,
+        crate::{
+            agent::{Agent, AwsTool, ExecuteShellTool, ToolTarget, WriteTool, hook::HookTrigger},
+            output::OutputFormat,
         },
     };
 
@@ -176,7 +217,7 @@ mod tests {
 
     async fn _discover_agents(fs: Fs) -> Result<()> {
         let location = ConfigLocation::Local;
-        let generator = Generator::new(fs.clone(), location)?;
+        let generator = Generator::new(fs.clone(), location, OutputFormat::default())?;
         assert!(!generator.agents.is_empty());
         assert_eq!(4, generator.agents.len());
         assert_eq!(4, generator.local_agents.len());
@@ -263,26 +304,28 @@ mod tests {
                     .join("dependabot.json"),
             )
             .await?;
-        let kiro_agent: Agent = serde_json::from_str(&content)?;
-        assert_eq!("dependabot", kiro_agent.name);
-        let exec_tool: ExecuteShellTool = kiro_agent.get_tool(ToolTarget::Shell);
+        let dependabot: Agent = serde_json::from_str(&content)?;
+        assert_eq!("dependabot", dependabot.name);
+        assert!(dependabot.mcp_servers.mcp_servers.contains_key("rustdocs"));
+        assert!(dependabot.mcp_servers.mcp_servers.contains_key("cargo"));
+        let exec_tool: ExecuteShellTool = dependabot.get_tool(ToolTarget::Shell);
         tracing::info!("{:?}", exec_tool);
         assert!(exec_tool.allowed_commands.contains("git commit .*"));
         assert!(exec_tool.allowed_commands.contains("git push .*"));
         assert!(!exec_tool.denied_commands.contains("git commit .*"));
         assert!(!exec_tool.denied_commands.contains("git push .*"));
 
-        let fs_tool: WriteTool = kiro_agent.get_tool(ToolTarget::Write);
+        let fs_tool: WriteTool = dependabot.get_tool(ToolTarget::Write);
         tracing::info!("{:?}", fs_tool);
         assert!(fs_tool.allowed_paths.contains(".*Cargo.toml.*"));
         assert!(!fs_tool.denied_paths.contains(".*Cargo.toml.*"));
 
-        tracing::info!("{:?}", kiro_agent.hooks);
-        assert_eq!(2, kiro_agent.hooks.len());
-        assert!(kiro_agent.hooks.contains_key(&HookTrigger::AgentSpawn));
+        tracing::info!("{:?}", dependabot.hooks);
+        assert_eq!(2, dependabot.hooks.len());
+        assert!(dependabot.hooks.contains_key(&HookTrigger::AgentSpawn));
         assert_eq!(
             2,
-            kiro_agent
+            dependabot
                 .hooks
                 .get(&HookTrigger::AgentSpawn)
                 .unwrap()

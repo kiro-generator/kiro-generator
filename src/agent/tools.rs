@@ -30,6 +30,17 @@ impl Display for ToolTarget {
     }
 }
 
+impl AsRef<str> for ToolTarget {
+    fn as_ref(&self) -> &str {
+        match self {
+            ToolTarget::Aws => "aws",
+            ToolTarget::Shell => "shell",
+            ToolTarget::Read => "read",
+            ToolTarget::Write => "write",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct MergingAwsTool {
@@ -98,7 +109,7 @@ pub struct MergingExecuteShellTool {
     #[serde(default = "default_allow_read_only")]
     pub auto_allow_readonly: bool,
 
-    #[serde(default, skip_serializing)]
+    #[serde(default)]
     pub force_allowed_commands: MergedSet,
 }
 
@@ -158,7 +169,7 @@ pub struct MergingReadTool {
     pub allowed_paths: MergedSet,
     #[serde(default, skip_serializing_if = "MergedSet::is_empty")]
     pub denied_paths: MergedSet,
-    #[serde(default, skip_serializing)]
+    #[serde(default)]
     pub force_allowed_paths: MergedSet,
 }
 

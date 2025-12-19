@@ -3,11 +3,12 @@ mod commands;
 mod generator;
 pub(crate) mod merging_format;
 mod os;
+pub mod output;
 mod schema;
+mod source;
 use {
     crate::{generator::Generator, os::Fs},
     clap::Parser,
-    super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
     tracing::{debug, enabled},
     tracing_error::ErrorLayer,
     tracing_subscriber::prelude::*,
@@ -16,8 +17,15 @@ pub type Result<T> = color_eyre::Result<T>;
 
 pub const DEFAULT_AGENT_RESOURCES: &[&str] = &["file://AGENTS.md", "file://README.md"];
 
-fn init_tracing(debug: bool) {
-    let filter = if debug {
+fn init_tracing(debug: bool, trace_agent: Option<&str>) {
+    let filter = if let Some(agent) = trace_agent {
+        let directive = if agent == "all" {
+            "trace".to_string()
+        } else {
+            format!("info,[agent{{name=\"{agent}\"}}]=trace")
+        };
+        tracing_subscriber::EnvFilter::new(directive)
+    } else if debug {
         tracing_subscriber::EnvFilter::new("debug")
     } else {
         tracing_subscriber::EnvFilter::try_from_default_env()
@@ -30,6 +38,7 @@ fn init_tracing(debug: bool) {
             .with(
                 tracing_subscriber::fmt::layer()
                     .with_level(true)
+                    .with_writer(std::io::stderr)
                     .with_target(true),
             )
             .with(ErrorLayer::default())
@@ -41,7 +50,8 @@ fn init_tracing(debug: bool) {
                 tracing_subscriber::fmt::layer()
                     .without_time()
                     .with_target(false)
-                    .with_level(true),
+                    .with_level(true)
+                    .with_writer(std::io::stderr),
             )
             .with(ErrorLayer::default())
             .init();
@@ -55,7 +65,7 @@ async fn main() -> Result<()> {
         println!("{}", clap::crate_version!());
         return Ok(());
     }
-    init_tracing(cli.debug);
+    init_tracing(cli.debug, cli.trace.as_deref());
     let span = tracing::info_span!(
         "main",
         dry_run = tracing::field::Empty,
@@ -91,7 +101,8 @@ async fn main() -> Result<()> {
         generator::ConfigLocation::Both(home_config)
     };
 
-    let q_generator_config: Generator = Generator::new(fs, location)?;
+    let format = cli.format_color();
+    let q_generator_config: Generator = Generator::new(fs, location, format)?;
     if enabled!(tracing::Level::TRACE) {
         tracing::trace!(
             "Loaded Agent Generator Config:\n{}",
@@ -100,23 +111,12 @@ async fn main() -> Result<()> {
     }
 
     match cli.command {
-        commands::Command::Validate(_args) | commands::Command::Generate(_args) => {
+        commands::Command::Validate(args) | commands::Command::Generate(args) => {
             let results = q_generator_config.write_all(dry_run).await?;
-            let mut table = Table::new();
-            table
-                .load_preset(UTF8_FULL)
-                .apply_modifier(UTF8_ROUND_CORNERS)
-                .set_content_arrangement(ContentArrangement::Dynamic)
-                .set_header(vec!["Agent", "Location"])
-                .add_rows(results);
-            println!("{table}");
+            format.result(dry_run, args.show_skeletons, results)?;
         }
         _ => {}
     };
-    if dry_run {
-        tracing::info!("Validated config");
-    } else {
-        tracing::info!("Overwrote existing config");
-    }
+
     Ok(())
 }

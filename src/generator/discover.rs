@@ -1,4 +1,4 @@
-use {super::*, tracing::enabled};
+use super::*;
 
 fn add_local(
     fs: &Fs,
@@ -28,6 +28,7 @@ fn add_local(
 pub(super) fn agents(
     fs: &Fs,
     location: &ConfigLocation,
+    format: &crate::output::OutputFormat,
 ) -> Result<(HashMap<String, KgAgent>, HashSet<String>)> {
     location.is_valid(fs)?;
 
@@ -90,8 +91,9 @@ pub(super) fn agents(
         sources.insert(name.clone(), Vec::with_capacity(4));
     }
     for (name, agent_sources) in sources.iter_mut() {
-        let span = tracing::debug_span!("sources", agent = ?name);
+        let span = tracing::debug_span!("agent", name = ?name);
         let _enter = span.enter();
+        tracing::trace!("matching location");
         match location {
             ConfigLocation::Local => {
                 add_local(
@@ -127,33 +129,14 @@ pub(super) fn agents(
             }
         };
     }
-    let mut table = Table::new();
-    table
-        .load_preset(UTF8_FULL)
-        .apply_modifier(UTF8_ROUND_CORNERS)
-        .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec!["Agent", "Source1", "Source2", "Source3", "Source4"]);
-    for (name, agent_sources) in sources.iter() {
-        let mut row: Vec<Cell> = vec![Cell::new(name.to_string())];
-        row.extend(agent_sources.iter().map(|s| s.to_cell(fs)));
 
-        // Expand the columns to fill the row as needed, there are 4 sources but not all
-        // will be present
-        let len: i32 = i32::try_from(row.len())?;
-        let expand_slot: i32 = len - 5;
-        if expand_slot < 0 {
-            let i = len + expand_slot + 1; // name is in row[0] and always exists
-            if i >= 0 && i < len {
-                let colspan = expand_slot.unsigned_abs() + 1;
-                let cell = row[i as usize].clone().set_colspan(colspan as u16);
-                row[i as usize] = cell;
-            }
-        }
+    for (name, agent_sources) in sources.iter() {
+        let span = tracing::debug_span!("agent", name = ?name);
+        let _enter = span.enter();
         let mut builder = Config::builder();
         for s in agent_sources {
             builder = builder.add_source(s.to_source(fs));
         }
-        table.add_row(row);
         let mut agent: KgAgent = builder
             .build()?
             .try_deserialize()
@@ -165,10 +148,19 @@ pub(super) fn agents(
             );
         }
         agent.name = name.clone();
+        if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace!(
+                "{}",
+                serde_json::to_string_pretty(&agent)
+                    .ok()
+                    .unwrap_or_default()
+            );
+        }
         resolved_agents.insert(name.clone(), agent);
     }
-    if enabled!(tracing::Level::DEBUG) {
-        println!("{table}")
+
+    if let Err(e) = format.sources(fs, &sources) {
+        tracing::error!("Failed to format sources: {}", e);
     }
     Ok((resolved_agents, local_agents))
 }

@@ -11,11 +11,20 @@ jobs:
     continue-on-error: false
     name: "cli test"
     run: |
+      cargo run -- help
+      cargo run -- --help      
       cargo run -- version
       cargo run -- --version
       cargo run -- validate
       cargo run -- v
       cargo run -- validate -d
+      cargo run -- --debug validate
+      cargo run -- validate --trace dependabot
+      cargo run -- --trace dependabot validate
+      cargo run -- v --format json
+      cargo run -- --format json v
+      cargo run -- g
+      cargo run -- generate
 
     matrix:
       os: []

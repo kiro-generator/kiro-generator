@@ -265,3 +265,12 @@ When reviewing error handling:
 ## Performance
 
 Runtime Performance  is **NOT** critical or important. This CLI will rarely be executed, it is far **MORE** important that the code is clean, maintainable and **SIMPLE** at the cost of performance.
+
+
+## Further Documentation 
+
+The directory `docs` contains mdbook formatted documentation for the project.  Some notiable files:
+
+- [SUMMARY.md](./docs/src/SUMMARY.md)
+- [index.md](./docs/src/index.md)
+- [usage.md](./docs/src/usage.md)

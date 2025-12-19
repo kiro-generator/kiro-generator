@@ -19,7 +19,7 @@ KG provides a hierarchical configuration system that allows you to define and ov
 
 ### Agent Declaration
 
-By default Agents can be declared globally `~/.kiro/generators/kg.toml` or locally `.kiro/generators/kg.toml` . If both are present, the local configuration takes precedence, however both configurations are merged together. You can use `--local` argument to ignore the global configuration.
+By default Agents can be declared globally `~/.kiro/generators/kg.toml` or locally `.kiro/generators/kg.toml` . If both are present, the local configuration takes precedence, however both configurations are merged together. You can use `--local` argument to ignore global configuration.
 
 From least precedence to highest precedence (local overrides global): 
 

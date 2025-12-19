@@ -1,4 +1,11 @@
-use {super::*, std::fmt::Display};
+use {
+    super::*,
+    crate::merging_format::MergingTomlFormat,
+    colored::Colorize,
+    config::FileSourceString,
+    std::{fmt::Display, path::PathBuf},
+    super_table::Cell,
+};
 
 pub enum AgentSource {
     Raw(String),
@@ -21,14 +28,16 @@ impl Display for AgentSource {
 }
 
 impl AgentSource {
-    pub(super) fn to_cell(&self, fs: &Fs) -> Cell {
+    pub(super) fn to_cell(&self, color: bool, fs: &Fs) -> Cell {
         match self {
             AgentSource::Raw(_) => Cell::new(format!("{self}")),
             AgentSource::GlobalInline(content) | AgentSource::LocalInline(content) => {
                 if content.is_empty() {
-                    Cell::new(format!("{self} [empty]"))
-                        .fg(Color::Red)
-                        .add_attributes(vec![Attribute::Bold, Attribute::SlowBlink]) // I am having fun
+                    if color {
+                        Cell::new(format!("{self} {}", "[empty]".red()))
+                    } else {
+                        Cell::new(format!("{self} empty"))
+                    }
                 } else {
                     Cell::new(format!("{self}"))
                 }
@@ -36,7 +45,13 @@ impl AgentSource {
             AgentSource::GlobalFile(path) | AgentSource::LocalFile(path) => {
                 match (fs.exists(path), fs.read_to_string_sync(path)) {
                     (true, Ok(_)) => Cell::new(format!("{self}")),
-                    _ => Cell::new(format!("{self} [empty]")).fg(Color::Red),
+                    _ => {
+                        if color {
+                            Cell::new(format!("{self} {}", "[empty]".red()))
+                        } else {
+                            Cell::new(format!("{self} empty"))
+                        }
+                    }
                 }
             }
         }
