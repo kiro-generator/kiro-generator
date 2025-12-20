@@ -7,10 +7,18 @@ pages:
     if: true
 release:
   cargo-publish: false
+  bin: kg
+  debian: true
 jobs:
   semver:
     if: false
     continue-on-error: false
+  sanitizers:
+    enabled: true
+    address:
+      if: false
+      continue-on-error: false
+
   extra:
     if: true
     continue-on-error: false
