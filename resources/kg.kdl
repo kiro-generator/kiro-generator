@@ -1,0 +1,88 @@
+// KDL Master Configuration (kg.kdl)
+//
+// This file declares agents and their inheritance relationships.
+// Learn more about KDL at: https://kdl.dev/
+//
+// Agent definitions can be:
+// 1. Minimal - just name and inheritance, config in separate file
+// 2. Inline - full configuration within this file
+// 3. Mixed - some config here, rest in agent-specific file
+//
+// Any property from agent-specific files (see example.kdl) can be used
+// directly within agent blocks here.
+
+// ============================================================================
+// BASIC AGENT DECLARATION
+// ============================================================================
+
+// Minimal agent - configuration loaded from ~/.kiro/generators/default.kdl
+// or .kiro/generators/default.kdl
+agent "default" {
+    inherits "git-readonly"
+}
+
+// ============================================================================
+// TEMPLATES
+// ============================================================================
+
+// Templates are reusable building blocks that don't generate agent files.
+// Use template=true to mark an agent as a template.
+// Templates can be inherited by other agents to share common configuration.
+
+agent "git-readonly" template=true {
+    native-tool {
+        shell {
+            allow "git status .*" "git log .*" \
+                  "git fetch .*" "git diff .*"
+        }
+    }
+}
+
+// ============================================================================
+// INLINE CONFIGURATION
+// ============================================================================
+
+// You can define full agent configuration inline instead of separate files
+// agent "rust" {
+//     inherits "default"
+//     description "Rust development agent"
+//     allowed-tools "@rustdocs" "@cargo"
+//     resource "file://RUST.md"
+// }
+
+// ============================================================================
+// TRANSITIVE INHERITANCE
+// ============================================================================
+
+// Agents inherit transitively through the full chain.
+// Example: dependabot -> aws-expert -> git-readonly
+//
+// The merge order is: base-most parent first, child last
+// Child properties override parent properties
+// Collections (tools, resources, etc.) are merged/combined
+
+// agent "aws-expert" template=true {
+//     inherits "git-readonly"
+//     prompt "You are an AWS expert"
+//     allowed-tools "@awsdocs"
+//     resource "file://AWS.md"
+// }
+//
+// agent "dependabot" {
+//     inherits "aws-expert"
+//     description "Automated dependency updates"
+//     native-tool {
+//         shell {
+//             override "git commit .*"  // Force allow, ignores parent denies
+//             override "git push .*"
+//         }
+//     }
+// }
+//
+// Result: dependabot gets:
+// - Shell allows from git-readonly (git status, log, fetch, diff)
+// - Prompt from aws-expert
+// - Allowed tools from aws-expert (@awsdocs)
+// - Resources from aws-expert (AWS.md)
+// - Description from dependabot
+// - Override permissions from dependabot (git commit, push)

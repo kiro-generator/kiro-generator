@@ -2,7 +2,6 @@ use {
     std::{
         collections::HashMap,
         fmt::Debug,
-        fs::{Metadata, Permissions},
         io,
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
@@ -19,20 +18,6 @@ pub const ACTIVE_USER_HOME: &str = if cfg!(windows) {
 } else {
     UNIX_USER_HOME
 };
-
-pub fn expand_tilde(path: &str) -> PathBuf {
-    if path.starts_with('~') {
-        match dirs::home_dir() {
-            Some(mut home) => {
-                home.push(&path[2..]);
-                home
-            }
-            None => PathBuf::from(path),
-        }
-    } else {
-        PathBuf::from(path)
-    }
-}
 
 // Import platform-specific modules
 #[cfg(unix)]
@@ -112,6 +97,7 @@ impl Debug for Fs {
 }
 
 impl Fs {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         match cfg!(test) {
             true => {
@@ -262,52 +248,6 @@ impl Fs {
                     Err(err) => Err(io::Error::new(io::ErrorKind::InvalidData, err)),
                 }
             }
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub fn is_same(&self, a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
-        use std::os::macos::fs::MetadataExt;
-
-        match (self.stat(a), self.stat(b)) {
-            (Some(a_stat), Some(b_stat)) => a_stat.st_ino() == b_stat.st_ino(),
-            _ => false,
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    pub fn is_same(&self, a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
-        use std::os::linux::fs::MetadataExt;
-
-        match (self.stat(a), self.stat(b)) {
-            (Some(a_stat), Some(b_stat)) => a_stat.st_ino() == b_stat.st_ino(),
-            _ => false,
-        }
-    }
-
-    /// Poor Man's check if two paths are the same
-    #[cfg(target_os = "windows")]
-    pub fn is_same(&self, a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
-        match (self.stat(a), self.stat(b)) {
-            (Some(a_stat), Some(b_stat)) => {
-                match (
-                    a_stat.len() == b_stat.len(),
-                    a_stat.created().ok(),
-                    b_stat.created().ok(),
-                ) {
-                    (true, Some(g), Some(l)) => g == l,
-                    _ => false,
-                }
-            }
-            _ => false,
-        }
-    }
-
-    pub fn stat(&self, path: impl AsRef<Path>) -> Option<Metadata> {
-        match self {
-            Self::Real => std::fs::metadata(path).ok(),
-            Self::Chroot(root) => std::fs::metadata(append(root.path(), path)).ok(),
-            Self::Fake(_map) => None,
         }
     }
 
@@ -527,58 +467,6 @@ impl Fs {
             Self::Chroot(root) => fs::read_dir(append(root.path(), path)).await,
             Self::Fake(_) => panic!("unimplemented"),
         }
-    }
-
-    /// Returns the canonical, absolute form of a path with all intermediate
-    /// components normalized and symbolic links resolved.
-    ///
-    /// This is a proxy to [`tokio::fs::canonicalize`].
-    pub async fn canonicalize(&self, path: impl AsRef<Path>) -> Result<PathBuf, io::Error> {
-        match self {
-            Self::Real => fs::canonicalize(path).await,
-            Self::Chroot(root) => fs::canonicalize(append(root.path(), path)).await,
-            Self::Fake(_) => panic!("unimplemented"),
-        }
-    }
-
-    /// Changes the permissions found on a file or a directory.
-    ///
-    /// This is a proxy to [`tokio::fs::set_permissions`]
-    pub async fn set_permissions(
-        &self,
-        path: impl AsRef<Path>,
-        perm: Permissions,
-    ) -> Result<(), io::Error> {
-        match self {
-            Self::Real => fs::set_permissions(path, perm).await,
-            Self::Chroot(root) => fs::set_permissions(append(root.path(), path), perm).await,
-            Self::Fake(_) => panic!("unimplemented"),
-        }
-    }
-
-    /// For test [Fs]'s that use a different root, returns an absolute path.
-    ///
-    /// This must be used for any paths indirectly used by code using a chroot
-    /// [Fs].
-    pub fn chroot_path(&self, path: impl AsRef<Path>) -> PathBuf {
-        match self {
-            Self::Chroot(root) => append(root.path(), path),
-            _ => path.as_ref().to_path_buf(),
-        }
-    }
-
-    /// See [Fs::chroot_path].
-    pub fn chroot_path_str(&self, path: impl AsRef<Path>) -> String {
-        match self {
-            Self::Chroot(root) => append(root.path(), path).to_string_lossy().to_string(),
-            _ => path.as_ref().to_path_buf().to_string_lossy().to_string(),
-        }
-    }
-}
-
-impl Default for Fs {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

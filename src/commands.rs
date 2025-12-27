@@ -38,6 +38,13 @@ pub struct Cli {
 }
 
 #[derive(clap::Args, Clone, Default)]
+pub struct InitArgs {
+    /// Directory where configuration will be created.
+    /// Defaults to $HOME/.kiro/generators if not specified.
+    pub location: Option<PathBuf>,
+}
+
+#[derive(clap::Args, Clone, Default)]
 pub struct Args {
     #[arg(long, conflicts_with = "global")]
     /// Ignore global $HOME kg.kdl and all global agent definitions
@@ -59,9 +66,9 @@ pub enum Command {
     /// local agents are generated. Use --global to generate $HOME agents
     #[command(alias = "g")]
     Generate(Args),
-    /// Not implemented yet
-    #[command(alias = "m", hide = true)]
-    Migrate,
+    /// Create default configuration in directory ~/.kiro/generators
+    #[command()]
+    Init(InitArgs),
     /// Display version information
     Version,
 }
@@ -117,5 +124,131 @@ impl Cli {
         let home_dir = dirs::home_dir().ok_or(eyre!("cannot locate home directory"))?;
         let cfg = home_dir.join(".kiro").join("generators").join("kg.kdl");
         Ok((home_dir, cfg))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dry_run() {
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Auto,
+            format: OutputFormatArg::Table,
+            command: Command::Validate(Args::default()),
+        };
+        assert!(cli.dry_run());
+
+        let cli = Cli {
+            command: Command::Generate(Args::default()),
+            ..cli
+        };
+        assert!(!cli.dry_run());
+    }
+
+    #[test]
+    fn test_is_local() {
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Auto,
+            format: OutputFormatArg::Table,
+            command: Command::Validate(Args {
+                local: true,
+                ..Args::default()
+            }),
+        };
+        assert!(cli.is_local());
+        assert!(!cli.is_global());
+    }
+
+    #[test]
+    fn test_is_global() {
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Auto,
+            format: OutputFormatArg::Table,
+            command: Command::Generate(Args {
+                global: true,
+                ..Args::default()
+            }),
+        };
+        assert!(cli.is_global());
+        assert!(!cli.is_local());
+    }
+
+    #[test]
+    fn test_color_auto() {
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Auto,
+            format: OutputFormatArg::Table,
+            command: Command::default(),
+        };
+        // Color depends on terminal and env vars, just verify it doesn't panic
+        let _ = cli.color();
+    }
+
+    #[test]
+    fn test_color_always() {
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Always,
+            format: OutputFormatArg::Table,
+            command: Command::default(),
+        };
+        assert!(cli.color());
+    }
+
+    #[test]
+    fn test_color_never() {
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Never,
+            format: OutputFormatArg::Table,
+            command: Command::default(),
+        };
+        assert!(!cli.color());
+    }
+
+    #[test]
+    fn test_format_color() {
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Always,
+            format: OutputFormatArg::Table,
+            command: Command::default(),
+        };
+        assert!(matches!(cli.format_color(), OutputFormat::Table(true)));
+
+        let cli = Cli {
+            format: OutputFormatArg::Json,
+            ..cli
+        };
+        assert!(matches!(cli.format_color(), OutputFormat::Json));
+    }
+
+    #[test]
+    fn test_config() {
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Auto,
+            format: OutputFormatArg::Table,
+            command: Command::default(),
+        };
+        let result = cli.config();
+        assert!(result.is_ok());
+        let (home, cfg) = result.unwrap();
+        assert!(cfg.ends_with(".kiro/generators/kg.kdl"));
+        assert!(cfg.starts_with(&home));
     }
 }

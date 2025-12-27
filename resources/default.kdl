@@ -1,0 +1,4 @@
+description  "Default KIRO agent"
+resource "file://README.md"
+resource "file://AGENT.md"
+resource "file://~/.agents/README.md"

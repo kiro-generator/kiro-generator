@@ -2,62 +2,38 @@
 
 [![Crates.io](https://img.shields.io/crates/v/kiro-generator.svg)](https://crates.io/crates/kiro-generator)
 [![Docs.rs](https://docs.rs/kiro-generator/badge.svg)](https://docs.rs/kiro-generator)
-[![CI](https://github.com/CarteraMesh/kiro-generator/workflows/test/badge.svg)](https://github.com/CarteraMesh/kiro-generator/actions)
+[![ci](https://github.com/CarteraMesh/kiro-generator/actions/workflows/test.yml/badge.svg)](https://github.com/CarteraMesh/kiro-generator/actions/workflows/test.yml)
 [![Cov](https://codecov.io/github/CarteraMesh/kiro-generator/graph/badge.svg?token=dILa1k9tlW)](https://codecov.io/github/CarteraMesh/kiro-generator)
 
 ## About
 
-`kiro-generator` is a tool for managing and generating [Kiro](https://kiro.dev/docs/) custom agent [files](https://kiro.dev/docs/cli/custom-agents/).
+`kiro-generator` (aka `kg`) is a tool for managing and generating [Kiro](https://kiro.dev/docs/) custom agent [files](https://kiro.dev/docs/cli/custom-agents/).
 
 ## Quick Start 
 
-1. Define your agents in `~/.kiro/generators/kg.toml`
+1. Initialize your config
 
-`cat ~/.kiro/generators/kg.toml`
+```shell
+$ kg init
 
-```toml
-[agents]
-default = {  } # default is the agent name
-rust = { inherits = ["default"] }  # rust agent config is merged with default
+Created /home/user/.kiro/generators/kg.kdl
+Created /home/user/.kiro/generators/default.kdl
+Created /home/user/.kiro/generators/example.kdl
+
+✓ Initialized kg configuration in /home/user/.kiro/generators
+
 ```
 
-2. Define your agent configurations in `~/.kiro/generators/<agent name>.toml`
+2. Review/Modify/Add to your config
 
-`cat ~/.kiro/generators/default.toml`
+See [documentation](https://kg.cartera-mesh.com) for further info and examples
 
-```toml
-description = "Default agent"
-tools = ["*"]
-allowedTools = ["read", "knowledge", "web_search"]
-resources = ["file://README.md", "file://AGENTS.md"]
-[toolsSettings.shell]
-allowedCommands = ["git status", "git fetch", "git diff .*" ]
-deniedCommands = ["git commit .*", "git push .*" ]
-autoAllowReadonly = true
-```
-
-`cat ~/.kiro/generators/rust.toml`
-
-```toml
-description = "General Rust agent"
-resources = ["file://RUST.md"]
-allowedTools = [ "@rustdocs", "@cargo" ] # also ["read", "knowledge", "web_search"] from default.toml
-[mcpServers]
-rustdocs = { type = "stdio" , command = "rust-docs-mcp", timeout = 1000 }
-cargo = {  command = "cargo-mcp" , timeout = 1200  }
-
-[toolsSettings]
-[toolsSettings.shell]
-allowedCommands = ["cargo .+" ] # inherits allowedCommands from default.toml
-deniedCommands = ["cargo publish .*"] # inherits deniedCommands from default.toml
-```
-
-3. Validate
+3. Validate your config
 
 ```shell
 $ kg validate 
 ╭────────────────────┬─────┬─────────────────┬────────────────────────────────────────────────┬────────────────────┬────────┬────────┬────────╮
-│ Agent 🤖 (PREVIEW) ┆ Loc ┆ MCP 💻          ┆ Allowed Tools ⚙️                               ┆ Resources 📋       ┆    Forced Permissions    │
+│ Agent 🤖 (PREVIEW) ┆ Loc ┆ MCP 💻          ┆ Allowed Tools ⚙️                               ┆ Resources 📋       ┆    Overrides             │
 ╞════════════════════╪═════╪═════════════════╪════════════════════════════════════════════════╪════════════════════╪══════════════════════════╡
 │ default            ┆ 📁  ┆                 ┆ knowledge, read, web_search                    ┆ - file://README.md ┆                          │
 │                    ┆     ┆                 ┆                                                ┆ - file://AGENTS.md ┆                          │
@@ -73,6 +49,13 @@ $ kg validate
 → Run kg generate to generate agent files
 ```
 
+4. Generate 
+
+```shell
+$ kg generate
+```
+
+profit
 
 ---
 
