@@ -1,4 +1,4 @@
-use {super::*, crate::kdl::KdlAgent, std::collections::HashSet};
+use {super::*, crate::config::KdlAgent, std::collections::HashSet};
 
 impl Generator {
     /// Resolve transitive inheritance chain for an agent
@@ -10,7 +10,7 @@ impl Generator {
         visited: &mut HashSet<String>,
     ) -> Result<Vec<String>> {
         if visited.contains(&agent.name) {
-            return Err(color_eyre::eyre::eyre!(
+            return Err(crate::format_err!(
                 "Circular inheritance detected: {} already in chain",
                 agent.name
             ));
@@ -18,12 +18,12 @@ impl Generator {
         visited.insert(agent.name.clone());
 
         let mut chain = Vec::new();
-        for parent_name in agent.inherits().iter() {
+        for parent_name in agent.inherits.iter() {
             let parent = self
                 .resolved
                 .agents
                 .get(parent_name)
-                .ok_or_else(|| color_eyre::eyre::eyre!("Agent '{parent_name}' not found"))?;
+                .ok_or_else(|| crate::format_err!("Agent '{parent_name}' not found"))?;
 
             let parent_chain = self.resolve_transitive_inheritance(parent, visited)?;
             for p in parent_chain {
@@ -54,9 +54,10 @@ impl Generator {
 
             let mut merged = agent.clone();
             for parent_name in parents.iter().rev() {
-                let parent = self.resolved.agents.get(parent_name).ok_or_else(|| {
-                    color_eyre::eyre::eyre!("Parent agent '{parent_name}' not found")
-                })?;
+                let parent =
+                    self.resolved.agents.get(parent_name).ok_or_else(|| {
+                        crate::format_err!("Parent agent '{parent_name}' not found")
+                    })?;
                 merged = merged.merge(parent.clone());
             }
 
@@ -94,50 +95,61 @@ mod tests {
 
         // Verify inheritance chain was resolved: dependabot -> aws-test -> base
         assert_eq!(
-            dependabot.description,
-            Some("I make life painful for developers".to_string())
+            dependabot.description.clone().unwrap_or_default(),
+            "I make life painful for developers"
         );
 
         // Should have prompt from aws-test
-        assert_eq!(dependabot.prompt, Some("you are an AWS expert".to_string()));
+        assert_eq!(
+            dependabot.prompt.clone().unwrap_or_default(),
+            "you are an AWS expert".to_string()
+        );
 
         // Should have tools from base
-        let tools = dependabot.tools();
+        let tools = &dependabot.tools;
         assert!(tools.contains("*"));
 
         // Should have allowed_tools merged from base and aws-test
-        let allowed = dependabot.allowed_tools();
+        let allowed = &dependabot.allowed_tools;
         assert!(allowed.contains("read"));
         assert!(allowed.contains("knowledge"));
-        assert!(allowed.contains("@fetch"));
+        assert!(allowed.contains("fetch"));
         assert!(allowed.contains("@awsdocs"));
 
         // Should have resources from all three
-        let resources: Vec<String> = dependabot.resources().map(|s| s.to_string()).collect();
+        let resources = &dependabot.resources;
         assert!(resources.contains(&"file://README.md".to_string()));
         assert!(resources.contains(&"file://AGENTS.md".to_string()));
         assert!(resources.contains(&"file://.amazonq/rules/**/*.md".to_string()));
 
         // Should have hooks from all levels
-        let hooks = dependabot.hooks();
-        assert!(hooks.contains_key(&crate::agent::hook::HookTrigger::AgentSpawn));
+        let hooks = &dependabot.hook;
+        assert!(
+            !hooks
+                .hooks(&crate::agent::hook::HookTrigger::AgentSpawn)
+                .is_empty()
+        );
 
         // Should have force permissions from dependabot overriding denies from base
         let shell = dependabot.get_tool_shell();
-        assert!(shell.override_command.contains(&"git commit .*".into()));
-        assert!(shell.override_command.contains(&"git push .*".into()));
+        let overrides = &shell.overrides;
+        assert!(overrides.contains("git commit .*"));
+        assert!(overrides.contains("git push .*"));
 
         let read = dependabot.get_tool_read();
-        assert!(read.override_path.contains(&".*Cargo.toml.*".into()));
+        let overrides = &read.overrides;
+        assert!(overrides.contains(".*Cargo.toml.*"));
 
         let write = dependabot.get_tool_write();
-        assert!(write.override_path.contains(&".*Cargo.toml.*".into()));
+        let overrides = &write.overrides;
+        assert!(overrides.contains(".*Cargo.toml.*"));
 
         // Should have aws tool from aws-test
         let aws = dependabot.get_tool_aws();
-        assert!(aws.allow.list.contains("ec2"));
-        assert!(aws.allow.list.contains("s3"));
-        assert!(aws.deny.list.contains("iam"));
+
+        assert_eq!(2, aws.allows.len());
+        assert!(aws.allows.contains("ec2"));
+        assert!(aws.allows.contains("s3"));
 
         // check try_from
         let results = generator.write_all(true).await?;

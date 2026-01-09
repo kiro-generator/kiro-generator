@@ -1,4 +1,4 @@
-agent "base" template=true {}
+agent "base" template=#true {}
 agent "aws-test" {
     inherits "base"
     hook {

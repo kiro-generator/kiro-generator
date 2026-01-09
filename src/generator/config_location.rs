@@ -49,7 +49,7 @@ impl ConfigLocation {
         let local_exists = fs.exists(self.local_kg());
 
         if !global_exists && !local_exists {
-            return Err(eyre!(
+            return Err(crate::format_err!(
                 "no kg.kdl found at global ({}) or local ({})",
                 self.global_kg().display(),
                 self.local_kg().display()

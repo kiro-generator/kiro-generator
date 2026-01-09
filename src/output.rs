@@ -6,10 +6,22 @@ use {
         source::KdlSources,
     },
     colored::Colorize,
+    miette::{Context, GraphicalReportHandler, GraphicalTheme, IntoDiagnostic},
     std::fmt::Display,
     super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
     tracing::enabled,
 };
+
+pub fn print_error(e: &crate::Error) {
+    match e {
+        crate::Error::DeserializeError(file, kdl_err) => {
+            let mut output = String::new();
+            let handler = GraphicalReportHandler::new_themed(GraphicalTheme::unicode());
+            handler.render_report(&mut output, kdl_err).unwrap();
+            eprintln!("{}\nFile location: '{}'", output, file);
+        }
+    };
+}
 
 /// Override the color setting. Default is [`ColorOverride::Auto`].
 #[derive(Copy, Clone, Debug, Default, clap::ValueEnum)]
@@ -129,7 +141,7 @@ impl OutputFormat {
 
         // MCP servers (only enabled ones)
         let mut servers = Vec::new();
-        for (k, v) in &result.agent.mcp_servers() {
+        for (k, v) in &result.agent.mcp {
             if !v.disabled {
                 servers.push(k.clone());
             }
@@ -140,14 +152,14 @@ impl OutputFormat {
         // Allowed tools
         let mut allowed_tools: Vec<String> = result
             .agent
-            .allowed_tools()
+            .allowed_tools
             .iter()
             .filter(|t| !t.is_empty())
             .cloned()
             .collect();
         allowed_tools.sort();
         let mut enabled_tools = Vec::with_capacity(allowed_tools.len());
-        let mcps = result.agent.mcp_servers();
+        let mcps = &result.agent.mcp;
         for t in allowed_tools {
             if t.len() < 2 {
                 continue;
@@ -179,7 +191,7 @@ impl OutputFormat {
         }
 
         // resources
-        if let Some(resources) = serialize_yaml("", &result.resources()) {
+        if let Some(resources) = serialize_yaml("", &Vec::from_iter(result.resources())) {
             row.add_cell(resources);
         }
 
@@ -289,7 +301,12 @@ impl OutputFormat {
             }
             Self::Json => {
                 let kiro_agents: Vec<Agent> = results.into_iter().map(|a| a.kiro_agent).collect();
-                println!("{}", serde_json::to_string_pretty(&kiro_agents)?);
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&kiro_agents)
+                        .into_diagnostic()
+                        .wrap_err("todo")?
+                );
                 Ok(())
             }
         }

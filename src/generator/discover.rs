@@ -1,25 +1,17 @@
 use {
     super::*,
-    crate::kdl::{GeneratorConfig, KdlAgent},
-    knuffel::parse,
+    crate::config::{GeneratorConfig, GeneratorConfigDoc, KdlAgent, KdlAgentDoc},
     std::{fmt::Display, ops::Deref, path::Path},
 };
 
 pub fn load_inline(fs: &Fs, path: impl AsRef<Path>) -> Result<GeneratorConfig> {
-    if fs.exists(&path) {
-        let content = fs
-            .read_to_string_sync(&path)
-            .wrap_err_with(|| format!("failed to read path '{}'", path.as_ref().display()))?;
-        match parse(&format!("{}", path.as_ref().display()), &content) {
-            Ok(c) => Ok(c),
-            Err(e) => {
-                let err_msg = e.to_string();
-                eprintln!("{:?}", miette::Report::new(e));
-                Err(eyre!("failed to parse: {err_msg}"))
-            }
+    let doc: Option<Result<GeneratorConfigDoc>> = crate::config::kdl_parse_path(fs, path);
+    match doc {
+        None => Ok(GeneratorConfig::default()),
+        Some(d) => {
+            let d = d?;
+            Ok(d.into())
         }
-    } else {
-        Ok(GeneratorConfig::default())
     }
 }
 
@@ -31,16 +23,17 @@ fn process_local(
     sources: &mut Vec<KdlAgentSource>,
 ) -> Result<KdlAgent> {
     let local_agent_path = location.local(&name);
-    let result = KdlAgent::from_path(fs, &name, &local_agent_path)?;
+    let result = KdlAgentDoc::from_path(fs, &name, &local_agent_path);
     match result {
-        None => Ok(KdlAgent::new(name)),
+        None => Ok(KdlAgent::new(name.as_ref().to_string())),
         Some(a) => {
+            let agent = KdlAgent::from(a?.clone());
             sources.push(KdlAgentSource::LocalFile(local_agent_path));
             if let Some(i) = inline {
                 sources.push(KdlAgentSource::LocalInline);
-                Ok(a.merge(i.clone()))
+                Ok(agent.merge(i.clone()))
             } else {
-                Ok(a)
+                Ok(agent)
             }
         }
     }
@@ -98,8 +91,10 @@ pub fn discover(
     let local_agents: GeneratorConfig = load_inline(fs, local_path)?;
     tracing::debug!("found {} local agents", local_agents.agents.len());
 
-    let local_names = local_agents.names();
-    let global_names = global_agents.names();
+    let local_names: HashSet<String> =
+        HashSet::from_iter(local_agents.agents.keys().map(|k| k.to_string()));
+    let global_names: HashSet<String> =
+        HashSet::from_iter(global_agents.agents.keys().map(|k| k.to_string()));
     let mut all_agents_names: HashSet<String> =
         HashSet::with_capacity(global_names.len() + local_names.len());
     all_agents_names.extend(local_names.clone());
@@ -128,19 +123,20 @@ pub fn discover(
                     agent_sources.push(KdlAgentSource::GlobalInline);
                     result = result.merge(a.clone());
                 }
-                let maybe_global_file = KdlAgent::from_path(fs, name, location.global(name))?;
+                let maybe_global_file = KdlAgentDoc::from_path(fs, name, location.global(name));
                 if let Some(global) = maybe_global_file {
                     agent_sources.push(KdlAgentSource::GlobalFile(location.global(name)));
-                    result = result.merge(global.clone());
+                    result = result.merge(KdlAgent::from(global?.clone()));
                 }
                 resolved_agents.insert(name.to_string(), result);
             }
             ConfigLocation::Global(_) => {
-                let mut global_file = match KdlAgent::from_path(fs, name, location.global(name))? {
-                    None => KdlAgent::new(name),
+                let mut global_file = match KdlAgentDoc::from_path(fs, name, location.global(name))
+                {
+                    None => KdlAgent::new(name.to_string()),
                     Some(a) => {
                         agent_sources.push(KdlAgentSource::GlobalFile(location.global(name)));
-                        a
+                        KdlAgent::from(a?)
                     }
                 };
                 if let Some(inline) = global_agents.get(name) {

@@ -1,14 +1,12 @@
 mod custom_tool;
 pub mod hook;
-mod mcp_config;
 pub mod tools;
-mod wrapper_types;
 pub const DEFAULT_AGENT_RESOURCES: &[&str] = &["file://README.md", "file://AGENTS.md"];
 pub const DEFAULT_APPROVE: [&str; 0] = [];
 use {
     super::agent::hook::{Hook, HookTrigger},
-    crate::{Result, kdl::KdlAgent},
-    color_eyre::eyre::eyre,
+    crate::{Result, config::KdlAgent},
+    miette::IntoDiagnostic,
     serde::{Deserialize, Serialize},
     std::{
         collections::{HashMap, HashSet},
@@ -16,10 +14,8 @@ use {
     },
 };
 pub use {
-    custom_tool::{CustomToolConfig, OAuthConfig, TransportType, tool_default_timeout},
-    mcp_config::McpServerConfig,
+    custom_tool::{CustomToolConfig, tool_default_timeout},
     tools::*,
-    wrapper_types::OriginalToolName,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -39,7 +35,7 @@ pub struct Agent {
     pub prompt: Option<String>,
     /// Configuration for Model Context Protocol (MCP) servers
     #[serde(default)]
-    pub mcp_servers: McpServerConfig,
+    pub mcp_servers: HashMap<String, CustomToolConfig>,
     /// List of tools the agent can see. Use \"@{MCP_SERVER_NAME}/tool_name\" to
     /// specify tools from mcp servers. To include all tools from a server,
     /// use \"@{MCP_SERVER_NAME}\"
@@ -47,7 +43,7 @@ pub struct Agent {
     pub tools: HashSet<String>,
     /// Tool aliases for remapping tool names
     #[serde(default)]
-    pub tool_aliases: HashMap<OriginalToolName, String>,
+    pub tool_aliases: HashMap<String, String>,
     /// List of tools the agent is explicitly allowed to use
     #[serde(default)]
     pub allowed_tools: HashSet<String>,
@@ -78,15 +74,17 @@ impl Display for Agent {
 
 impl Agent {
     pub fn validate(&self) -> Result<()> {
-        let schema: serde_json::Value = serde_json::from_str(crate::schema::SCHEMA)?;
-        let validator = jsonschema::validator_for(&schema)?;
-        let instance = serde_json::to_value(self)?;
+        // TODO cache this
+        let schema: serde_json::Value =
+            serde_json::from_str(crate::schema::SCHEMA).into_diagnostic()?;
+        let validator = jsonschema::validator_for(&schema).into_diagnostic()?;
+        let instance = serde_json::to_value(self).into_diagnostic()?;
 
         if let Err(e) = validator.validate(&instance) {
-            return Err(eyre!(
+            return Err(crate::format_err!(
                 "Validation error: {}\n{}",
                 e,
-                serde_json::to_string(&instance)?
+                serde_json::to_string(&instance).unwrap_or_default()
             ));
         }
         Ok(())
@@ -94,7 +92,7 @@ impl Agent {
 }
 
 impl TryFrom<&KdlAgent> for Agent {
-    type Error = color_eyre::Report;
+    type Error = miette::Report;
 
     fn try_from(value: &KdlAgent) -> std::result::Result<Self, Self::Error> {
         let native_tools = &value.native_tool;
@@ -105,8 +103,12 @@ impl TryFrom<&KdlAgent> for Agent {
         if tool != AwsTool::default() {
             tools_settings.insert(
                 tool_name.to_string(),
-                serde_json::to_value(&tool)
-                    .map_err(|e| eyre!("Failed to serialize {tool_name} tool configuration {e}"))?,
+                serde_json::to_value(&tool).map_err(|e| {
+                    crate::format_err!(
+                        "Failed to serialize {tool_name} tool
+    configuration {e}"
+                    )
+                })?,
             );
         }
         let tool: ReadTool = native_tools.into();
@@ -114,8 +116,12 @@ impl TryFrom<&KdlAgent> for Agent {
         if tool != ReadTool::default() {
             tools_settings.insert(
                 tool_name.to_string(),
-                serde_json::to_value(&tool)
-                    .map_err(|e| eyre!("Failed to serialize {tool_name} tool configuration {e}"))?,
+                serde_json::to_value(&tool).map_err(|e| {
+                    crate::format_err!(
+                        "Failed to serialize {tool_name} tool
+    configuration {e}"
+                    )
+                })?,
             );
         }
         let tool: WriteTool = native_tools.into();
@@ -123,8 +129,12 @@ impl TryFrom<&KdlAgent> for Agent {
         if tool != WriteTool::default() {
             tools_settings.insert(
                 tool_name.to_string(),
-                serde_json::to_value(&tool)
-                    .map_err(|e| eyre!("Failed to serialize {tool_name} tool configuration {e}"))?,
+                serde_json::to_value(&tool).map_err(|e| {
+                    crate::format_err!(
+                        "Failed to serialize {tool_name} tool
+    configuration {e}"
+                    )
+                })?,
             );
         }
         let tool: ExecuteShellTool = native_tools.into();
@@ -132,32 +142,39 @@ impl TryFrom<&KdlAgent> for Agent {
         if tool != ExecuteShellTool::default() {
             tools_settings.insert(
                 tool_name.to_string(),
-                serde_json::to_value(&tool)
-                    .map_err(|e| eyre!("Failed to serialize {tool_name} tool configuration {e}"))?,
+                serde_json::to_value(&tool).map_err(|e| {
+                    crate::format_err!(
+                        "Failed to serialize {tool_name} tool
+    configuration {e}"
+                    )
+                })?,
             );
         }
         let default_agent = Self::default();
-        let tools = value.tools().clone();
-        let allowed_tools = value.allowed_tools().clone();
-        let resources: HashSet<String> = value.resources().map(|s| s.to_string()).collect();
+        let tools = value.tools.clone();
+        let allowed_tools = value.allowed_tools.clone();
+        let resources: HashSet<String> = value.resources.clone();
 
         // Extra tool settings override native tools
-        let extra_tool_settings = value.extra_tool_settings()?;
-        tools_settings.extend(extra_tool_settings);
+        // let extra_tool_settings = value.extra_tool_settings()?;
+        // tools_settings.extend(extra_tool_settings);
 
+        let mut hooks: HashMap<HookTrigger, Vec<Hook>> = HashMap::new();
+        let triggers: Vec<HookTrigger> = enum_iterator::all::<HookTrigger>().collect();
+        for t in triggers {
+            hooks.insert(t, value.hook.hooks(&t));
+        }
         Ok(Self {
             name: value.name.clone(),
             description: value.description.clone(),
             prompt: value.prompt.clone(),
-            mcp_servers: McpServerConfig {
-                mcp_servers: value.mcp_servers(),
-            },
+            mcp_servers: value.mcp.clone(),
             tools: if tools.is_empty() {
                 default_agent.tools
             } else {
                 tools
             },
-            tool_aliases: value.tool_aliases(),
+            tool_aliases: value.alias.clone(),
             allowed_tools: if allowed_tools.is_empty() {
                 default_agent.allowed_tools
             } else {
@@ -168,10 +185,10 @@ impl TryFrom<&KdlAgent> for Agent {
             } else {
                 resources
             },
-            hooks: value.hooks(),
+            hooks,
             tools_settings,
             model: value.model.clone(),
-            include_mcp_json: value.include_mcp_json(),
+            include_mcp_json: value.include_mcp_json.is_some_and(|f| f),
         })
     }
 }
@@ -206,5 +223,25 @@ impl Default for Agent {
             include_mcp_json: true,
             model: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_agent() -> crate::Result<()> {
+        let agent = Agent {
+            name: "test".to_string(),
+            ..Default::default()
+        };
+        assert_eq!("test", format!("{agent}"));
+
+        let kg_agent = KdlAgent::default();
+        let agent = Agent::try_from(&kg_agent)?;
+        assert_eq!(agent.tools, Agent::default().tools);
+
+        Ok(())
     }
 }

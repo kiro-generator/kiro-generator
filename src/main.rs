@@ -1,7 +1,9 @@
 mod agent;
 mod commands;
+mod config;
+mod error;
 mod generator;
-mod kdl;
+// mod kdl;
 mod os;
 pub mod output;
 mod schema;
@@ -10,13 +12,15 @@ mod source;
 use {
     crate::{generator::Generator, os::Fs},
     clap::Parser,
-    color_eyre::eyre::Context,
+    miette::{Context, IntoDiagnostic},
     std::path::Path,
     tracing::{debug, enabled},
     tracing_error::ErrorLayer,
     tracing_subscriber::prelude::*,
 };
-pub type Result<T> = color_eyre::Result<T>;
+pub use {error::Error, miette::miette as format_err};
+pub type Result<T> = miette::Result<T>;
+
 pub(crate) const DOCS_URL: &str = "https://kg.cartera-mesh.com";
 
 fn init_tracing(debug: bool, trace_agent: Option<&str>) {
@@ -78,7 +82,7 @@ async fn init(fs: &Fs, gen_dir: impl AsRef<Path>) -> Result<()> {
     let gen_dir = gen_dir.as_ref();
     let kg_config = gen_dir.join("kg.kdl");
     if fs.exists(&kg_config) {
-        return Err(color_eyre::eyre::format_err!(
+        return Err(format_err!(
             "kg.kdl already exists at {}",
             kg_config.display()
         ));
@@ -87,6 +91,7 @@ async fn init(fs: &Fs, gen_dir: impl AsRef<Path>) -> Result<()> {
     if !fs.exists(gen_dir) {
         fs.create_dir_all(gen_dir)
             .await
+            .into_diagnostic()
             .wrap_err_with(|| format!("failed to create directory {}", gen_dir.display()))?;
     }
 
@@ -101,6 +106,7 @@ async fn init(fs: &Fs, gen_dir: impl AsRef<Path>) -> Result<()> {
         let dest = gen_dir.join(filename);
         fs.write(&dest, content)
             .await
+            .into_diagnostic()
             .wrap_err_with(|| format!("failed to write {}", dest.display()))?;
         println!("Created {}", dest.display());
     }
@@ -116,7 +122,6 @@ async fn init(fs: &Fs, gen_dir: impl AsRef<Path>) -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    color_eyre::install()?;
     let cli = commands::Cli::parse();
     if matches!(cli.command, commands::Command::Version) {
         println!("{}", clap::crate_version!());
@@ -148,7 +153,9 @@ async fn main() -> Result<()> {
             "changing working directory to {}",
             home_dir.as_os_str().display()
         );
-        std::env::set_current_dir(&home_dir)?;
+        std::env::set_current_dir(&home_dir)
+            .into_diagnostic()
+            .wrap_err(format!("failed to set CWD {}", home_dir.display()))?;
     }
     if local_mode {
         span.record("local_mode", true);
@@ -172,7 +179,9 @@ async fn main() -> Result<()> {
     if enabled!(tracing::Level::TRACE) {
         tracing::trace!(
             "Loaded Agent Generator Config:\n{}",
-            serde_json::to_string_pretty(&q_generator_config)?
+            serde_json::to_string_pretty(&q_generator_config)
+                .into_diagnostic()
+                .wrap_err("unable to decode to json")?
         );
     }
 

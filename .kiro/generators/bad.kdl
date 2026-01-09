@@ -1,1 +1,2 @@
-foo "bar"
+agent "bad" include-mcp-json="bar" {
+}

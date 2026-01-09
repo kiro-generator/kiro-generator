@@ -2,10 +2,10 @@ use {
     crate::{
         Result,
         agent::{Agent, ToolTarget},
-        kdl::KdlAgent,
+        config::KdlAgent,
         os::Fs,
     },
-    color_eyre::eyre::{Context, eyre},
+    miette::{Context, IntoDiagnostic},
     serde::Serialize,
     std::{
         collections::{HashMap, HashSet},
@@ -36,34 +36,34 @@ impl AgentResult {
         match target {
             ToolTarget::Read => self
                 .agent
-                .get_tool_read()
-                .override_path
+                .native_tool
+                .read
+                .overrides
                 .iter()
-                .cloned()
                 .map(|f| f.to_string())
                 .collect(),
             ToolTarget::Write => self
                 .agent
-                .get_tool_write()
-                .override_path
+                .native_tool
+                .write
+                .overrides
                 .iter()
-                .cloned()
                 .map(|f| f.to_string())
                 .collect(),
             ToolTarget::Shell => self
                 .agent
-                .get_tool_shell()
-                .override_command
+                .native_tool
+                .shell
+                .overrides
                 .iter()
-                .cloned()
                 .map(|f| f.to_string())
                 .collect(),
             _ => vec![],
         }
     }
 
-    pub fn resources(&self) -> Vec<String> {
-        self.agent.resources().map(|s| s.to_string()).collect()
+    pub fn resources(&self) -> HashSet<String> {
+        self.agent.resources.clone()
     }
 }
 
@@ -155,7 +155,8 @@ impl Generator {
             self.fs
                 .create_dir_all(&result.destination)
                 .await
-                .with_context(|| {
+                .into_diagnostic()
+                .wrap_err_with(|| {
                     format!(
                         "failed to create directory {}",
                         result.destination.display()
@@ -168,9 +169,13 @@ impl Generator {
                 .join(format!("{}.json", result.agent.name));
 
             self.fs
-                .write(&out, serde_json::to_string_pretty(&result.kiro_agent)?)
+                .write(
+                    &out,
+                    serde_json::to_string_pretty(&result.kiro_agent).into_diagnostic()?,
+                )
                 .await
-                .with_context(|| format!("failed to write file {}", out.display()))?;
+                .into_diagnostic()
+                .wrap_err_with(|| format!("failed to write file {}", out.display()))?;
         }
         Ok(result)
     }

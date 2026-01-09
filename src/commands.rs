@@ -5,7 +5,6 @@ use {
         Subcommand,
         builder::{Styles, styling::AnsiColor},
     },
-    color_eyre::eyre::eyre,
     std::{io::IsTerminal, path::PathBuf},
 };
 
@@ -121,7 +120,7 @@ impl Cli {
 
     /// Return home dir and ~/.kiro/generators/kg.kdl
     pub fn config(&self) -> crate::Result<(PathBuf, PathBuf)> {
-        let home_dir = dirs::home_dir().ok_or(eyre!("cannot locate home directory"))?;
+        let home_dir = dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?;
         let cfg = home_dir.join(".kiro").join("generators");
         Ok((home_dir, cfg))
     }

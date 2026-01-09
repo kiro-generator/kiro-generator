@@ -1,39 +1,51 @@
 description "Default agent for Kiro"
 tools "*"
-allowed-tools "read" "knowledge" "@fetch"
+allowed-tools "read" "knowledge" "fetch"
 resource "file://README.md"
 resource "file://.amazonq/rules/**/*.md"
 alias "execute_shell" "bash"
-
 hook {
-  agent-spawn "echo" {
-      command  "echo My name is Bob"
-      timeout-ms  4000
-      cache-ttl-seconds  300
-  }
+    agent-spawn echo {
+        command "echo My name is Bob"
+        timeout-ms 4000
+        cache-ttl-seconds 300
+    }
 }
-
 native-tool {
-  read  { deny ".*Cargo.toml.*" ".*yarn.lock.*";  }
-  write { deny  ".*Cargo.toml.*";  }
-  shell {
-      allow  "git status" "git fetch" "git diff .*" \
-             "git pull .*"  "yarn .*" "pulumi preview .*" \
-             "kubectl .*" "pdf2.*" "ps .*" "timeout.*" "pgrep.*"
-
-      deny   "git commit .*" "git push .*" "kubectl .*delete*" \
-             ".*delete.*"  "pulumi up.*" "^rm .*" \
-             ".*destroy.*" ".*rollout.*" ".*kill.*"
-   }
+    read {
+        denies ".*Cargo.toml.*" ".*yarn.lock.*"
+    }
+    write {
+        denies ".*Cargo.toml.*"
+    }
+    shell {
+        allows "git status" \
+            "git fetch" \
+            "git diff .*" \
+            "git pull.*" \
+            "yarn.*" \
+            "pulumi preview .*" \
+            "pdf2.*" \
+            "ps .*" \
+            "timeout.*" \
+            "pgrep.*"
+        denies "git commit .*" \
+            "git push .*" \
+            "kubectl .*delete*" \
+            ".*delete.*" \
+            "pulumi up.*" \
+            "^rm .*" \
+            ".*destroy.*" \
+            ".*rollout.*" \
+            ".*kill.*"
+    }
 }
-
-mcp "rustdocs" {
+mcp rustdocs {
     command "mcp-docsrs"
     timeout 1200
 }
-
-mcp "cargo" {
-  command "cargo-mcp"
-  args "--debug"
-  timeout 120000
+mcp cargo {
+    command "cargo-mcp"
+    args "--debug"
+    timeout 120000
 }
