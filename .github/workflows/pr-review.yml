@@ -21,10 +21,12 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - name: Validate ANTROPIC_API_KEY
+      - name: Validate ANTHROPIC_API_KEY
         shell: bash
         run: |
-          [ -z "${{ secrets.ANTROPIC_API_KEY }}" ] && exit 1
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            exit 1
+          fi
       - name: jobtaker
         uses: anthropics/claude-code-action@v1
         with:
