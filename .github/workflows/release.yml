@@ -24,6 +24,7 @@ on:
 jobs:
   releaser:
     name: release
+    if: false
     uses: carteramesh/ci/.github/workflows/rust-release.yml@main
     secrets: inherit
     with:
