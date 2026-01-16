@@ -1,0 +1,11 @@
+[agents]
+base = { template = true }
+empty = {  }
+dependabot = { inherits = ["aws-test"] }
+
+[agents.aws-test]
+inherits = ["base"]
+
+[agents.aws-test.hooks.whoami]
+command = "aws get caller-identity"
+type = "agentSpawn"

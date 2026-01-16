@@ -1,0 +1,66 @@
+[agents.parent]
+template = true
+description = "I am parent"
+prompt = "i tell you what to do"
+model = "claude"
+resources = ["file://parent.md", "file://README.md"]
+tools = ["web_search", "shell"]
+allowedTools = ["write"]
+
+[agents.parent.toolAliases]
+execute_bash = "shell"
+fs_read = "read"
+
+[agents.parent.nativeTools.shell]
+allow = ["git status .*", "git pull ,*"]
+deny = ["git push .*"]
+
+[agents.parent.nativeTools.write]
+allow = ["./src/*", "./scripts/**"]
+deny = ["Cargo.loc"]
+
+[agents.parent.nativeTools.read]
+allow = ["./src/*", "./scripts/**"]
+deny = ["Cargo.loc"]
+
+[agents.parent.hooks.spawn]
+type = "agentSpawn"
+command = "echo override me"
+
+[agents.parent.hooks.submit]
+type = "userPromptSubmit"
+command = "echo user submitted"
+
+[agents.parent.hooks.pre]
+type = "preToolUse"
+command = "echo before tool"
+matcher = "git.*"
+
+[agents.parent.hooks.post]
+type = "postToolUse"
+command = "echo after tool"
+
+[agents.parent.hooks.stop]
+type = "stop"
+command = "echo stopped"
+
+[agents.child]
+template = false
+includeMcpJson = true
+description = "I am a child"
+resources = ["file://child.md", "file://README.md"]
+inherits = ["parent"]
+tools = ["@awsdocs", "shell"]
+
+[agents.child.toolAliases]
+execute_bash = "shell"
+
+[agents.child.nativeTools.write]
+forceAllow = ["Cargo.lock"]
+
+[agents.child.nativeTools.shell]
+forceAllow = ["git push .*"]
+
+[agents.child.hooks.spawn]
+type = "agentSpawn"
+command = "echo i have spawned"

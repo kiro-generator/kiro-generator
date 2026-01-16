@@ -12,7 +12,7 @@ keywords = ["AI", "agents", "cli", "kiro"]
 categories = ["command-line-interface", "config"]
 
 [package.metadata.deb]
-maintainer = "Dougefresh <dchimento@gmail.com>"
+maintainer = "dougefresh <dchimento@gmail.com>"
 section = "utility"
 priority = "optional"
 assets = [
@@ -26,26 +26,21 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["cargo", "derive", "env", "unicode"] }
+color-eyre = "0.6.5"
 colored = "3.0.0"
 dirs = "6"
 emojis-rs = "0.1.3"
 enum-iterator = "2.3.0"
-# facet = { git = "https://github.com/facet-rs/facet.git", features = [
-#   "auto-traits",
-#   "reflect",
-#   "simd"
-# ] }
 facet = { version = "0.42.0", features = ["auto-traits", "reflect", "simd"] }
-facet-kdl = { version = "0.42.0" }
-# facet-kdl = { git = "https://github.com/facet-rs/facet.git" }
+facet-format = "0.42.0"
+facet-json = { version = "0.42.0", features = ["std", "validate"] }
+facet-toml = { version = "0.42.0", features = ["std"] }
+facet-value = { version = "0.42.0", features = ["diagnostics", "std"] }
 futures = "0.3"
-indoc = "2.0.7"
 jsonschema = { version = "0.37", default-features = false, features = [
   "resolve-async",
   "resolve-file"
 ] }
-miette = { version = "7", features = ["fancy"] }
-serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 serde_yaml2 = "0.1.3"
 super-table = { version = "1", features = ["custom_styling"] }

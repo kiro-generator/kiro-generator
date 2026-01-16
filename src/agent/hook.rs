@@ -1,16 +1,6 @@
-use {
-    serde::{Deserialize, Serialize},
-    std::fmt::Display,
-};
+use {facet::Facet, std::fmt::Display};
 
-const DEFAULT_TIMEOUT_MS: u64 = 30_000;
-const DEFAULT_MAX_OUTPUT_SIZE: u64 = 1024 * 10;
-const DEFAULT_CACHE_TTL_SECONDS: u64 = 0;
-
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq, Hash, enum_iterator::Sequence,
-)]
-#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub enum HookTrigger {
     /// Triggered during agent spawn
     AgentSpawn,
@@ -35,103 +25,50 @@ impl Display for HookTrigger {
         }
     }
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Facet, Default, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Hook {
     /// The command to run when the hook is triggered
     pub command: String,
 
-    /// Max time the hook can run before it throws a timeout error
-    #[serde(default = "Hook::default_timeout_ms")]
-    pub timeout_ms: u64,
-
-    /// Max output size of the hook before it is truncated
-    #[serde(default = "Hook::default_max_output_size")]
-    pub max_output_size: u64,
-
-    /// How long the hook output is cached before it will be executed again
-    #[serde(default = "Hook::default_cache_ttl_seconds")]
-    pub cache_ttl_seconds: u64,
+    #[facet(rename = "type", skip_serializing)]
+    pub hook_type: String,
 
     /// Optional glob matcher for hook
     /// Currently used for matching tool name of PreToolUse and PostToolUse hook
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[facet(skip_serializing_if = Option::is_none)]
     pub matcher: Option<String>,
 }
 
 impl Hook {
     pub fn merge(mut self, o: Self) -> Self {
-        if self.cache_ttl_seconds == 0 {
-            self.cache_ttl_seconds = if o.cache_ttl_seconds == 0 {
-                DEFAULT_CACHE_TTL_SECONDS
-            } else {
-                o.cache_ttl_seconds
-            };
-        }
+        self.matcher = self.matcher.or(o.matcher);
         if self.command.is_empty() {
             self.command = o.command;
         }
-        if self.max_output_size == 0 {
-            self.max_output_size = if o.max_output_size == 0 {
-                DEFAULT_MAX_OUTPUT_SIZE
-            } else {
-                o.max_output_size
-            };
-        }
-        if self.timeout_ms == 0 {
-            self.timeout_ms = if o.timeout_ms == 0 {
-                DEFAULT_TIMEOUT_MS
-            } else {
-                o.timeout_ms
-            };
-        }
-        if self.matcher.is_none() && o.matcher.is_some() {
-            self.matcher = o.matcher;
-        }
         self
-    }
-
-    fn default_timeout_ms() -> u64 {
-        DEFAULT_TIMEOUT_MS
-    }
-
-    fn default_max_output_size() -> u64 {
-        DEFAULT_MAX_OUTPUT_SIZE
-    }
-
-    fn default_cache_ttl_seconds() -> u64 {
-        DEFAULT_CACHE_TTL_SECONDS
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
-    fn hook_trigger_display() {
-        assert_eq!(HookTrigger::AgentSpawn.to_string(), "agentSpawn");
-        assert_eq!(HookTrigger::Stop.to_string(), "stop");
-    }
-
-    #[test]
-    fn hook_defaults() {
-        assert_eq!(Hook::default_timeout_ms(), 30_000);
-        assert_eq!(Hook::default_max_output_size(), 10_240);
-        assert_eq!(Hook::default_cache_ttl_seconds(), 0);
-    }
-
-    #[test]
-    fn hook_serde() {
-        let hook = Hook {
+    fn hook_merge() -> crate::config::ConfigResult<()> {
+        let parent = Hook {
             command: "test".into(),
-            timeout_ms: 1000,
-            max_output_size: 500,
-            cache_ttl_seconds: 10,
+            hook_type: HookTrigger::AgentSpawn.to_string(),
             matcher: Some("*.rs".into()),
         };
-        let json = serde_json::to_string(&hook).unwrap();
-        let deserialized: Hook = serde_json::from_str(&json).unwrap();
-        assert_eq!(hook, deserialized);
+
+        let child = Hook {
+            command: "test-child".into(),
+            hook_type: HookTrigger::AgentSpawn.to_string(),
+            matcher: None,
+        };
+
+        let merged = child.merge(parent);
+        assert_eq!("test-child", merged.command);
+        assert_eq!(Some("*.rs".to_string()), merged.matcher);
+        Ok(())
     }
 }

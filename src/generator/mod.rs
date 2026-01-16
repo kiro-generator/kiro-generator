@@ -2,11 +2,11 @@ use {
     crate::{
         Result,
         agent::{Agent, ToolTarget},
-        config::KdlAgent,
+        config::KgAgent,
         os::Fs,
     },
-    miette::{Context, IntoDiagnostic},
-    serde::Serialize,
+    color_eyre::eyre::Context,
+    facet::Facet,
     std::{
         collections::{HashMap, HashSet},
         fmt::{self, Debug},
@@ -22,7 +22,7 @@ use crate::source::*;
 
 pub struct AgentResult {
     pub kiro_agent: Agent,
-    pub agent: KdlAgent,
+    pub agent: KgAgent,
     pub writable: bool,
     pub destination: PathBuf,
 }
@@ -32,29 +32,29 @@ impl AgentResult {
         self.agent.is_template()
     }
 
-    pub fn overrides(&self, target: &ToolTarget) -> Vec<String> {
+    pub fn force_allow(&self, target: &ToolTarget) -> Vec<String> {
         match target {
             ToolTarget::Read => self
                 .agent
-                .native_tool
+                .native_tools
                 .read
-                .overrides
+                .force_allow
                 .iter()
                 .map(|f| f.to_string())
                 .collect(),
             ToolTarget::Write => self
                 .agent
-                .native_tool
+                .native_tools
                 .write
-                .overrides
+                .force_allow
                 .iter()
                 .map(|f| f.to_string())
                 .collect(),
             ToolTarget::Shell => self
                 .agent
-                .native_tool
+                .native_tools
                 .shell
-                .overrides
+                .force_allow
                 .iter()
                 .map(|f| f.to_string())
                 .collect(),
@@ -68,13 +68,14 @@ impl AgentResult {
 }
 
 /// Main generator that orchestrates agent discovery and merging
-#[derive(Serialize)]
+#[derive(Facet)]
+#[facet(opaque)]
 pub struct Generator {
     global_path: PathBuf,
     resolved: discover::ResolvedAgents,
-    #[serde(skip)]
+    #[facet(skip, default)]
     fs: Fs,
-    #[serde(skip)]
+    #[facet(skip, default)]
     #[allow(unused)]
     format: crate::output::OutputFormat,
 }
@@ -99,7 +100,7 @@ impl Generator {
         format: crate::output::OutputFormat,
     ) -> Result<Self> {
         let global_path = location.global_kg();
-        let resolved = discover::discover(&fs, &location, &format)?;
+        let resolved = discover::discover(&fs, &location, &format).unwrap();
         Ok(Self {
             global_path,
             resolved,
@@ -139,7 +140,7 @@ impl Generator {
     }
 
     #[tracing::instrument(skip(dry_run), level = "info")]
-    pub(crate) async fn write(&self, agent: KdlAgent, dry_run: bool) -> Result<AgentResult> {
+    pub(crate) async fn write(&self, agent: KgAgent, dry_run: bool) -> Result<AgentResult> {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
             kiro_agent: Agent::try_from(&agent)?,
@@ -155,7 +156,6 @@ impl Generator {
             self.fs
                 .create_dir_all(&result.destination)
                 .await
-                .into_diagnostic()
                 .wrap_err_with(|| {
                     format!(
                         "failed to create directory {}",
@@ -169,12 +169,8 @@ impl Generator {
                 .join(format!("{}.json", result.agent.name));
 
             self.fs
-                .write(
-                    &out,
-                    serde_json::to_string_pretty(&result.kiro_agent).into_diagnostic()?,
-                )
+                .write(&out, facet_json::to_string_pretty(&result.kiro_agent)?)
                 .await
-                .into_diagnostic()
                 .wrap_err_with(|| format!("failed to write file {}", out.display()))?;
         }
         Ok(result)

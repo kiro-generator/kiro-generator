@@ -78,8 +78,9 @@ fn append(base: impl AsRef<Path>, path: impl AsRef<Path>) -> PathBuf {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum Fs {
+    #[default]
     Real,
     /// Uses the real filesystem except acts as if the process has
     /// a different root directory by using [TempDir]

@@ -1,0 +1,14 @@
+prompt = "you are NOT an AWS expert"
+allowedTools = ["@awsdocs"]
+resources = ["file://AGENTS.md", "file://README.md"]
+
+[nativeTools.aws]
+allow = ["ec2", "s3"]
+
+[mcpServers.awsdocs]
+command = "blah"
+args = ["awslabs.aws-documentation-mcp-server@latest"]
+
+[mcpServers.awsdocs.env]
+FASTMCP_LOG_LEVEL = "INFO"
+AWS_DOCUMENTATION_PARTITION = "ec2"

@@ -1,12 +1,9 @@
 use {
-    serde::{Deserialize, Serialize},
+    facet::Facet,
     std::{collections::HashSet, fmt::Display},
 };
 
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq, Hash, enum_iterator::Sequence,
-)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, enum_iterator::Sequence)]
 pub enum ToolTarget {
     Aws,
     Shell,
@@ -37,14 +34,14 @@ impl AsRef<str> for ToolTarget {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[derive(Debug, Clone, Facet, PartialEq, Eq)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AwsTool {
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
     pub allowed_services: HashSet<String>,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
     pub denied_services: HashSet<String>,
-    #[serde(default)]
+    #[facet(default)]
     pub auto_allow_readonly: bool,
 }
 
@@ -58,21 +55,16 @@ impl Default for AwsTool {
     }
 }
 
-fn default_allow_read_only() -> bool {
-    false
-}
-
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[derive(Debug, Facet, PartialEq, Eq)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ExecuteShellTool {
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
     pub allowed_commands: HashSet<String>,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
     pub denied_commands: HashSet<String>,
-    #[serde(default)]
+    #[facet(default)]
     pub deny_by_default: bool,
-    #[serde(default = "default_allow_read_only")]
     pub auto_allow_readonly: bool,
 }
 
@@ -82,28 +74,28 @@ impl Default for ExecuteShellTool {
             allowed_commands: Default::default(),
             denied_commands: Default::default(),
             deny_by_default: false,
-            auto_allow_readonly: default_allow_read_only(),
+            auto_allow_readonly: true,
         }
     }
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[derive(Debug, Facet, Default, PartialEq, Eq)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReadTool {
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
     pub allowed_paths: HashSet<String>,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
     pub denied_paths: HashSet<String>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Serialize, Default, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[derive(Debug, Facet, Default, PartialEq, Eq)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
 pub struct WriteTool {
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
     pub allowed_paths: HashSet<String>,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
     pub denied_paths: HashSet<String>,
 }
 
@@ -134,22 +126,22 @@ mod tests {
     fn execute_shell_tool_default() {
         let tool = ExecuteShellTool::default();
         assert!(!tool.deny_by_default);
-        assert!(!tool.auto_allow_readonly);
+        assert!(tool.auto_allow_readonly);
     }
 
     #[test]
-    fn read_tool_serde() {
+    fn read_tool_facet() {
         let tool = ReadTool::default();
-        let json = serde_json::to_string(&tool).unwrap();
-        let deserialized: ReadTool = serde_json::from_str(&json).unwrap();
+        let json = facet_json::to_string(&tool).unwrap();
+        let deserialized: ReadTool = facet_json::from_str(&json).unwrap();
         assert_eq!(tool, deserialized);
     }
 
     #[test]
-    fn write_tool_serde() {
+    fn write_tool_facet() {
         let tool = WriteTool::default();
-        let json = serde_json::to_string(&tool).unwrap();
-        let deserialized: WriteTool = serde_json::from_str(&json).unwrap();
+        let json = facet_json::to_string(&tool).unwrap();
+        let deserialized: WriteTool = facet_json::from_str(&json).unwrap();
         assert_eq!(tool, deserialized);
     }
 }

@@ -1,0 +1,7 @@
+[agents.base]
+template = true
+
+[agents.aws-test]
+inherits = ["base"]
+
+[agents.dependabot]

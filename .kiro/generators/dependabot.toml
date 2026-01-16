@@ -1,0 +1,7 @@
+description = "I make life painful for developers"
+
+[nativeTools]
+shell = { forceAllow = ["git commit .*", "git push .*"] }
+read = { forceAllow = [".*Cargo.toml.*"] }
+write = { forceAllow = [".*Cargo.toml.*"] }
+aws = { disableAutoReadOnly = false }

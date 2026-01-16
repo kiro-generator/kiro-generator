@@ -1,0 +1,56 @@
+description = "agent from file"
+prompt = "Generate a test prompt"
+resources = ["file://resource.md", "file://README.md"]
+includeMcpJson = true
+tools = ["*"]
+allowedTools = ["@awsdocs"]
+
+[hooks.spawn]
+type = "agentSpawn"
+command = "echo i have spawned"
+
+[hooks.submit]
+type = "userPromptSubmit"
+command = "echo user submitted"
+
+[hooks.pre]
+type = "preToolUse"
+command = "echo before tool"
+matcher = "git.*"
+
+[hooks.post]
+type = "postToolUse"
+command = "echo after tool"
+
+[hooks.stop]
+type = "stop"
+command = "echo stopped"
+
+[mcpServers.awsdocs]
+command = "aws-docs"
+args = ["--verbose", "--config=/path"]
+timeout = 5000
+
+[mcpServers.awsdocs.env]
+RUST_LOG = "debug"
+PATH = "/usr/bin"
+
+[mcpServers.awsdocs.headers]
+Authorization = "Bearer token"
+
+[toolAliases]
+execute_bash = "shell"
+
+[nativeTools.write]
+allow = ["./src/*", "./scripts/**"]
+deny = ["Cargo.lock"]
+forceAllow = ["/tmp", "/var/log"]
+
+[nativeTools.shell]
+denyByDefault = true
+allow = ["git status .*"]
+deny = ["git push .*"]
+forceAllow = ["git pull .*"]
+
+[toolSettings.whoami]
+env = { LOG_LEVEL = "debug" }

@@ -5,22 +5,15 @@ use {
         generator::AgentResult,
         source::KdlSources,
     },
+    color_eyre::eyre::Context,
     colored::Colorize,
-    miette::{Context, GraphicalReportHandler, GraphicalTheme, IntoDiagnostic},
     std::fmt::Display,
     super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
     tracing::enabled,
 };
 
 pub fn print_error(e: &crate::Error) {
-    match e {
-        crate::Error::DeserializeError(file, kdl_err) => {
-            let mut output = String::new();
-            let handler = GraphicalReportHandler::new_themed(GraphicalTheme::unicode());
-            handler.render_report(&mut output, kdl_err).unwrap();
-            eprintln!("{}\nFile location: '{}'", output, file);
-        }
-    };
+    eprintln!("{e}");
 }
 
 /// Override the color setting. Default is [`ColorOverride::Auto`].
@@ -141,8 +134,8 @@ impl OutputFormat {
 
         // MCP servers (only enabled ones)
         let mut servers = Vec::new();
-        for (k, v) in &result.agent.mcp {
-            if !v.disabled {
+        for (k, v) in &result.agent.mcp_servers {
+            if !v.disabled.unwrap_or_default() {
                 servers.push(k.clone());
             }
         }
@@ -159,15 +152,17 @@ impl OutputFormat {
             .collect();
         allowed_tools.sort();
         let mut enabled_tools = Vec::with_capacity(allowed_tools.len());
-        let mcps = &result.agent.mcp;
+        let mcps = &result.agent.mcp_servers;
         for t in allowed_tools {
             if t.len() < 2 {
                 continue;
             }
             if let Some(server_name) = t.strip_prefix("@") {
                 match mcps.get(server_name) {
-                    Some(mcp) if !mcp.disabled => {} // enabled, keep it
-                    _ => continue,                   // disabled or doesn't exist, skip it
+                    Some(mcp) if !mcp.disabled.unwrap_or_default() => {} // enabled, keep it
+                    _ => continue,                                       /* disabled or
+                                                                           * doesn't exist,
+                                                                           * skip it */
                 }
             }
             enabled_tools.push(t);
@@ -175,9 +170,9 @@ impl OutputFormat {
         row.add_cell(Cell::new(enabled_tools.join(", ")));
 
         // Override permissions (security-critical)
-        let sh = result.overrides(&ToolTarget::Shell);
-        let read = result.overrides(&ToolTarget::Read);
-        let write = result.overrides(&ToolTarget::Write);
+        let sh = result.force_allow(&ToolTarget::Shell);
+        let read = result.force_allow(&ToolTarget::Read);
+        let write = result.force_allow(&ToolTarget::Write);
 
         let mut forced = vec![];
         if let Some(c) = serialize_yaml("cmds:\n", &sh) {
@@ -303,9 +298,7 @@ impl OutputFormat {
                 let kiro_agents: Vec<Agent> = results.into_iter().map(|a| a.kiro_agent).collect();
                 println!(
                     "{}",
-                    serde_json::to_string_pretty(&kiro_agents)
-                        .into_diagnostic()
-                        .wrap_err("todo")?
+                    facet_json::to_string_pretty(&kiro_agents).wrap_err("TODO")?
                 );
                 Ok(())
             }

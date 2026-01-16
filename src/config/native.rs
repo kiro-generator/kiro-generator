@@ -1,5 +1,4 @@
 use {
-    super::GenericSet,
     crate::agent::{
         AwsTool as KiroAwsTool,
         ExecuteShellTool as KiroShellTool,
@@ -7,18 +6,23 @@ use {
         WriteTool as KiroWriteTool,
     },
     facet::Facet,
-    facet_kdl as kdl,
     std::collections::HashSet,
 };
 
 macro_rules! define_tool {
     ($name:ident) => {
-        #[derive(Clone, Debug, Default, PartialEq, Eq)]
+        #[derive(Facet, Clone, Debug, Default, PartialEq, Eq)]
+        #[facet(default, deny_unknown_fields)]
         pub struct $name {
+            #[facet(default, rename = "allow")]
             pub allows: HashSet<String>,
+            #[facet(default, rename = "deny")]
             pub denies: HashSet<String>,
-            pub overrides: HashSet<String>,
+            #[facet(default, rename = "forceAllow")]
+            pub force_allow: HashSet<String>,
+            #[facet(default, rename = "disableAutoReadOnly")]
             pub disable_auto_readonly: Option<bool>,
+            #[facet(default, rename = "denyByDefault")]
             pub deny_by_default: Option<bool>,
         }
 
@@ -40,13 +44,13 @@ macro_rules! define_tool {
                     );
                     self.denies.extend(other.denies);
                 }
-                if !other.overrides.is_empty() {
+                if !other.force_allow.is_empty() {
                     tracing::trace!(
                         tool = stringify!($name),
-                        count = other.overrides.len(),
-                        "merging overrides"
+                        count = other.force_allow.len(),
+                        "merging force_allow"
                     );
-                    self.overrides.extend(other.overrides);
+                    self.force_allow.extend(other.force_allow);
                 }
                 self.disable_auto_readonly =
                     self.disable_auto_readonly.or(other.disable_auto_readonly);
@@ -57,84 +61,22 @@ macro_rules! define_tool {
     };
 }
 
-macro_rules! define_kdl_doc {
-    ($name:ident) => {
-        #[derive(Facet, Clone, Debug, Default, PartialEq, Eq)]
-        #[facet(default, rename_all = "kebab-case")]
-        pub struct $name {
-            #[facet(default, kdl::child)]
-            pub(super) allows: GenericSet,
-            #[facet(default, kdl::child)]
-            pub(super) denies: GenericSet,
-            #[facet(default, kdl::child)]
-            pub(super) overrides: GenericSet,
-            #[facet(default, kdl::property)]
-            pub deny_by_default: Option<bool>,
-            #[facet(default, kdl::property)]
-            pub disable_auto_readonly: Option<bool>,
-        }
-    };
-}
-
-macro_rules! define_tool_into {
-    ($name:ident, $to:ident) => {
-        impl From<$name> for $to {
-            fn from(value: $name) -> $to {
-                $to {
-                    allows: value.allows.item,
-                    denies: value.denies.item,
-                    overrides: value.overrides.item,
-                    deny_by_default: value.deny_by_default,
-                    disable_auto_readonly: value.disable_auto_readonly,
-                }
-            }
-        }
-    };
-}
-
-define_kdl_doc!(AwsToolDoc);
-define_kdl_doc!(ExecuteShellToolDoc);
-define_kdl_doc!(WriteToolDoc);
-define_kdl_doc!(ReadToolDoc);
 define_tool!(ExecuteShellTool);
 define_tool!(AwsTool);
 define_tool!(WriteTool);
 define_tool!(ReadTool);
-define_tool_into!(ExecuteShellToolDoc, ExecuteShellTool);
-define_tool_into!(AwsToolDoc, AwsTool);
-define_tool_into!(WriteToolDoc, WriteTool);
-define_tool_into!(ReadToolDoc, ReadTool);
 
 #[derive(Facet, Default, Clone, Debug, PartialEq, Eq)]
-#[facet(default)]
-pub struct NativeToolsDoc {
-    #[facet(default, kdl::child)]
-    pub shell: ExecuteShellToolDoc,
-    #[facet(default, kdl::child)]
-    pub aws: AwsToolDoc,
-    #[facet(default, kdl::child)]
-    pub read: ReadToolDoc,
-    #[facet(default, kdl::child)]
-    pub write: WriteToolDoc,
-}
-
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
+#[facet(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct NativeTools {
+    #[facet(default)]
     pub shell: ExecuteShellTool,
+    #[facet(default)]
     pub aws: AwsTool,
+    #[facet(default)]
     pub read: ReadTool,
+    #[facet(default)]
     pub write: WriteTool,
-}
-
-impl From<NativeToolsDoc> for NativeTools {
-    fn from(value: NativeToolsDoc) -> Self {
-        Self {
-            shell: value.shell.into(),
-            aws: value.aws.into(),
-            read: value.read.into(),
-            write: value.write.into(),
-        }
-    }
 }
 
 impl NativeTools {
@@ -163,12 +105,12 @@ impl From<&NativeTools> for KiroWriteTool {
         let write = &value.write;
         let mut allows: HashSet<String> = write.allows.clone();
         let mut denies: HashSet<String> = write.denies.clone();
-        if !write.overrides.is_empty() {
+        if !write.force_allow.is_empty() {
             tracing::trace!(
                 "Override/Forcing write: {:?}",
-                write.overrides.iter().collect::<Vec<_>>()
+                write.force_allow.iter().collect::<Vec<_>>()
             );
-            for cmd in write.overrides.iter() {
+            for cmd in write.force_allow.iter() {
                 allows.insert(cmd.clone());
                 if denies.remove(cmd) {
                     tracing::trace!("Removed from denies: {cmd}");
@@ -188,12 +130,12 @@ impl From<&NativeTools> for KiroReadTool {
         let read = &value.read;
         let mut allows: HashSet<String> = read.allows.clone();
         let mut denies: HashSet<String> = read.denies.clone();
-        if !read.overrides.is_empty() {
+        if !read.force_allow.is_empty() {
             tracing::trace!(
-                "Override/Forcing write: {:?}",
-                read.overrides.iter().collect::<Vec<_>>()
+                "Override/Forcing read: {:?}",
+                read.force_allow.iter().collect::<Vec<_>>()
             );
-            for cmd in read.overrides.iter() {
+            for cmd in read.force_allow.iter() {
                 allows.insert(cmd.clone());
                 if denies.remove(cmd) {
                     tracing::trace!("Removed from denies: {cmd}");
@@ -214,12 +156,12 @@ impl From<&NativeTools> for KiroShellTool {
         let mut allows: HashSet<String> = shell.allows.clone();
         let mut denies: HashSet<String> = shell.denies.clone();
 
-        if !shell.overrides.is_empty() {
+        if !shell.force_allow.is_empty() {
             tracing::trace!(
                 "Override/Forcing commands: {:?}",
-                shell.overrides.iter().collect::<Vec<_>>()
+                shell.force_allow.iter().collect::<Vec<_>>()
             );
-            for cmd in shell.overrides.iter() {
+            for cmd in shell.force_allow.iter() {
                 allows.insert(cmd.clone());
                 if denies.remove(cmd) {
                     tracing::trace!("Removed command from denies: {cmd}");
@@ -241,7 +183,7 @@ mod tests {
         super::*,
         crate::{
             Result,
-            config::{ConfigResult, kdl_parse},
+            config::{ConfigResult, toml_parse},
         },
         std::fmt::Display,
     };
@@ -250,36 +192,36 @@ mod tests {
     }
     #[test_log::test]
     fn parse_shell_tool() -> ConfigResult<()> {
-        let kdl = r#"
-            shell deny-by-default=#true disable-auto-readonly=#false {
-                allows "ls .*" "git status"
-                denies "rm -rf /"
-                overrides "git push"
-            }
+        let raw = r#"
+[shell]
+denyByDefault=true
+disableAutoReadOnly=false
+allow = ["ls .*",  "git status"]
+deny = ["rm -rf /"]
+forceAllow = ["git push"]
         "#;
 
-        let doc: NativeToolsDoc = kdl_parse(kdl)?;
-        let doc = NativeTools::from(doc);
+        let doc: NativeTools = toml_parse(raw)?;
         let shell = doc.shell;
         assert_eq!(shell.allows.len(), 2);
         assert_eq!(shell.denies.len(), 1);
         assert!(shell.deny_by_default.unwrap_or_default());
         assert!(!shell.disable_auto_readonly.unwrap_or_default());
-        assert_eq!(shell.overrides.len(), 1);
+        assert_eq!(shell.force_allow.len(), 1);
         Ok(())
     }
 
     #[test_log::test]
     fn parse_aws_tool() -> ConfigResult<()> {
-        let kdl = r#"
-            aws disable-auto-readonly=#true {
-                allows "ec2" "s3"
-                denies "iam"
-            }
+        let raw = r#"
+            [aws]
+            disableAutoReadOnly=true
+            allow =  ["ec2" , "s3"]
+            deny = ["iam"]
         "#;
 
-        let doc: NativeToolsDoc = kdl_parse(kdl)?;
-        let aws = NativeTools::from(doc).aws;
+        let doc: NativeTools = toml_parse(raw)?;
+        let aws = doc.aws;
         assert!(aws.disable_auto_readonly.is_some());
         assert!(aws.disable_auto_readonly.unwrap_or_default());
         assert_eq!(aws.allows.len(), 2);
@@ -289,33 +231,37 @@ mod tests {
 
     #[test_log::test]
     fn parse_read_write_tools() -> ConfigResult<()> {
-        let kdl = r#"
-            read {
-                allows "*.rs" "*.toml"
-                denies "/etc/*"
-                overrides "/etc/hosts"
-            }
-            write {
-                allows "*.txt"
-                denies "/tmp/*"
-                overrides "/tmp/allowed"
-            }
+        let raw = r#"
+            [read]
+            allow= ["*.rs", "*.toml"]
+            deny= ["/etc/*"]
+            forceAllow = ["/etc/hosts"]
+
+            [write]
+            allow= ["*.txt"]
+            deny= ["/tmp/*"]
+            forceAllow = ["/tmp/allowed"]
+
         "#;
 
-        let doc: NativeToolsDoc = kdl_parse(kdl)?;
-        let doc = NativeTools::from(doc);
+        let doc: NativeTools = toml_parse(raw)?;
         assert_eq!(doc.read.allows.len(), 2);
+        assert_eq!(doc.read.denies.len(), 1);
+        assert_eq!(doc.read.force_allow.len(), 1);
         assert_eq!(doc.write.allows.len(), 1);
+        assert_eq!(doc.write.denies.len(), 1);
+        assert_eq!(doc.write.force_allow.len(), 1);
         Ok(())
     }
 
     #[test_log::test]
-    pub fn test_native_merge_empty() -> Result<()> {
+    pub fn test_native_merge_empty() -> ConfigResult<()> {
         let child = NativeTools::default();
         let parent = NativeTools::default();
         let merged = child.merge(parent);
 
         assert_eq!(merged, NativeTools::default());
+        toml_parse::<NativeTools>("")?;
         Ok(())
     }
 
@@ -326,27 +272,27 @@ mod tests {
             aws: AwsTool {
                 disable_auto_readonly: None,
                 deny_by_default: None,
-                overrides: Default::default(),
+                force_allow: Default::default(),
                 allows: into_set(vec!["ec2"]),
                 denies: into_set(vec!["iam"]),
             },
             shell: ExecuteShellTool {
                 allows: into_set(vec!["ls .*"]),
                 denies: into_set(vec!["git push"]),
-                overrides: into_set(vec!["rm -rf /"]),
+                force_allow: into_set(vec!["rm -rf /"]),
                 deny_by_default: Some(true),
                 disable_auto_readonly: Some(false),
             },
             read: ReadTool {
                 allows: into_set(vec!["ls .*"]),
                 denies: into_set(vec!["git push"]),
-                overrides: into_set(vec!["rm -rf /"]),
+                force_allow: into_set(vec!["rm -rf /"]),
                 ..Default::default()
             },
             write: WriteTool {
                 allows: into_set(vec!["ls .*"]),
                 denies: into_set(vec!["git push"]),
-                overrides: into_set(vec!["rm -rf /"]),
+                force_allow: into_set(vec!["rm -rf /"]),
                 ..Default::default()
             },
         };
@@ -466,7 +412,7 @@ mod tests {
                 denies: into_set(vec!["rm"]),
                 deny_by_default: None,
                 disable_auto_readonly: None,
-                overrides: into_set(vec!["rm"]),
+                force_allow: into_set(vec!["rm"]),
             },
             ..Default::default()
         };
@@ -492,7 +438,7 @@ mod tests {
             read: ReadTool {
                 allows: into_set(vec!["ls"]),
                 denies: into_set(vec!["rm"]),
-                overrides: into_set(vec!["rm"]),
+                force_allow: into_set(vec!["rm"]),
                 ..Default::default()
             },
             ..Default::default()
@@ -516,7 +462,7 @@ mod tests {
         let write = WriteTool {
             allows: into_set(vec!["ls"]),
             denies: into_set(vec!["rm"]),
-            overrides: into_set(vec!["rm"]),
+            force_allow: into_set(vec!["rm"]),
             ..Default::default()
         };
         let a = NativeTools {

@@ -1,5 +1,4 @@
 use {
-    serde::Serialize,
     std::{
         collections::{HashMap, HashSet},
         fmt::Debug,
@@ -9,9 +8,10 @@ use {
     super_table::Cell,
 };
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Default)]
 pub enum KdlAgentSource {
     LocalFile(PathBuf),
+    #[default]
     LocalInline,
     GlobalFile(PathBuf),
     GlobalInline,
@@ -34,8 +34,9 @@ impl From<&KdlAgentSource> for Cell {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Default)]
 pub struct KdlSources(pub HashMap<String, Vec<KdlAgentSource>>);
+
 impl Debug for KdlSources {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "sources={}", self.0.len())

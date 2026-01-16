@@ -1,0 +1,53 @@
+description = "Default agent for Kiro"
+tools = ["*"]
+allowedTools = ["read", "knowledge", "@fetch"]
+resources = ["file://README.md", "file://.amazonq/rules/**/*.md"]
+includeMcpJson = false
+
+[hooks.echo]
+type = "agentSpawn"
+command = "echo My name is Bob"
+
+[nativeTools]
+read = { deny = [".*Cargo.toml.*", ".*yarn.lock.*"] }
+write = { deny = [".*Cargo.toml.*"] }
+aws = { disableAutoReadOnly = true }
+
+[nativeTools.shell]
+allow = [
+  "git status",
+  "git fetch",
+  "git diff .*",
+  "git pull .*",
+  "yarn .*",
+  "pulumi preview .*",
+  "kubectl .*",
+  "pdf2.*",
+  "ps .*",
+  "timeout.*",
+  "pgrep.*"
+]
+deny = [
+  "git commit .*",
+  "git push .*",
+  "kubectl .*delete*",
+  ".*delete.*",
+  "pulumi up.*",
+  "^rm .*",
+  ".*destroy.*",
+  ".*rollout.*",
+  ".*kill.*"
+]
+disableAutoReadOnly = true
+
+[mcpServers.rustdocs]
+command = "rust-docs-mcp"
+args = []
+timeout = 1200
+disabled = false
+
+[mcpServers.cargo]
+command = "cargo-mcp"
+args = []
+timeout = 120000
+disabled = false

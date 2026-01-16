@@ -1,4 +1,4 @@
-use {super::*, crate::config::KdlAgent, std::collections::HashSet};
+use {super::*, crate::config::KgAgent, std::collections::HashSet};
 
 impl Generator {
     /// Resolve transitive inheritance chain for an agent
@@ -6,7 +6,7 @@ impl Generator {
     #[tracing::instrument(level = "debug", skip(self))]
     fn resolve_transitive_inheritance(
         &self,
-        agent: &KdlAgent,
+        agent: &KgAgent,
         visited: &mut HashSet<String>,
     ) -> Result<Vec<String>> {
         if visited.contains(&agent.name) {
@@ -42,8 +42,8 @@ impl Generator {
 
     /// Merge all agents with transitive inheritance resolution
     #[tracing::instrument(level = "debug")]
-    pub fn merge(&self) -> Result<Vec<KdlAgent>> {
-        let mut resolved_agents: HashMap<String, KdlAgent> =
+    pub fn merge(&self) -> Result<Vec<KgAgent>> {
+        let mut resolved_agents: HashMap<String, KgAgent> =
             HashMap::with_capacity(self.resolved.agents.len());
 
         for (name, agent) in &self.resolved.agents {
@@ -64,7 +64,7 @@ impl Generator {
             resolved_agents.insert(name.clone(), merged);
         }
 
-        let mut agents: Vec<KdlAgent> = resolved_agents.values().cloned().collect();
+        let mut agents: Vec<KgAgent> = resolved_agents.values().cloned().collect();
         agents.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(agents)
     }
@@ -72,7 +72,7 @@ impl Generator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::agent::hook::HookTrigger};
 
     #[tokio::test]
     #[test_log::test]
@@ -85,7 +85,7 @@ mod tests {
         )?;
 
         let merged = generator.merge()?;
-        assert_eq!(merged.len(), 3);
+        assert_eq!(merged.len(), 4);
 
         // Find dependabot agent
         let dependabot = merged
@@ -113,7 +113,7 @@ mod tests {
         let allowed = &dependabot.allowed_tools;
         assert!(allowed.contains("read"));
         assert!(allowed.contains("knowledge"));
-        assert!(allowed.contains("fetch"));
+        assert!(allowed.contains("@fetch"));
         assert!(allowed.contains("@awsdocs"));
 
         // Should have resources from all three
@@ -123,26 +123,24 @@ mod tests {
         assert!(resources.contains(&"file://.amazonq/rules/**/*.md".to_string()));
 
         // Should have hooks from all levels
-        let hooks = &dependabot.hook;
-        assert!(
-            !hooks
-                .hooks(&crate::agent::hook::HookTrigger::AgentSpawn)
-                .is_empty()
-        );
+        let hooks = dependabot.hooks();
+        let spawn = hooks.get(&HookTrigger::AgentSpawn.to_string());
+        assert!(spawn.is_some());
+        assert!(!spawn.unwrap().is_empty());
 
         // Should have force permissions from dependabot overriding denies from base
         let shell = dependabot.get_tool_shell();
-        let overrides = &shell.overrides;
-        assert!(overrides.contains("git commit .*"));
-        assert!(overrides.contains("git push .*"));
+        let force_allow = &shell.force_allow;
+        assert!(force_allow.contains("git commit .*"));
+        assert!(force_allow.contains("git push .*"));
 
         let read = dependabot.get_tool_read();
-        let overrides = &read.overrides;
-        assert!(overrides.contains(".*Cargo.toml.*"));
+        let force_allow = &read.force_allow;
+        assert!(force_allow.contains(".*Cargo.toml.*"));
 
         let write = dependabot.get_tool_write();
-        let overrides = &write.overrides;
-        assert!(overrides.contains(".*Cargo.toml.*"));
+        let force_allow = &write.force_allow;
+        assert!(force_allow.contains(".*Cargo.toml.*"));
 
         // Should have aws tool from aws-test
         let aws = dependabot.get_tool_aws();

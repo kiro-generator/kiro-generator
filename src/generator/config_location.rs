@@ -6,13 +6,13 @@ pub enum ConfigLocation {
     Global(PathBuf),
     /// Only local ./.kiro/generators
     Local,
-    /// Both global and local configs (local overrides global)
+    /// Both global and local configs (local force_allow global)
     Both(PathBuf),
 }
 
 impl ConfigLocation {
     pub fn global(&self, name: impl AsRef<str>) -> PathBuf {
-        let n = format!("{}.kdl", name.as_ref());
+        let n = format!("{}.toml", name.as_ref());
         match self {
             ConfigLocation::Global(path) | ConfigLocation::Both(path) => path.join(n),
             #[cfg(not(test))]
@@ -27,7 +27,7 @@ impl ConfigLocation {
         match self {
             Self::Local | Self::Both(_) => PathBuf::from(".kiro")
                 .join("generators")
-                .join(format!("{}.kdl", name.as_ref())),
+                .join(format!("{}.toml", name.as_ref())),
             #[cfg(not(test))]
             Self::Global(_) => PathBuf::default(),
             #[cfg(test)]
@@ -50,7 +50,7 @@ impl ConfigLocation {
 
         if !global_exists && !local_exists {
             return Err(crate::format_err!(
-                "no kg.kdl found at global ({}) or local ({})",
+                "no kg.toml found at global ({}) or local ({})",
                 self.global_kg().display(),
                 self.local_kg().display()
             ));
