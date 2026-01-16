@@ -27,6 +27,8 @@ jobs:
           if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
             exit 1
           fi
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: jobtaker
         uses: anthropics/claude-code-action@v1
         with:
