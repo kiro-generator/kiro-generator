@@ -67,7 +67,7 @@ fn init_tracing(debug: bool, trace_agent: Option<&str>) {
 /// Initialize a new kg configuration directory.
 ///
 /// Creates the specified directory (if needed) and populates it with
-/// default configuration files: kg.kdl, default.kdl, and example.kdl.
+/// default configuration files in manifests/ and agents/ subdirectories.
 ///
 /// # Arguments
 /// * `fs` - Filesystem abstraction for testability
@@ -75,11 +75,64 @@ fn init_tracing(debug: bool, trace_agent: Option<&str>) {
 ///
 /// # Errors
 /// Returns an error if:
-/// - kg.kdl already exists in the target directory
+/// - manifests/kg.toml already exists in the target directory
 /// - Directory creation fails
 /// - File write operations fail
-#[allow(unused_variables)]
 async fn init(fs: &Fs, gen_dir: impl AsRef<Path>) -> Result<()> {
+    let gen_dir = gen_dir.as_ref();
+    let manifests_dir = gen_dir.join("manifests");
+    let agents_dir = gen_dir.join("agents");
+    let kg_toml = manifests_dir.join("kg.toml");
+
+    if fs.exists(&kg_toml) {
+        return Err(format_err!(
+            "Configuration already exists at {}",
+            kg_toml.display()
+        ));
+    }
+
+    // Create directories
+    fs.create_dir_all(&manifests_dir)
+        .await
+        .wrap_err(format!("Failed to create {}", manifests_dir.display()))?;
+    fs.create_dir_all(&agents_dir)
+        .await
+        .wrap_err(format!("Failed to create {}", agents_dir.display()))?;
+
+    // Create manifests/kg.toml
+    let kg_content = r#"# Kiro Generator Manifest
+# Declare your agents and their relationships here
+
+[agents]
+default = { inherits = [] }
+"#;
+    fs.write(&kg_toml, kg_content)
+        .await
+        .wrap_err(format!("Failed to write {}", kg_toml.display()))?;
+
+    // Create agents/default.toml
+    let default_toml = agents_dir.join("default.toml");
+    let default_content = r#"# Default agent configuration
+description = "Default agent"
+tools = ["*"]
+allowedTools = ["read", "knowledge", "web_search"]
+resources = ["file://README.md"]
+
+[toolsSettings.shell]
+allowedCommands = ["git status", "git fetch", "git diff .*"]
+deniedCommands = ["git commit .*", "git push .*"]
+autoAllowReadonly = true
+"#;
+    fs.write(&default_toml, default_content)
+        .await
+        .wrap_err(format!("Failed to write {}", default_toml.display()))?;
+
+    println!("✓ Created {}", manifests_dir.display());
+    println!("✓ Created {}", agents_dir.display());
+    println!("✓ Created {}", kg_toml.display());
+    println!("✓ Created {}", default_toml.display());
+    println!("\nInitialized kg configuration in {}", gen_dir.display());
+
     Ok(())
 }
 

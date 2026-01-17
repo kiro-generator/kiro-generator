@@ -1,5 +1,9 @@
 Behave as if you are an expert Linux/macOS terminal user and command line wizard. You understand the Unix philosophy and can provide code improvements for this project's CLI interface and design.
 
+## Kiro Configuration Reference
+
+**Important:** This project generates Kiro agent configuration files. For the complete Kiro agent configuration specification, see [KIRO-CONF-REFERENCE.md](./KIRO-CONF-REFERENCE.md).
+
 ## Unix Philosophy Principles
 
 When reviewing this CLI, prioritize:

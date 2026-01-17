@@ -117,28 +117,68 @@ impl Fs {
                         .expect("failed to create test user home");
                     fs.create_dir_all("./.kiro").await.ok();
                     fs.create_dir_all("./.kiro/generators").await.ok();
+                    fs.create_dir_all("./.kiro/generators/manifests").await.ok();
+                    fs.create_dir_all("./.kiro/generators/agents").await.ok();
                     fs.create_dir_all("./.kiro/agents").await.ok();
-                    if let Ok(entries) = std::fs::read_dir("./.kiro/generators") {
+
+                    // Copy local manifests
+                    if let Ok(entries) = std::fs::read_dir("./.kiro/generators/manifests") {
                         for entry in entries.flatten() {
                             if let Ok(file_type) = entry.file_type()
                                 && file_type.is_file()
                                 && let Ok(config) = std::fs::read_to_string(entry.path())
                                 && let Some(name) = entry.file_name().to_str()
                             {
-                                fs.write(format!("./.kiro/generators/{}", name), config)
+                                fs.write(format!("./.kiro/generators/manifests/{}", name), config)
                                     .await
                                     .ok();
                             }
                         }
                     }
-                    if let Ok(entries) = std::fs::read_dir("./.kiro/global") {
+
+                    // Copy local agents
+                    if let Ok(entries) = std::fs::read_dir("./.kiro/generators/agents") {
                         for entry in entries.flatten() {
                             if let Ok(file_type) = entry.file_type()
                                 && file_type.is_file()
                                 && let Ok(config) = std::fs::read_to_string(entry.path())
                                 && let Some(name) = entry.file_name().to_str()
                             {
-                                fs.write(user_path.join(name), config).await.ok();
+                                fs.write(format!("./.kiro/generators/agents/{}", name), config)
+                                    .await
+                                    .ok();
+                            }
+                        }
+                    }
+
+                    // Copy global manifests
+                    if let Ok(entries) = std::fs::read_dir("./.kiro/global/manifests") {
+                        fs.create_dir_all(user_path.join("manifests")).await.ok();
+                        for entry in entries.flatten() {
+                            if let Ok(file_type) = entry.file_type()
+                                && file_type.is_file()
+                                && let Ok(config) = std::fs::read_to_string(entry.path())
+                                && let Some(name) = entry.file_name().to_str()
+                            {
+                                fs.write(user_path.join("manifests").join(name), config)
+                                    .await
+                                    .ok();
+                            }
+                        }
+                    }
+
+                    // Copy global agents
+                    if let Ok(entries) = std::fs::read_dir("./.kiro/global/agents") {
+                        fs.create_dir_all(user_path.join("agents")).await.ok();
+                        for entry in entries.flatten() {
+                            if let Ok(file_type) = entry.file_type()
+                                && file_type.is_file()
+                                && let Ok(config) = std::fs::read_to_string(entry.path())
+                                && let Some(name) = entry.file_name().to_str()
+                            {
+                                fs.write(user_path.join("agents").join(name), config)
+                                    .await
+                                    .ok();
                             }
                         }
                     }

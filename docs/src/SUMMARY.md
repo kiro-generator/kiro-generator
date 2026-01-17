@@ -6,17 +6,11 @@
 
 # Configuration
 
-- [Config Files](config/files.md)
-- [Agent Declaration](config/agents.md)
+- [Directory Structure](config/structure.md)
+- [Manifests](config/manifests.md)
+- [Agent Definitions](config/agents.md)
 - [Inheritance](config/inheritance.md)
-- [Skeletons](config/skeletons.md)
-
-<!--# Examples
-
-- [Basic Agent](examples/basic.md)
-- [MCP Servers](examples/mcp.md)
-- [Tool Settings](examples/toolsettings.md)
-- [Hooks](examples/hooks.md)-->
+- [Templates](config/templates.md)
 
 # Reference
 

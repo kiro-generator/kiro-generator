@@ -4,7 +4,7 @@
 
 ## Why?
 
-Because managing config files via `JSON` is the second worse format. Obviously `YAML` files takes 1st prize
+Because managing config files via `JSON` is painful. `kg` lets you define agents in TOML with inheritance, templates, and composition.
 
 ## Prerequisites
 
@@ -13,15 +13,23 @@ Because managing config files via `JSON` is the second worse format. Obviously `
 
 ## Features
 
-### Config Hierarchy 
+### Composable Configuration
 
-KG provides a hierarchical configuration system that allows you to define and override settings at different levels. The schemas is mostly the same as `kiro-cli` JSON's format but defined as TOML, with a few added fields explained in [usage](./usage.md)
+Build agents from reusable templates. Define common settings once, inherit everywhere.
 
-### Agent Declaration
+### Hierarchical Structure
 
-By default Agents can be declared globally `~/.kiro/generators/kg.toml` or locally `.kiro/generators/kg.toml`. If both are present, the local configuration takes precedence, however both configurations are merged together. You can use `--local` argument to ignore global configuration.
+- **Global agents** (`~/.kiro/generators/`) - Available in all projects
+- **Local agents** (`.kiro/generators/`) - Project-specific overrides
 
+### Inheritance & Templates
 
-### Force Permissions 
+Create base agents with common tools and permissions. Extend them for specific use cases.
 
-You can override toolsettings permissions. For example, you can have your `default` agent deny executing `git push`, but override this for special use cases, see [inheritance](config/inheritance.md) and [usage](./usage.md) for more information.
+### Force Permissions
+
+Override permission restrictions in child agents. Ensure critical capabilities are always available.
+
+### Vendor Packages
+
+Share complete agent configurations (MCP servers + resources + permissions). See [VENDOR.md](https://github.com/CarteraMesh/kiro-generator/blob/main/VENDOR.md) for future plans.

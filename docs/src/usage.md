@@ -2,90 +2,110 @@
 
 ## Setup 
 
-1. Create global config file `~/.kiro/generators/kg.toml` 
+1. Create global config structure
 
-2. Add your first agent: 
+```bash
+kg init
+```
+
+This creates:
+```
+~/.kiro/generators/
+├── manifests/
+│   └── kg.toml
+└── agents/
+    └── default.toml
+```
+
+2. Add your first agent in `~/.kiro/generators/manifests/kg.toml`
 
 ```toml
 [agents]
-default = { inherits = [] } # `default` is the name of the agent
+default = { inherits = [] }
 ```
 
-3. Verify
+3. Configure the agent in `~/.kiro/generators/agents/default.toml`
 
+```toml
+description = "Default agent"
+allowedTools = ["read", "knowledge"]
+resources = ["file://README.md"]
 ```
+
+4. Verify
+
+```bash
 kg validate
 ```
 
-4. Generate
+5. Generate
 
-```shell
+```bash
 kg generate
 ```
 
-
 ## Inheritance
 
-`kg.toml` defined the relationship or inheritance of your agents. You can define the relationship between agents using the `inherit` field. For example, if you have an agent named `default` and another agent named `rust`, you can define the relationship between them as follows:
+`manifests/kg.toml` defines the relationship or inheritance of your agents. You can define the relationship between agents using the `inherits` field. For example, if you have an agent named `default` and another agent named `rust`, you can define the relationship between them as follows:
 
 ```toml
 [agents]
-default = { inherits = [] } # parent 
-rust = { inherits = ["default"] } # child
+default = { inherits = [] }
+rust = { inherits = ["default"] }
 ```
 
 `kg` will then look for agent configuration files in the following order:
 
-- `~/.kiro/generators/<agent-name>.toml`  # e.g. rust.toml
-- `.kiro/generators/<agent-name>.toml`  # e.g. rust.toml
+- `~/.kiro/generators/agents/rust.toml`
+- `.kiro/generators/agents/rust.toml`
 
 Both can be present and will be merged together.
 
 ### "Inline" Agent Configuration
 
-You can define agent properties "inline" using only `kg.toml` files: 
+You can define agent properties "inline" using only `manifests/kg.toml` files: 
 
 ```toml
 [agents.default]
 inherits = []
 allowedTools = ["read", "knowledge"]
 
-
 [agents.rust]
-inherits= ["default"]
-allowedTools = [ "@rustdocs", "@cargo" ]
+inherits = ["default"]
+allowedTools = ["@rustdocs", "@cargo"]
 ```
 
-In this example, the allowedTools field is inherited from the default agent, and the rust agent adds two additional tools: `@rustdocs` and `@cargo`.
+In this example, the `allowedTools` field is inherited from the `default` agent, and the `rust` agent adds two additional tools: `@rustdocs` and `@cargo`.
 
-### Skeletons 
+### Templates
 
-`Skeletons` are like agent templates. `kg` will skip generating agent `JSON` files. You can use them building blocks or components to derive other real agents.
+`Templates` are like agent templates. `kg` will skip generating agent `JSON` files. You can use them as building blocks or components to derive other real agents.
 
-`kg.toml`: 
+`manifests/kg.toml`: 
 
 ```toml
-
 [agents.default]
 inherits = ["git"]
 allowedTools = ["read", "knowledge"]
 
 [agents.git]
-skeleton = true # do not generate JSON agent config
-[toolsSettings.execute_bash]
-allowedCommands = ["git status .*", "git fetch .*", "git diff .*" , "git log .*"]
+template = true  # do not generate JSON agent config
+
+[agents.git.toolsSettings.shell]
+allowedCommands = ["git status .*", "git fetch .*", "git diff .*", "git log .*"]
 
 [agents.git-write]
-skeleton = true
-[toolsSettings.execute_bash]
+template = true
+
+[agents.git-write.toolsSettings.shell]
 allowedCommands = ["git .*"]
 
 [agents.rust]
 inherits = ["default"]
-allowedTools = [ "@rustdocs", "@cargo" ]
+allowedTools = ["@rustdocs", "@cargo"]
 
 [agents.dependabot]
-inherits = ["russt", "git-write"]
+inherits = ["rust", "git-write"]
 ```
 
 The `dependabot` agent will be able to use any git command.

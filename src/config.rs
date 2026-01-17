@@ -92,9 +92,9 @@ mod tests {
 
     #[test_log::test]
     fn test_agent_decoding() -> ConfigResult<()> {
-        let kdl_agents = include_str!("../data/test-decoding.toml");
+        let toml_agents = include_str!("../data/test-decoding.toml");
 
-        let config: GeneratorConfig = toml_parse(kdl_agents)?;
+        let config: GeneratorConfig = toml_parse(toml_agents)?;
         assert_eq!(config.agents.len(), 1);
         let agent = config.agents.get("test");
         assert!(agent.is_some());
@@ -154,12 +154,12 @@ mod tests {
 
     #[test_log::test]
     fn test_agent_empty() -> ConfigResult<()> {
-        let kdl_agents = r#"
+        let toml_agents = r#"
             [agents.test]
             template=true
         "#;
 
-        let config: GeneratorConfig = toml_parse(kdl_agents)?;
+        let config: GeneratorConfig = toml_parse(toml_agents)?;
         assert!(!format!("{config:?}").is_empty());
         assert_eq!(config.agents.len(), 1);
         let agent = config.agents.get("test").unwrap();

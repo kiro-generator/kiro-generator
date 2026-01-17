@@ -27,7 +27,7 @@ kg validate [OPTIONS]
 **Options:**
 - `--local` - Ignore global `~/.kiro/generators/` config
 - `--global` - Ignore local `.kiro/generators/` config
-- `--show-skeletons` - Include skeleton agents in output
+- `--show-templates` - Include template agents in output
 
 **Output:**
 
@@ -48,8 +48,8 @@ kg validate
 # Only validate local agents
 kg validate --local
 
-# Show skeletons in output
-kg validate --show-skeletons
+# Show templates in output
+kg validate --show-templates
 
 # JSON output for scripting
 kg validate --format json
@@ -66,7 +66,7 @@ kg generate [OPTIONS]
 **Options:**
 - `--local` - Ignore global config, only generate local agents
 - `--global` - Ignore local config, only generate global agents
-- `--show-skeletons` - Include skeleton agents in output
+- `--show-templates` - Include template agents in output
 
 **Output:**
 
@@ -74,7 +74,7 @@ Generates JSON files:
 - Global agents → `~/.kiro/agents/<agent-name>.json`
 - Local agents → `.kiro/agents/<agent-name>.json`
 
-Skeletons are never generated.
+Templates are never generated.
 
 **Examples:**
 

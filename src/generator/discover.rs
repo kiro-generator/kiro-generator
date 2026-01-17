@@ -4,6 +4,68 @@ use {
     std::{fmt::Display, ops::Deref, path::Path},
 };
 
+/// Load all TOML files from a manifests directory and merge them
+fn load_manifests(fs: &Fs, dir: impl AsRef<Path>) -> ConfigResult<GeneratorConfig> {
+    let dir_path = dir.as_ref();
+
+    if !fs.exists(dir_path) {
+        return Ok(GeneratorConfig::default());
+    }
+
+    let mut entries =
+        futures::executor::block_on(async { fs.read_dir(dir_path).await }).map_err(|e| {
+            crate::Error::Report(format!(
+                "Failed to read directory {}: {}",
+                dir_path.display(),
+                e
+            ))
+        })?;
+
+    let mut merged = GeneratorConfig::default();
+    let mut agent_files: Vec<PathBuf> = Vec::new();
+
+    // Collect all TOML files
+    loop {
+        let entry = futures::executor::block_on(async { entries.next_entry().await })
+            .map_err(|e| crate::Error::Report(format!("Failed to read directory entry: {}", e)))?;
+
+        match entry {
+            None => break,
+            Some(entry) => {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+                    agent_files.push(path);
+                }
+            }
+        }
+    }
+
+    // Sort for deterministic order
+    agent_files.sort();
+
+    for path in agent_files {
+        if let Some(config_result) = crate::config::toml_parse_path(fs, &path) {
+            let config: GeneratorConfig = config_result?;
+            let config = config.populate_names();
+
+            // Check for duplicate agent names
+            for name in config.agents.keys() {
+                if merged.agents.contains_key(name) {
+                    return Err(crate::Error::Report(format!(
+                        "Duplicate agent '{}' found in manifests directory",
+                        name
+                    )));
+                }
+            }
+
+            merged.agents.extend(config.agents);
+        }
+    }
+
+    Ok(merged)
+}
+
+#[cfg(test)]
 pub fn load_inline(fs: &Fs, path: impl AsRef<Path>) -> ConfigResult<GeneratorConfig> {
     let doc: Option<ConfigResult<GeneratorConfig>> = crate::config::toml_parse_path(fs, path);
     match doc {
@@ -22,7 +84,7 @@ fn process_local(
     inline: Option<&KgAgent>,
     sources: &mut Vec<KdlAgentSource>,
 ) -> ConfigResult<KgAgent> {
-    let local_agent_path = location.local(&name);
+    let local_agent_path = location.local_agent(&name);
     let result = KgAgent::from_path(fs, &name, &local_agent_path);
     match result {
         None => Ok(KgAgent::new(name.as_ref().to_string())),
@@ -74,10 +136,10 @@ impl Display for ResolvedAgents {
 ///
 /// merge agent config from lowest precedence to higher precedence:
 /// ```text
-/// * `~/.kiro/generators/<agent-name>.kdl`
-/// * `~/.kiro/generators/kg.kdl`
-/// * `.kiro/generators/<agent-name>.kdl`
-/// * `.kiro/generators/kg.kdl`
+/// * `~/.kiro/generators/agents/<agent-name>.toml`
+/// * `~/.kiro/generators/manifests/*.toml`
+/// * `.kiro/generators/agents/<agent-name>.toml`
+/// * `.kiro/generators/manifests/*.toml`
 /// ```
 #[tracing::instrument(level = "info")]
 pub fn discover(
@@ -89,10 +151,12 @@ pub fn discover(
         .is_valid(fs)
         .map_err(|e| crate::Error::Report(e.to_string()))?;
 
-    let global_path = location.global_kg();
-    let local_path = location.local_kg();
-    let global_agents: GeneratorConfig = load_inline(fs, global_path)?;
-    let local_agents: GeneratorConfig = load_inline(fs, local_path)?;
+    let global_manifests_dir = location.global_manifests_dir();
+    let local_manifests_dir = location.local_manifests_dir();
+
+    let global_agents: GeneratorConfig = load_manifests(fs, global_manifests_dir)?;
+    let local_agents: GeneratorConfig = load_manifests(fs, local_manifests_dir)?;
+
     tracing::debug!("found {} local agents", local_agents.agents.len());
 
     let local_names: HashSet<String> =
@@ -127,21 +191,23 @@ pub fn discover(
                     agent_sources.push(KdlAgentSource::GlobalInline);
                     result = result.merge(a.clone());
                 }
-                let maybe_global_file = KgAgent::from_path(fs, name, location.global(name));
+                let maybe_global_file = KgAgent::from_path(fs, name, location.global_agent(name));
                 if let Some(global) = maybe_global_file {
-                    agent_sources.push(KdlAgentSource::GlobalFile(location.global(name)));
+                    agent_sources.push(KdlAgentSource::GlobalFile(location.global_agent(name)));
                     result = result.merge(global?);
                 }
                 resolved_agents.insert(name.to_string(), result);
             }
             ConfigLocation::Global(_) => {
-                let mut global_file = match KgAgent::from_path(fs, name, location.global(name)) {
-                    None => KgAgent::new(name.to_string()),
-                    Some(a) => {
-                        agent_sources.push(KdlAgentSource::GlobalFile(location.global(name)));
-                        a?
-                    }
-                };
+                let mut global_file =
+                    match KgAgent::from_path(fs, name, location.global_agent(name)) {
+                        None => KgAgent::new(name.to_string()),
+                        Some(a) => {
+                            agent_sources
+                                .push(KdlAgentSource::GlobalFile(location.global_agent(name)));
+                            a?
+                        }
+                    };
                 if let Some(inline) = global_agents.get(name) {
                     agent_sources.push(KdlAgentSource::GlobalInline);
                     global_file = global_file.merge(inline.clone());
@@ -172,7 +238,7 @@ mod tests {
 
     #[tokio::test]
     #[test_log::test]
-    async fn test_discover_local_agents_kdl() -> Result<()> {
+    async fn test_discover_local_agents_toml() -> Result<()> {
         let fs = Fs::new();
         let resolved = discover(
             &fs,
@@ -211,7 +277,7 @@ mod tests {
 
     #[tokio::test]
     #[test_log::test]
-    async fn test_discover_global_agents_kdl() -> Result<()> {
+    async fn test_discover_global_agents_toml() -> Result<()> {
         let fs = Fs::new();
         let g_path = PathBuf::from(ACTIVE_USER_HOME)
             .join(".kiro")
@@ -242,14 +308,17 @@ mod tests {
         let fs = Fs::new();
         let e = load_inline(
             &fs,
-            PathBuf::from(".kiro").join("generators").join("bad.toml"),
+            PathBuf::from(".kiro")
+                .join("generators")
+                .join("agents")
+                .join("bad.toml"),
         );
         assert!(e.is_err());
     }
 
     #[tokio::test]
     #[test_log::test]
-    async fn test_discover_both_agents_kdl() -> Result<()> {
+    async fn test_discover_both_agents_toml() -> Result<()> {
         let fs = Fs::new();
         let g_path = PathBuf::from(ACTIVE_USER_HOME)
             .join(".kiro")
