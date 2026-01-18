@@ -10,6 +10,16 @@ pub enum Error {
     FileIoError(#[from] std::io::Error),
     #[error("Invalid syntax in file {0}")]
     FileDeserializeError(String),
+    #[error("Duplicate agent '{name}' found in {scope}:\n  - {first}\n  - {second}")]
+    DuplicateAgent {
+        name: String,
+        scope: String,
+        first: String,
+        second: String,
+    },
     #[error("error report {0}")]
     Report(String),
+
+    #[error("Directory {0} has too many files or directories")]
+    MaxEntities(String),
 }

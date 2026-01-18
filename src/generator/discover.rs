@@ -84,20 +84,37 @@ fn process_local(
     inline: Option<&KgAgent>,
     sources: &mut Vec<KdlAgentSource>,
 ) -> ConfigResult<KgAgent> {
-    let local_agent_path = location.local_agent(&name);
-    let result = KgAgent::from_path(fs, &name, &local_agent_path);
-    match result {
-        None => Ok(KgAgent::new(name.as_ref().to_string())),
-        Some(a) => {
-            let agent = a?;
-            sources.push(KdlAgentSource::LocalFile(local_agent_path));
+    let local_agent_path = location.local_agent(fs, &name)?;
+
+    match &local_agent_path {
+        None => {
             if let Some(i) = inline {
                 sources.push(KdlAgentSource::LocalInline);
-                Ok(agent.merge(i.clone()))
+                Ok(KgAgent::new(name.as_ref().to_string()).merge(i.clone()))
             } else {
-                Ok(agent)
+                Ok(KgAgent::new(name.as_ref().to_string()))
             }
         }
+        Some(path) => match KgAgent::from_path(fs, &name, path) {
+            None => {
+                if let Some(i) = inline {
+                    sources.push(KdlAgentSource::LocalInline);
+                    Ok(KgAgent::new(name.as_ref().to_string()).merge(i.clone()))
+                } else {
+                    Ok(KgAgent::new(name.as_ref().to_string()))
+                }
+            }
+            Some(a) => {
+                let agent = a?;
+                sources.push(KdlAgentSource::LocalFile(path.clone()));
+                if let Some(i) = inline {
+                    sources.push(KdlAgentSource::LocalInline);
+                    Ok(agent.merge(i.clone()))
+                } else {
+                    Ok(agent)
+                }
+            }
+        },
     }
 }
 
@@ -147,9 +164,8 @@ pub fn discover(
     location: &ConfigLocation,
     format: &crate::output::OutputFormat,
 ) -> ConfigResult<ResolvedAgents> {
-    location
-        .is_valid(fs)
-        .map_err(|e| crate::Error::Report(e.to_string()))?;
+    // Validate no duplicate agent names
+    location.validate(fs, MAX_AGENT_DIR_ENTRIES)?;
 
     let global_manifests_dir = location.global_manifests_dir();
     let local_manifests_dir = location.local_manifests_dir();
@@ -191,23 +207,22 @@ pub fn discover(
                     agent_sources.push(KdlAgentSource::GlobalInline);
                     result = result.merge(a.clone());
                 }
-                let maybe_global_file = KgAgent::from_path(fs, name, location.global_agent(name));
-                if let Some(global) = maybe_global_file {
-                    agent_sources.push(KdlAgentSource::GlobalFile(location.global_agent(name)));
+                if let Some(global_path) = location.global_agent(fs, name)?
+                    && let Some(global) = KgAgent::from_path(fs, name, &global_path)
+                {
+                    agent_sources.push(KdlAgentSource::GlobalFile(global_path));
                     result = result.merge(global?);
                 }
                 resolved_agents.insert(name.to_string(), result);
             }
             ConfigLocation::Global(_) => {
-                let mut global_file =
-                    match KgAgent::from_path(fs, name, location.global_agent(name)) {
-                        None => KgAgent::new(name.to_string()),
-                        Some(a) => {
-                            agent_sources
-                                .push(KdlAgentSource::GlobalFile(location.global_agent(name)));
-                            a?
-                        }
-                    };
+                let mut global_file = KgAgent::new(name.to_string());
+                if let Some(global_path) = location.global_agent(fs, name)?
+                    && let Some(agent) = KgAgent::from_path(fs, name, &global_path)
+                {
+                    agent_sources.push(KdlAgentSource::GlobalFile(global_path));
+                    global_file = agent?;
+                }
                 if let Some(inline) = global_agents.get(name) {
                     agent_sources.push(KdlAgentSource::GlobalInline);
                     global_file = global_file.merge(inline.clone());
@@ -248,7 +263,7 @@ mod tests {
         let agents = resolved.agents;
         let sources = resolved.sources;
         assert!(!agents.is_empty());
-        assert_eq!(sources.keys().len(), 4);
+        assert_eq!(sources.keys().len(), 7);
         assert!(sources.contains_key("base"));
         assert!(sources.contains_key("aws-test"));
         assert!(sources.contains_key("dependabot"));
@@ -329,14 +344,14 @@ mod tests {
             &crate::output::OutputFormat::Table(true),
         )?;
 
-        assert_eq!(resolved.len(), 4);
+        assert_eq!(resolved.len(), 7);
 
         for (n, agent_sources) in resolved.sources.iter() {
             if n == "aws-test" {
                 assert_eq!(agent_sources.len(), 4);
             } else if n == "empty" {
                 assert_eq!(agent_sources.len(), 2);
-            } else {
+            } else if n == "default" {
                 assert_eq!(agent_sources.len(), 3);
             }
         }

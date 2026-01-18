@@ -18,8 +18,8 @@ Agents can inherit from multiple parents:
 
 ```toml
 [agents]
-git-base = { skeleton = true }
-rust-base = { skeleton = true }
+git-base = { template = true }
+rust-base = { template = true }
 rust-dev = { inherits = ["git-base", "rust-base"] }
 ```
 
@@ -115,7 +115,7 @@ Force specific shell commands to be allowed:
 
 ```toml
 [agents.git-pusher]
-skeleton = true
+template = true
 [agents.git-pusher.toolsSettings.shell]
 forceAllowedCommands = ["git commit .*", "git push .*"]
 ```
@@ -137,7 +137,7 @@ Force specific paths to be readable or writable:
 
 ```toml
 [agents.cargo-editor]
-skeleton = true
+template = true
 [agents.cargo-editor.toolsSettings.read]
 forceAllowedPaths = [".*Cargo.toml.*"]
 [agents.cargo-editor.toolsSettings.write]

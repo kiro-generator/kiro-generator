@@ -270,6 +270,64 @@ When reviewing error handling:
 
 Runtime Performance  is **NOT** critical or important. This CLI will rarely be executed, it is far **MORE** important that the code is clean, maintainable and **SIMPLE** at the cost of performance.
 
+## Testing with the Fs Module
+
+This project uses a custom `Fs` enum (in `src/os/fs/mod.rs`) that provides filesystem abstraction with special behavior during tests.
+
+### Fs Behavior
+
+**Production (`cfg!(not(test))`):**
+- `Fs::Real` - Uses the actual filesystem directly
+
+**Tests (`cfg!(test)`):**
+- `Fs::Chroot(Arc<TempDir>)` - Creates an isolated temporary directory that acts as the filesystem root
+- All file operations are scoped to this temporary directory
+- Tests run in complete isolation without affecting the real filesystem
+
+### Test Environment Setup
+
+When `Fs::new()` is called during tests, it automatically:
+
+1. Creates a temporary directory (via `tempfile::tempdir()`)
+2. Sets up the test user home at `$TEMP/home/testuser` (defined by `ACTIVE_USER_HOME`)
+3. Creates standard directories:
+   - `~/.kiro/generators/manifests/`
+   - `~/.kiro/generators/agents/`
+   - `./.kiro/generators/manifests/`
+   - `./.kiro/generators/agents/`
+4. Copies test fixtures from the real filesystem:
+   - `./.kiro/generators/` → test chroot `./.kiro/generators/`
+   - `./.kiro/global/` → test chroot `~/.kiro/generators/`
+
+### Writing Tests
+
+**Use `Fs::new()` in every test:**
+```rust
+#[tokio::test]
+async fn test_something() -> Result<()> {
+    let fs = Fs::new();  // Creates isolated test environment
+    
+    // All fs operations are scoped to the temp directory
+    fs.write("test.toml", b"content").await?;
+    
+    Ok(())
+}
+```
+
+**Path behavior in tests:**
+- Absolute paths like `/etc/config` → `$TEMP/etc/config`
+- Home paths like `~/.kiro/` → `$TEMP/home/testuser/.kiro/`
+- Relative paths like `./.kiro/` → `$TEMP/.kiro/`
+
+**Test fixtures:**
+- Place global test data in `./.kiro/global/` (copied to `~/.kiro/generators/` in tests)
+- Place local test data in `./.kiro/generators/` (copied to test chroot)
+
+**Key points:**
+- Each test gets a fresh temporary directory (no state leakage between tests)
+- Tests never touch the real filesystem
+- The temp directory is automatically cleaned up after the test
+- Use `#[tokio::test]` for async tests that use `Fs`
 
 ## Further Documentation 
 

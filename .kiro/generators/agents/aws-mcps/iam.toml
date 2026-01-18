@@ -1,0 +1,6 @@
+description = "AWS IAM MCP Server agent"
+allowedTools = ["@aws-iam"]
+
+[mcpServers.aws-iam]
+command = "uvx"
+args = ["awslabs.aws-iam-mcp-server@latest"]

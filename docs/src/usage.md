@@ -44,9 +44,9 @@ kg validate
 kg generate
 ```
 
-## Inheritance
+## Manifests
 
-`manifests/kg.toml` defines the relationship or inheritance of your agents. You can define the relationship between agents using the `inherits` field. For example, if you have an agent named `default` and another agent named `rust`, you can define the relationship between them as follows:
+`manifests/*.toml` files define the relationship or inheritance of your agents. You can define the relationship between agents using the `inherits` field. For example, if you have an agent named `default` and another agent named `rust`, you can define the relationship between them as follows:
 
 ```toml
 [agents]
@@ -63,7 +63,7 @@ Both can be present and will be merged together.
 
 ### "Inline" Agent Configuration
 
-You can define agent properties "inline" using only `manifests/kg.toml` files: 
+You can define agent properties "inline" in manifest files: 
 
 ```toml
 [agents.default]

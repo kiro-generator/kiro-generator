@@ -509,6 +509,17 @@ impl Fs {
             Self::Fake(_) => panic!("unimplemented"),
         }
     }
+
+    /// Returns an iterator over the entries within a directory (synchronous).
+    ///
+    /// This is a proxy to [`std::fs::read_dir`].
+    pub fn read_dir_sync(&self, path: impl AsRef<Path>) -> Result<std::fs::ReadDir, io::Error> {
+        match self {
+            Self::Real => std::fs::read_dir(path),
+            Self::Chroot(root) => std::fs::read_dir(append(root.path(), path)),
+            Self::Fake(_) => panic!("unimplemented"),
+        }
+    }
 }
 
 #[cfg(test)]

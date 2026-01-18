@@ -27,7 +27,7 @@ Contains agent declarations and inheritance relationships.
 
 **Purpose:** Define which agents exist and how they relate to each other.
 
-**Files:** TOML files (typically `kg.toml`, but can be multiple files)
+**Files:** TOML files (any `.toml` file in the directory - commonly named `kg.toml`, but you can use multiple files like `aws.toml`, `dev-tools.toml`, etc.)
 
 **Example:**
 ```toml

@@ -12,6 +12,10 @@
 - [Inheritance](config/inheritance.md)
 - [Templates](config/templates.md)
 
+# Advanced
+
+- [Organizing Agents](advanced/organizing.md)
+
 # Reference
 
 - [CLI Commands](reference/cli.md)

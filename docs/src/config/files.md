@@ -7,17 +7,17 @@ kg uses a hierarchical TOML-based configuration system. Configuration can be def
 Configuration is loaded in order from least to most precedence:
 
 1. `~/.kiro/generators/[agent-name].toml` - Global agent config
-2. `~/.kiro/generators/kg.toml` - Global agent declarations
+2. `~/.kiro/generators/manifests/*.toml` - Global agent declarations (all `.toml` files)
 3. `.kiro/generators/[agent-name].toml` - Local agent config
-4. `.kiro/generators/kg.toml` - Local agent declarations
+4. `.kiro/generators/manifests/*.toml` - Local agent declarations (all `.toml` files)
 
 Local settings override global settings. Both are merged together unless you use `--local` to ignore global config.
 
 ## File Types
 
-### kg.toml
+### Manifest Files
 
-The main configuration file that declares agents and their relationships.
+The main configuration files that declare agents and their relationships. Any `.toml` file in the `manifests/` directory is loaded (commonly `kg.toml`, but can be `aws.toml`, `dev.toml`, etc.).
 
 ```toml
 [agents]

@@ -1,0 +1,6 @@
+description = "AWS EKS MCP Server agent"
+allowedTools = ["@aws-eks"]
+
+[mcpServers.aws-eks]
+command = "uvx"
+args = ["awslabs.aws-eks-mcp-server@latest"]

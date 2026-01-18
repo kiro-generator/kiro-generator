@@ -8,6 +8,8 @@ Manifests answer: "What agents exist and how do they relate to each other?"
 
 They don't contain the actual configuration - that's in `agents/`. Think of manifests as the index or table of contents.
 
+**Note:** Any `.toml` file in the `manifests/` directory is loaded. The name doesn't matter - use `kg.toml`, `aws.toml`, `dev.toml`, etc.
+
 ## Location
 
 - **Global:** `~/.kiro/generators/manifests/*.toml`

@@ -2,6 +2,9 @@
 base = { template = true }
 empty = {  }
 dependabot = { inherits = ["aws-test"] }
+iam = { template = true }
+eks = { template = true }
+aws-secops = { inherits = ["base", "iam", "eks"] }
 
 [agents.aws-test]
 inherits = ["base"]

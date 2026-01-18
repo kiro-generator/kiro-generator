@@ -85,7 +85,7 @@ mod tests {
         )?;
 
         let merged = generator.merge()?;
-        assert_eq!(merged.len(), 4);
+        assert_eq!(merged.len(), 7);
 
         // Find dependabot agent
         let dependabot = merged
