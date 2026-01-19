@@ -100,7 +100,7 @@ mod tests {
         assert!(agent.is_some());
         let agent = agent.unwrap().clone();
         assert!(agent.model.is_none());
-        assert!(!agent.is_template());
+        assert!(!agent.template);
         let inherits = &agent.inherits;
         assert_eq!(inherits.len(), 1);
         assert_eq!(inherits.iter().next().unwrap(), "parent");
@@ -137,7 +137,7 @@ mod tests {
         let aws_docs = mcp.get("awsdocs").unwrap();
         assert_eq!(aws_docs.command, "aws-docs");
         assert_eq!(aws_docs.args, vec!["--verbose", "--config=/path"]);
-        assert!(!aws_docs.disabled.unwrap_or_default());
+        assert!(!aws_docs.disabled);
         assert_eq!(aws_docs.headers.len(), 1);
         assert_eq!(aws_docs.env.len(), 2);
         assert_eq!(aws_docs.timeout, Some(5000));
@@ -164,7 +164,7 @@ mod tests {
         assert_eq!(config.agents.len(), 1);
         let agent = config.agents.get("test").unwrap();
         assert!(agent.model.is_none());
-        assert!(agent.is_template());
+        assert!(agent.template);
 
         Ok(())
     }

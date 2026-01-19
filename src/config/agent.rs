@@ -13,7 +13,12 @@ use {
 pub struct KgAgent {
     #[facet(default)]
     pub name: String,
-    pub template: Option<bool>,
+    /// Whether this agent is a template. Templates are not written to disk
+    /// and serve only as parent configurations for other agents to inherit
+    /// from. Template status is NEVER inherited - it must be explicitly
+    /// declared.
+    #[facet(default)]
+    pub template: bool,
     pub description: Option<String>,
     #[facet(default)]
     pub inherits: HashSet<String>,
@@ -68,10 +73,6 @@ impl KgAgent {
                 .or_insert(vec![h.clone()]);
         }
         result
-    }
-
-    pub fn is_template(&self) -> bool {
-        self.template.is_some_and(|f| f)
     }
 
     pub fn get_tool_aws(&self) -> &AwsTool {

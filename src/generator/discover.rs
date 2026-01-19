@@ -95,26 +95,29 @@ fn process_local(
                 Ok(KgAgent::new(name.as_ref().to_string()))
             }
         }
-        Some(path) => match KgAgent::from_path(fs, &name, path) {
-            None => {
-                if let Some(i) = inline {
-                    sources.push(KdlAgentSource::LocalInline);
-                    Ok(KgAgent::new(name.as_ref().to_string()).merge(i.clone()))
-                } else {
-                    Ok(KgAgent::new(name.as_ref().to_string()))
+        Some(path) => {
+            // Template status is only defined in manifests, passed via inline config
+            match KgAgent::from_path(fs, &name, path, inline.is_some_and(|i| i.template)) {
+                None => {
+                    if let Some(i) = inline {
+                        sources.push(KdlAgentSource::LocalInline);
+                        Ok(KgAgent::new(name.as_ref().to_string()).merge(i.clone()))
+                    } else {
+                        Ok(KgAgent::new(name.as_ref().to_string()))
+                    }
+                }
+                Some(a) => {
+                    let agent = a?;
+                    sources.push(KdlAgentSource::LocalFile(path.clone()));
+                    if let Some(i) = inline {
+                        sources.push(KdlAgentSource::LocalInline);
+                        Ok(agent.merge(i.clone()))
+                    } else {
+                        Ok(agent)
+                    }
                 }
             }
-            Some(a) => {
-                let agent = a?;
-                sources.push(KdlAgentSource::LocalFile(path.clone()));
-                if let Some(i) = inline {
-                    sources.push(KdlAgentSource::LocalInline);
-                    Ok(agent.merge(i.clone()))
-                } else {
-                    Ok(agent)
-                }
-            }
-        },
+        }
     }
 }
 
@@ -208,7 +211,12 @@ pub fn discover(
                     result = result.merge(a.clone());
                 }
                 if let Some(global_path) = location.global_agent(fs, name)?
-                    && let Some(global) = KgAgent::from_path(fs, name, &global_path)
+                    && let Some(global) = KgAgent::from_path(
+                        fs,
+                        name,
+                        &global_path,
+                        global_agents.get(name).is_some_and(|a| a.template),
+                    )
                 {
                     agent_sources.push(KdlAgentSource::GlobalFile(global_path));
                     result = result.merge(global?);
@@ -218,7 +226,12 @@ pub fn discover(
             ConfigLocation::Global(_) => {
                 let mut global_file = KgAgent::new(name.to_string());
                 if let Some(global_path) = location.global_agent(fs, name)?
-                    && let Some(agent) = KgAgent::from_path(fs, name, &global_path)
+                    && let Some(agent) = KgAgent::from_path(
+                        fs,
+                        name,
+                        &global_path,
+                        global_agents.get(name).is_some_and(|a| a.template),
+                    )
                 {
                     agent_sources.push(KdlAgentSource::GlobalFile(global_path));
                     global_file = agent?;
@@ -358,6 +371,27 @@ mod tests {
 
         assert!(!format!("{resolved}").is_empty());
         assert!(!format!("{resolved:?}").is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_template_not_inherited() -> Result<()> {
+        let fs = Fs::new();
+        let resolved = discover(
+            &fs,
+            &ConfigLocation::Local,
+            &crate::output::OutputFormat::Table(true),
+        )?;
+
+        // base is a template
+        let base = resolved.agents.get("base").unwrap();
+        assert!(base.template);
+
+        // aws-test inherits from base but is NOT a template
+        let aws_test = resolved.agents.get("aws-test").unwrap();
+        assert!(!aws_test.template);
+
         Ok(())
     }
 }

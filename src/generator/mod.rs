@@ -35,7 +35,7 @@ pub struct AgentResult {
 
 impl AgentResult {
     pub fn is_template(&self) -> bool {
-        self.agent.is_template()
+        self.agent.template
     }
 
     pub fn force_allow(&self, target: &ToolTarget) -> Vec<String> {
@@ -150,7 +150,7 @@ impl Generator {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
             kiro_agent: Agent::try_from(&agent)?,
-            writable: !agent.is_template(),
+            writable: !agent.template,
             destination,
             agent,
         };

@@ -43,21 +43,28 @@ impl KgAgent {
         fs: &Fs,
         name: impl AsRef<str>,
         path: impl AsRef<Path>,
+        template: bool,
     ) -> Option<ConfigResult<Self>> {
         if let Some(result) = super::toml_parse_path::<KgAgentFileDoc>(fs, path) {
             match result {
                 Err(e) => return Some(Err(e)),
-                Ok(file_source) => return Some(Ok(Self::from_file_source(name, file_source))),
+                Ok(file_source) => {
+                    return Some(Ok(Self::from_file_source(name, file_source, template)));
+                }
             }
         };
         None
     }
 
-    pub fn from_file_source(name: impl AsRef<str>, file_source: KgAgentFileDoc) -> Self {
+    pub fn from_file_source(
+        name: impl AsRef<str>,
+        file_source: KgAgentFileDoc,
+        template: bool,
+    ) -> Self {
         Self {
             name: name.as_ref().to_string(),
             description: file_source.description,
-            template: None,
+            template,
             inherits: Default::default(),
             prompt: file_source.prompt,
             resources: file_source.resources,

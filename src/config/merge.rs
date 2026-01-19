@@ -4,7 +4,7 @@ impl KgAgent {
     pub fn merge(mut self, other: KgAgent) -> Self {
         // Child wins for explicit values
         self.include_mcp_json = self.include_mcp_json.or(other.include_mcp_json);
-        self.template = self.template.or(other.template);
+        // template is never merged - only the original declaration matters
         self.description = self.description.or(other.description);
         self.prompt = self.prompt.or(other.prompt);
         self.model = self.model.or(other.model);
@@ -65,14 +65,14 @@ mod tests {
         let parent = parent.unwrap().clone();
         assert!(!child.tools.is_empty());
         assert!(!parent.tools.is_empty());
-        assert!(parent.is_template());
+        assert!(parent.template);
         let merged = child.merge(parent);
         assert!(merged.description.is_some());
         let d = merged.description.clone().unwrap();
         assert_eq!(d, "I am a child");
 
         assert_eq!(merged.resources.len(), 3);
-        assert!(!merged.is_template());
+        assert!(!merged.template);
         assert!(merged.include_mcp_json.unwrap_or_default());
 
         assert_eq!(merged.inherits.len(), 1);

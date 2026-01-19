@@ -23,14 +23,14 @@ pub struct CustomToolConfig {
     pub timeout: Option<u64>,
     /// A boolean flag to denote whether or not to load this mcp server
     #[facet(default)]
-    pub disabled: Option<bool>,
+    pub disabled: bool,
 }
 
 impl CustomToolConfig {
     pub fn merge(mut self, other: Self) -> Self {
         // Child wins for explicit values
         self.timeout = self.timeout.or(other.timeout);
-        self.disabled = self.disabled.or(other.disabled);
+        self.disabled = self.disabled || other.disabled;
 
         if self.url.is_empty() {
             self.url = other.url;
@@ -143,7 +143,7 @@ timeout  =1000
         assert!(doc.mcp_servers.contains_key("tool"));
         let mcp = doc.mcp_servers.get("tool").unwrap();
         assert_eq!(mcp.args, vec!["--verbose", "--output=json"]);
-        assert!(mcp.disabled.unwrap_or_default());
+        assert!(mcp.disabled);
         Ok(())
     }
 
