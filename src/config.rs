@@ -1,15 +1,16 @@
 mod agent;
 mod agent_file;
+mod knowledge;
 mod merge;
 mod native;
 
-pub use agent::KgAgent;
 use {
     crate::Fs,
     facet::Facet,
     facet_toml as toml,
     std::{collections::HashMap, fmt::Debug, path::Path},
 };
+pub use {agent::KgAgent, knowledge::Knowledge};
 
 pub(crate) type ConfigResult<T> = crate::Result<T>;
 

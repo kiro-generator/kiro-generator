@@ -7,6 +7,10 @@ resources = ["file://parent.md", "file://README.md"]
 tools = ["web_search", "shell"]
 allowedTools = ["write"]
 
+[agents.parent.knowledge.docs]
+source = "file://./parent-docs"
+description = "Parent documentation"
+
 [agents.parent.toolAliases]
 execute_bash = "shell"
 fs_read = "read"
@@ -51,6 +55,13 @@ description = "I am a child"
 resources = ["file://child.md", "file://README.md"]
 inherits = ["parent"]
 tools = ["@awsdocs", "shell"]
+
+[agents.child.knowledge.docs]
+indexType = "best"
+
+[agents.child.knowledge.api]
+source = "file://./api-docs"
+description = "API documentation"
 
 [agents.child.toolAliases]
 execute_bash = "shell"

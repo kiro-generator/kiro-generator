@@ -39,6 +39,22 @@ impl KgAgent {
             self.resources.extend(other.resources);
         }
 
+        if !other.knowledge.is_empty() {
+            tracing::trace!(count = other.knowledge.len(), "knowledge: merging");
+            for (key, other_kb) in other.knowledge {
+                self.knowledge
+                    .entry(key.clone())
+                    .and_modify(|self_kb| {
+                        tracing::trace!(name = %key, "knowledge: merged");
+                        *self_kb = self_kb.clone().merge(other_kb.clone());
+                    })
+                    .or_insert_with(|| {
+                        tracing::trace!(name = %key, "knowledge: inserted");
+                        other_kb
+                    });
+            }
+        }
+
         if !other.tools.is_empty() {
             tracing::trace!(count = other.tools.len(), "tools: extended");
             self.tools.extend(other.tools);
@@ -186,6 +202,21 @@ mod tests {
         let tool = merged.get_tool_aws();
         assert!(tool.allows.is_empty());
         assert!(tool.denies.is_empty());
+
+        // Knowledge merge tests
+        assert_eq!(merged.knowledge.len(), 2);
+        let docs = merged.knowledge.get("docs");
+        assert!(docs.is_some());
+        let docs = docs.unwrap();
+        assert_eq!(docs.source, Some("file://./parent-docs".to_string()));
+        assert_eq!(docs.description, Some("Parent documentation".to_string()));
+        assert_eq!(docs.index_type, Some("best".to_string()));
+
+        let api = merged.knowledge.get("api");
+        assert!(api.is_some());
+        let api = api.unwrap();
+        assert_eq!(api.source, Some("file://./api-docs".to_string()));
+        assert_eq!(api.description, Some("API documentation".to_string()));
 
         assert_eq!("", format!("{merged}"));
         assert_eq!("", format!("{merged:?}"));

@@ -3,7 +3,7 @@ use {
     crate::{
         Fs,
         agent::{CustomToolConfig, Hook},
-        config::{ConfigResult, native::NativeTools},
+        config::{ConfigResult, Knowledge, native::NativeTools},
     },
     facet::Facet,
     std::{
@@ -19,6 +19,8 @@ pub struct KgAgentFileDoc {
     pub prompt: Option<String>,
     #[facet(default)]
     pub resources: HashSet<String>,
+    #[facet(default)]
+    pub knowledge: HashMap<String, Knowledge>,
     #[facet(default, rename = "includeMcpJson")]
     pub include_mcp_json: Option<bool>,
     #[facet(default)]
@@ -68,6 +70,7 @@ impl KgAgent {
             inherits: Default::default(),
             prompt: file_source.prompt,
             resources: file_source.resources,
+            knowledge: file_source.knowledge,
             include_mcp_json: file_source.include_mcp_json,
             tools: file_source.tools,
             allowed_tools: file_source.allowed_tools,

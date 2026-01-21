@@ -41,8 +41,8 @@ pub struct Agent {
     #[facet(default, rename = "allowedTools", skip_serializing_if = HashSet::is_empty)]
     pub allowed_tools: HashSet<String>,
     /// Files to include in the agent's context
-    #[facet(default, skip_serializing_if = HashSet::is_empty)]
-    pub resources: HashSet<String>,
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub resources: Vec<facet_value::Value>,
     /// Commands to run when a chat session is created
     #[facet(default, skip_serializing_if = HashMap::is_empty)]
     pub hooks: HashMap<String, Vec<AgentHook>>,
@@ -116,7 +116,7 @@ impl TryFrom<&KgAgent> for Agent {
         let default_agent = Self::default();
         let tools = value.tools.clone();
         let allowed_tools = value.allowed_tools.clone();
-        let resources: HashSet<String> = value.resources.clone();
+        let resources = value.resources()?;
 
         let extra_tool_settings = value.tool_settings.clone();
         tools_settings.extend(extra_tool_settings);
@@ -170,9 +170,10 @@ impl Default for Agent {
                 set
             },
             resources: {
-                let mut resources = HashSet::new();
-                resources.extend(DEFAULT_AGENT_RESOURCES.iter().map(|&s| s.into()));
-                //                resources.insert(format!("file://{}", RULES_PATTERN).into());
+                let mut resources = Vec::new();
+                for r in DEFAULT_AGENT_RESOURCES {
+                    resources.push(facet_value::Value::from(*r));
+                }
                 resources
             },
             hooks: Default::default(),

@@ -266,6 +266,48 @@ When reviewing error handling:
 8. Do network/IO errors guide users toward resolution?
 
 
+## Serialization with facet
+
+This project uses [facet](https://facet.rs) for (de)serialization instead of serde. Facet provides reflection for Rust types with compile-time shape information.
+
+### Key Differences from serde
+
+**Derive macro:**
+```rust
+use facet::Facet;
+
+#[derive(Facet, Clone, Default)]
+#[facet(default, deny_unknown_fields)]
+pub struct MyStruct {
+    #[facet(default)]
+    pub field: String,
+    #[facet(rename = "camelCase")]
+    pub some_field: Option<String>,
+}
+```
+
+**Common attributes:**
+- `#[facet(default)]` - Use Default::default() for missing fields
+- `#[facet(default = expr)]` - Custom default value
+- `#[facet(rename = "name")]` - Rename field in serialized form
+- `#[facet(rename_all = "camelCase")]` - Rename all fields (struct-level)
+- `#[facet(deny_unknown_fields)]` - Error on unknown fields during deserialization
+- `#[facet(skip)]` - Skip field during serialization/deserialization
+- `#[facet(skip_serializing_if = "Option::is_none")]` - Conditional skip
+
+**Format crates:**
+- `facet-toml` - TOML support (used in this project)
+- `facet-json` - JSON support (used for agent output)
+- `facet-value` - Dynamic value type
+
+**No untagged enum support:**
+Facet does not support serde's `#[serde(untagged)]` for enums. For dual-type fields (like `resources` which can be String or Knowledge object), handle this at the application level by using separate fields or custom parsing logic.
+
+### References
+- [facet.rs guide](https://facet.rs/guide/getting-started/)
+- [facet attributes reference](https://facet.rs/reference/attributes/)
+- [docs.rs/facet](https://docs.rs/facet/latest/facet/)
+
 ## Performance
 
 Runtime Performance  is **NOT** critical or important. This CLI will rarely be executed, it is far **MORE** important that the code is clean, maintainable and **SIMPLE** at the cost of performance.
