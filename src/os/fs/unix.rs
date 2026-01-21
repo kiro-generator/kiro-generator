@@ -23,16 +23,6 @@ pub(super) fn append(a: impl AsRef<Path>, b: impl AsRef<Path>) -> PathBuf {
         .join(PathBuf::from(OsString::from_vec(b.to_vec())))
 }
 
-/// Creates a new symbolic link on the filesystem.
-///
-/// The `link` path will be a symbolic link pointing to the `original` path.
-pub(super) fn symlink_sync(
-    original: impl AsRef<Path>,
-    link: impl AsRef<Path>,
-) -> std::io::Result<()> {
-    std::os::unix::fs::symlink(original, link)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

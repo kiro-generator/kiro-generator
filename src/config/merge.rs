@@ -2,37 +2,94 @@ use super::*;
 
 impl KgAgent {
     pub fn merge(mut self, other: KgAgent) -> Self {
+        tracing::trace!(
+            self_name = %self.name,
+            self_template = self.template,
+            other_name = %other.name,
+            other_template = other.template,
+            "merge start"
+        );
+
         // Child wins for explicit values
-        self.include_mcp_json = self.include_mcp_json.or(other.include_mcp_json);
+        if self.include_mcp_json.is_none() && other.include_mcp_json.is_some() {
+            tracing::trace!("include_mcp_json: merged from other");
+            self.include_mcp_json = other.include_mcp_json;
+        }
+
         // template is never merged - only the original declaration matters
-        self.description = self.description.or(other.description);
-        self.prompt = self.prompt.or(other.prompt);
-        self.model = self.model.or(other.model);
+
+        if self.description.is_none() && other.description.is_some() {
+            tracing::trace!("description: merged from other");
+            self.description = other.description;
+        }
+
+        if self.prompt.is_none() && other.prompt.is_some() {
+            tracing::trace!("prompt: merged from other");
+            self.prompt = other.prompt;
+        }
+
+        if self.model.is_none() && other.model.is_some() {
+            tracing::trace!("model: merged from other");
+            self.model = other.model;
+        }
 
         // Collections are extended (merged)
-        self.resources.extend(other.resources);
-        self.tools.extend(other.tools);
-        self.allowed_tools.extend(other.allowed_tools);
-        self.alias.extend(other.alias);
-        self.inherits.extend(other.inherits);
-        self.tool_settings.extend(other.tool_settings);
+        if !other.resources.is_empty() {
+            tracing::trace!(count = other.resources.len(), "resources: extended");
+            self.resources.extend(other.resources);
+        }
+
+        if !other.tools.is_empty() {
+            tracing::trace!(count = other.tools.len(), "tools: extended");
+            self.tools.extend(other.tools);
+        }
+
+        if !other.allowed_tools.is_empty() {
+            tracing::trace!(count = other.allowed_tools.len(), "allowed_tools: extended");
+            self.allowed_tools.extend(other.allowed_tools);
+        }
+
+        if !other.alias.is_empty() {
+            tracing::trace!(count = other.alias.len(), "alias: extended");
+            self.alias.extend(other.alias);
+        }
+
+        if !other.inherits.is_empty() {
+            tracing::trace!(count = other.inherits.len(), "inherits: extended");
+            self.inherits.extend(other.inherits);
+        }
+
+        if !other.tool_settings.is_empty() {
+            tracing::trace!(count = other.tool_settings.len(), "tool_settings: extended");
+            self.tool_settings.extend(other.tool_settings);
+        }
 
         // Merge hooks - child force_allow parent for same key
         for (key, parent_hook) in other.hooks {
             self.hooks
-                .entry(key)
+                .entry(key.clone())
                 .and_modify(|child_hook| {
+                    tracing::trace!(hook = %key, "hook: merged");
                     *child_hook = child_hook.clone().merge(parent_hook.clone())
                 })
-                .or_insert(parent_hook);
+                .or_insert_with(|| {
+                    tracing::trace!(hook = %key, "hook: inserted");
+                    parent_hook
+                });
         }
 
         // Merge mcp_servers - child force_allow parent for same key
         for (key, parent_mcp) in other.mcp_servers {
             self.mcp_servers
-                .entry(key)
-                .and_modify(|child_mcp| *child_mcp = child_mcp.clone().merge(parent_mcp.clone()))
-                .or_insert(parent_mcp);
+                .entry(key.clone())
+                .and_modify(|child_mcp| {
+                    tracing::trace!(server = %key, "mcp_server: merged");
+                    *child_mcp = child_mcp.clone().merge(parent_mcp.clone())
+                })
+                .or_insert_with(|| {
+                    tracing::trace!(server = %key, "mcp_server: inserted");
+                    parent_mcp
+                });
         }
 
         self.native_tools = self.native_tools.merge(other.native_tools);

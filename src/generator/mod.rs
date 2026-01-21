@@ -136,8 +136,10 @@ impl Generator {
         let mut results = Vec::with_capacity(agents.len());
         // If no local agents defined, write all (global) agents
         // If local agents exist, only write those
-        let write_all_agents = self.resolved.has_local;
+        let write_all_agents = !self.resolved.has_local;
         for agent in agents {
+            let span = tracing::debug_span!("agent", name = ?agent.name, local = self.is_local(&agent.name));
+            let _enter = span.enter();
             if write_all_agents || self.is_local(&agent.name) {
                 results.push(self.write(agent, dry_run).await?);
             }
@@ -154,6 +156,10 @@ impl Generator {
             destination,
             agent,
         };
+
+        if let Ok(j) = facet_json::to_string_pretty(&result.kiro_agent) {
+            tracing::trace!("{j}");
+        }
         result.kiro_agent.validate()?;
         if dry_run {
             return Ok(result);

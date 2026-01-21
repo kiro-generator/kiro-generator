@@ -1,4 +1,5 @@
 use {
+    color_eyre::eyre::WrapErr,
     std::{
         collections::HashMap,
         fmt::Debug,
@@ -28,9 +29,9 @@ mod windows;
 use tracing::info;
 // Use platform-specific functions
 #[cfg(unix)]
-use unix::{append as platform_append, symlink_sync};
+use unix::append as platform_append;
 #[cfg(windows)]
-use windows::{append as platform_append, symlink_sync};
+use windows::append as platform_append;
 
 /// Rust path handling is hard coded to work specific ways depending on the
 /// OS that is being executed on. Because of this, if Unix paths are provided,
@@ -203,67 +204,78 @@ impl Fs {
         Self::Fake(Arc::new(Mutex::new(map)))
     }
 
-    pub async fn create_new(&self, path: impl AsRef<Path>) -> io::Result<fs::File> {
+    pub async fn create_new(&self, path: impl AsRef<Path>) -> crate::Result<fs::File> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::File::create_new(path).await,
             Self::Chroot(root) => fs::File::create_new(append(root.path(), path)).await,
             Self::Fake(_) => Err(io::Error::other("unimplemented")),
         }
+        .wrap_err_with(|| format!("Failed to create file: {}", path.display()))
     }
 
-    pub async fn create_dir(&self, path: impl AsRef<Path>) -> io::Result<()> {
+    pub async fn create_dir(&self, path: impl AsRef<Path>) -> crate::Result<()> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::create_dir(path).await,
             Self::Chroot(root) => fs::create_dir(append(root.path(), path)).await,
             Self::Fake(_) => Err(io::Error::other("unimplemented")),
         }
+        .wrap_err_with(|| format!("Failed to create directory: {}", path.display()))
     }
 
-    pub async fn create_dir_all(&self, path: impl AsRef<Path>) -> io::Result<()> {
+    pub async fn create_dir_all(&self, path: impl AsRef<Path>) -> crate::Result<()> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::create_dir_all(path).await,
             Self::Chroot(root) => fs::create_dir_all(append(root.path(), path)).await,
             Self::Fake(_) => Err(io::Error::other("unimplemented")),
         }
+        .wrap_err_with(|| format!("Failed to create directory tree: {}", path.display()))
     }
 
     /// Attempts to open a file in read-only mode.
     ///
     /// This is a proxy to [`tokio::fs::File::open`].
-    pub async fn open(&self, path: impl AsRef<Path>) -> io::Result<fs::File> {
+    pub async fn open(&self, path: impl AsRef<Path>) -> crate::Result<fs::File> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::File::open(path).await,
             Self::Chroot(root) => fs::File::open(append(root.path(), path)).await,
             Self::Fake(_) => Err(io::Error::other("unimplemented")),
         }
+        .wrap_err_with(|| format!("Failed to open file: {}", path.display()))
     }
 
-    pub async fn read(&self, path: impl AsRef<Path>) -> io::Result<Vec<u8>> {
+    pub async fn read(&self, path: impl AsRef<Path>) -> crate::Result<Vec<u8>> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::read(path).await,
             Self::Chroot(root) => fs::read(append(root.path(), path)).await,
             Self::Fake(map) => {
                 let Ok(lock) = map.lock() else {
-                    return Err(io::Error::other("poisoned lock"));
+                    return Err(io::Error::other("poisoned lock").into());
                 };
-                let Some(data) = lock.get(path.as_ref()) else {
-                    return Err(io::Error::new(io::ErrorKind::NotFound, "not found"));
+                let Some(data) = lock.get(path) else {
+                    return Err(io::Error::new(io::ErrorKind::NotFound, "not found").into());
                 };
                 Ok(data.clone())
             }
         }
+        .wrap_err_with(|| format!("Failed to read file: {}", path.display()))
     }
 
-    pub async fn read_to_string(&self, path: impl AsRef<Path>) -> io::Result<String> {
+    pub async fn read_to_string(&self, path: impl AsRef<Path>) -> crate::Result<String> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::read_to_string(path).await,
             Self::Chroot(root) => fs::read_to_string(append(root.path(), path)).await,
             Self::Fake(map) => {
                 let Ok(lock) = map.lock() else {
-                    return Err(io::Error::other("poisoned lock"));
+                    return Err(io::Error::other("poisoned lock").into());
                 };
-                let Some(data) = lock.get(path.as_ref()) else {
-                    return Err(io::Error::new(io::ErrorKind::NotFound, "not found"));
+                let Some(data) = lock.get(path) else {
+                    return Err(io::Error::new(io::ErrorKind::NotFound, "not found").into());
                 };
                 match String::from_utf8(data.clone()) {
                     Ok(string) => Ok(string),
@@ -271,18 +283,20 @@ impl Fs {
                 }
             }
         }
+        .wrap_err_with(|| format!("Failed to read file to string: {}", path.display()))
     }
 
-    pub fn read_to_string_sync(&self, path: impl AsRef<Path>) -> io::Result<String> {
+    pub fn read_to_string_sync(&self, path: impl AsRef<Path>) -> crate::Result<String> {
+        let path = path.as_ref();
         match self {
             Self::Real => std::fs::read_to_string(path),
             Self::Chroot(root) => std::fs::read_to_string(append(root.path(), path)),
             Self::Fake(map) => {
                 let Ok(lock) = map.lock() else {
-                    return Err(io::Error::other("poisoned lock"));
+                    return Err(io::Error::other("poisoned lock").into());
                 };
-                let Some(data) = lock.get(path.as_ref()) else {
-                    return Err(io::Error::new(io::ErrorKind::NotFound, "not found"));
+                let Some(data) = lock.get(path) else {
+                    return Err(io::Error::new(io::ErrorKind::NotFound, "not found").into());
                 };
                 match String::from_utf8(data.clone()) {
                     Ok(string) => Ok(string),
@@ -290,6 +304,7 @@ impl Fs {
                 }
             }
         }
+        .wrap_err_with(|| format!("Failed to read file to string: {}", path.display()))
     }
 
     /// Creates a future that will open a file for writing and write the entire
@@ -300,18 +315,20 @@ impl Fs {
         &self,
         path: impl AsRef<Path>,
         contents: impl AsRef<[u8]>,
-    ) -> io::Result<()> {
+    ) -> crate::Result<()> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::write(path, contents).await,
             Self::Chroot(root) => fs::write(append(root.path(), path), contents).await,
             Self::Fake(map) => {
                 let Ok(mut lock) = map.lock() else {
-                    return Err(io::Error::other("poisoned lock"));
+                    return Err(io::Error::other("poisoned lock").into());
                 };
-                lock.insert(path.as_ref().to_owned(), contents.as_ref().to_owned());
+                lock.insert(path.to_owned(), contents.as_ref().to_owned());
                 Ok(())
             }
         }
+        .wrap_err_with(|| format!("Failed to write file: {}", path.display()))
     }
 
     /// Removes a file from the filesystem.
@@ -321,24 +338,28 @@ impl Fs {
     /// immediate removal).
     ///
     /// This is a proxy to [`tokio::fs::remove_file`].
-    pub async fn remove_file(&self, path: impl AsRef<Path>) -> io::Result<()> {
+    pub async fn remove_file(&self, path: impl AsRef<Path>) -> crate::Result<()> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::remove_file(path).await,
             Self::Chroot(root) => fs::remove_file(append(root.path(), path)).await,
             Self::Fake(_) => panic!("unimplemented"),
         }
+        .wrap_err_with(|| format!("Failed to remove file: {}", path.display()))
     }
 
     /// Removes a directory at this path, after removing all its contents. Use
     /// carefully!
     ///
     /// This is a proxy to [`tokio::fs::remove_dir_all`].
-    pub async fn remove_dir_all(&self, path: impl AsRef<Path>) -> io::Result<()> {
+    pub async fn remove_dir_all(&self, path: impl AsRef<Path>) -> crate::Result<()> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::remove_dir_all(path).await,
             Self::Chroot(root) => fs::remove_dir_all(append(root.path(), path)).await,
             Self::Fake(_) => panic!("unimplemented"),
         }
+        .wrap_err_with(|| format!("Failed to remove directory: {}", path.display()))
     }
 
     /// Renames a file or directory to a new name, replacing the original file
@@ -347,7 +368,9 @@ impl Fs {
     /// This will not work if the new name is on a different mount point.
     ///
     /// This is a proxy to [`tokio::fs::rename`].
-    pub async fn rename(&self, from: impl AsRef<Path>, to: impl AsRef<Path>) -> io::Result<()> {
+    pub async fn rename(&self, from: impl AsRef<Path>, to: impl AsRef<Path>) -> crate::Result<()> {
+        let from = from.as_ref();
+        let to = to.as_ref();
         match self {
             Self::Real => fs::rename(from, to).await,
             Self::Chroot(root) => {
@@ -355,6 +378,7 @@ impl Fs {
             }
             Self::Fake(_) => panic!("unimplemented"),
         }
+        .wrap_err_with(|| format!("Failed to rename {} to {}", from.display(), to.display()))
     }
 
     /// Copies the contents of one file to another. This function will also copy
@@ -362,7 +386,9 @@ impl Fs {
     /// This function will overwrite the contents of to.
     ///
     /// This is a proxy to [`tokio::fs::copy`].
-    pub async fn copy(&self, from: impl AsRef<Path>, to: impl AsRef<Path>) -> io::Result<u64> {
+    pub async fn copy(&self, from: impl AsRef<Path>, to: impl AsRef<Path>) -> crate::Result<u64> {
+        let from = from.as_ref();
+        let to = to.as_ref();
         match self {
             Self::Real => fs::copy(from, to).await,
             Self::Chroot(root) => {
@@ -370,6 +396,7 @@ impl Fs {
             }
             Self::Fake(_) => panic!("unimplemented"),
         }
+        .wrap_err_with(|| format!("Failed to copy {} to {}", from.display(), to.display()))
     }
 
     /// Returns `Ok(true)` if the path points at an existing entity.
@@ -379,12 +406,14 @@ impl Fs {
     /// return `Ok(false)`.
     ///
     /// This is a proxy to [`tokio::fs::try_exists`].
-    pub async fn try_exists(&self, path: impl AsRef<Path>) -> Result<bool, io::Error> {
+    pub async fn try_exists(&self, path: impl AsRef<Path>) -> crate::Result<bool> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::try_exists(path).await,
             Self::Chroot(root) => fs::try_exists(append(root.path(), path)).await,
             Self::Fake(_) => panic!("unimplemented"),
         }
+        .wrap_err_with(|| format!("Failed to check if path exists: {}", path.display()))
     }
 
     /// Returns `true` if the path points at an existing entity.
@@ -400,125 +429,28 @@ impl Fs {
         }
     }
 
-    /// Returns `true` if the path points at an existing entity without
-    /// following symlinks.
-    ///
-    /// This does *not* guarantee that the path doesn't point to a symlink. For
-    /// example, `false` will be returned if the user doesn't have
-    /// permission to perform a metadata operation on `path`.
-    pub async fn symlink_exists(&self, path: impl AsRef<Path>) -> bool {
-        match self.symlink_metadata(path).await {
-            Ok(_) => true,
-            Err(err) if err.kind() != std::io::ErrorKind::NotFound => true,
-            Err(_) => false,
-        }
-    }
-
-    pub async fn create_tempdir(&self) -> io::Result<TempDir> {
-        match self {
-            Self::Real => TempDir::new(),
-            Self::Chroot(root) => TempDir::new_in(root.path()),
-            Self::Fake(_) => panic!("unimplemented"),
-        }
-    }
-
-    /// Creates a new symbolic link on the filesystem.
-    ///
-    /// The `link` path will be a symbolic link pointing to the `original` path.
-    pub async fn symlink(
-        &self,
-        original: impl AsRef<Path>,
-        link: impl AsRef<Path>,
-    ) -> io::Result<()> {
-        #[cfg(unix)]
-        async fn do_symlink(original: impl AsRef<Path>, link: impl AsRef<Path>) -> io::Result<()> {
-            fs::symlink(original, link).await
-        }
-
-        #[cfg(windows)]
-        async fn do_symlink(original: impl AsRef<Path>, link: impl AsRef<Path>) -> io::Result<()> {
-            windows::symlink_async(original, link).await
-        }
-
-        match self {
-            Self::Real => do_symlink(original, link).await,
-            Self::Chroot(root) => {
-                do_symlink(append(root.path(), original), append(root.path(), link)).await
-            }
-            Self::Fake(_) => panic!("unimplemented"),
-        }
-    }
-
-    /// Creates a new symbolic link on the filesystem.
-    ///
-    /// The `link` path will be a symbolic link pointing to the `original` path.
-    pub fn symlink_sync(
-        &self,
-        original: impl AsRef<Path>,
-        link: impl AsRef<Path>,
-    ) -> io::Result<()> {
-        match self {
-            Self::Real => symlink_sync(original, link),
-            Self::Chroot(root) => {
-                symlink_sync(append(root.path(), original), append(root.path(), link))
-            }
-            Self::Fake(_) => panic!("unimplemented"),
-        }
-    }
-
-    /// Query the metadata about a file without following symlinks.
-    ///
-    /// This is a proxy to [`tokio::fs::symlink_metadata`]
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error in the following situations, but is
-    /// not limited to just these cases:
-    ///
-    /// * The user lacks permissions to perform `metadata` call on `path`.
-    /// * `path` does not exist.
-    pub async fn symlink_metadata(&self, path: impl AsRef<Path>) -> io::Result<std::fs::Metadata> {
-        match self {
-            Self::Real => fs::symlink_metadata(path).await,
-            Self::Chroot(root) => fs::symlink_metadata(append(root.path(), path)).await,
-            Self::Fake(_) => panic!("unimplemented"),
-        }
-    }
-
-    /// Reads a symbolic link, returning the file that the link points to.
-    ///
-    /// This is a proxy to [`tokio::fs::read_link`].
-    pub async fn read_link(&self, path: impl AsRef<Path>) -> io::Result<PathBuf> {
-        match self {
-            Self::Real => fs::read_link(path).await,
-            Self::Chroot(root) => Ok(append(
-                root.path(),
-                fs::read_link(append(root.path(), path)).await?,
-            )),
-            Self::Fake(_) => panic!("unimplemented"),
-        }
-    }
-
-    /// Returns a stream over the entries within a directory.
-    ///
     /// This is a proxy to [`tokio::fs::read_dir`].
-    pub async fn read_dir(&self, path: impl AsRef<Path>) -> Result<fs::ReadDir, io::Error> {
+    pub async fn read_dir(&self, path: impl AsRef<Path>) -> crate::Result<fs::ReadDir> {
+        let path = path.as_ref();
         match self {
             Self::Real => fs::read_dir(path).await,
             Self::Chroot(root) => fs::read_dir(append(root.path(), path)).await,
             Self::Fake(_) => panic!("unimplemented"),
         }
+        .wrap_err_with(|| format!("Failed to read directory: {}", path.display()))
     }
 
     /// Returns an iterator over the entries within a directory (synchronous).
     ///
     /// This is a proxy to [`std::fs::read_dir`].
-    pub fn read_dir_sync(&self, path: impl AsRef<Path>) -> Result<std::fs::ReadDir, io::Error> {
+    pub fn read_dir_sync(&self, path: impl AsRef<Path>) -> crate::Result<std::fs::ReadDir> {
+        let path = path.as_ref();
         match self {
             Self::Real => std::fs::read_dir(path),
             Self::Chroot(root) => std::fs::read_dir(append(root.path(), path)),
             Self::Fake(_) => panic!("unimplemented"),
         }
+        .wrap_err_with(|| format!("Failed to read directory: {}", path.display()))
     }
 }
 
@@ -531,8 +463,9 @@ mod tests {
         let dir = PathBuf::from("/dir");
         let fs = Fs::from_slice(&[("/test", "test")]);
 
-        fs.create_dir(dir.join("create_dir")).await.unwrap_err();
-        fs.create_dir_all(dir.join("create/dir/all"))
+        let _ = fs.create_dir(dir.join("create_dir")).await.unwrap_err();
+        let _ = fs
+            .create_dir_all(dir.join("create/dir/all"))
             .await
             .unwrap_err();
         fs.write(dir.join("write"), b"write").await.unwrap();
@@ -590,17 +523,19 @@ mod tests {
             "contents",
             "should read fake file"
         );
+        let err = fs.read_to_string("unknown").await;
+        assert!(err.is_err(), "unknown path should error");
+        let err_msg = err.unwrap_err().to_string();
         assert!(
-            fs.read_to_string("unknown")
-                .await
-                .is_err_and(|err| err.kind() == io::ErrorKind::NotFound),
-            "unknown path should return NotFound"
+            err_msg.contains("Failed to read"),
+            "error should indicate read failure, got: {}",
+            err_msg
         );
         assert!(
             fs.read_to_string("invalid_utf8")
                 .await
-                .is_err_and(|err| err.kind() == io::ErrorKind::InvalidData),
-            "invalid utf8 should return InvalidData"
+                .is_err_and(|err| err.to_string().contains("Failed to read")),
+            "invalid utf8 should return error"
         );
 
         // sync tests
@@ -611,13 +546,13 @@ mod tests {
         );
         assert!(
             fs.read_to_string_sync("unknown")
-                .is_err_and(|err| err.kind() == io::ErrorKind::NotFound),
-            "unknown path should return NotFound"
+                .is_err_and(|err| err.to_string().contains("Failed to read")),
+            "unknown path should return error"
         );
         assert!(
             fs.read_to_string_sync("invalid_utf8")
-                .is_err_and(|err| err.kind() == io::ErrorKind::InvalidData),
-            "invalid utf8 should return InvalidData"
+                .is_err_and(|err| err.to_string().contains("Failed to read")),
+            "invalid utf8 should return error"
         );
     }
 
@@ -655,32 +590,6 @@ mod tests {
         fs.remove_file("/fake_copy").await.unwrap();
         assert!(!fs.try_exists("/fake_copy").await.unwrap());
 
-        fs.symlink("/fake", "/fake_symlink").await.unwrap();
-        fs.symlink_sync("/fake", "/fake_symlink_sync").unwrap();
-        assert_eq!(
-            fs.read_to_string("/fake_symlink").await.unwrap(),
-            "contents"
-        );
-        assert_eq!(
-            fs.read_to_string(fs.read_link("/fake_symlink").await.unwrap())
-                .await
-                .unwrap(),
-            "contents"
-        );
-        assert_eq!(
-            fs.read_to_string("/fake_symlink_sync").await.unwrap(),
-            "contents"
-        );
-        assert_eq!(fs.read_to_string_sync("/fake_symlink").unwrap(), "contents");
-
-        // Checking symlink exist
-        assert!(fs.symlink_exists("/fake_symlink").await);
-        assert!(fs.exists("/fake_symlink"));
-        fs.remove_file("/fake").await.unwrap();
-        assert!(fs.symlink_exists("/fake_symlink").await);
-        assert!(!fs.exists("/fake_symlink"));
-
-        // Checking rename
         fs.write("/rename_1", "abc").await.unwrap();
         fs.write("/rename_2", "123").await.unwrap();
         fs.rename("/rename_2", "/rename_1").await.unwrap();
@@ -689,17 +598,6 @@ mod tests {
         // Checking open
         assert!(fs.open("/does_not_exist").await.is_err());
         assert!(fs.open("/rename_1").await.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_chroot_tempdir() {
-        let fs = Fs::new();
-        let tempdir = fs.create_tempdir().await.unwrap();
-        if let Fs::Chroot(root) = fs {
-            assert_eq!(tempdir.path().parent().unwrap(), root.path());
-        } else {
-            panic!("tempdir should be created under root");
-        }
     }
 
     #[tokio::test]

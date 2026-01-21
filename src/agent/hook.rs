@@ -41,8 +41,12 @@ pub struct Hook {
 
 impl Hook {
     pub fn merge(mut self, o: Self) -> Self {
-        self.matcher = self.matcher.or(o.matcher);
+        if self.matcher.is_none() && o.matcher.is_some() {
+            tracing::trace!("matcher: merged from other");
+            self.matcher = o.matcher;
+        }
         if self.command.is_empty() {
+            tracing::trace!("command: merged from other");
             self.command = o.command;
         }
         self

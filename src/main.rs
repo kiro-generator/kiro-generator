@@ -1,13 +1,13 @@
 mod agent;
 mod commands;
 mod config;
-mod error;
 mod generator;
 mod os;
 pub mod output;
 mod schema;
 mod source;
 
+pub use color_eyre::eyre::format_err;
 use {
     crate::{generator::Generator, os::Fs},
     clap::Parser,
@@ -17,7 +17,6 @@ use {
     tracing_error::ErrorLayer,
     tracing_subscriber::prelude::*,
 };
-pub use {color_eyre::eyre::format_err, error::Error};
 pub type Result<T> = color_eyre::Result<T>;
 
 #[allow(dead_code)]
@@ -28,7 +27,10 @@ fn init_tracing(debug: bool, trace_agent: Option<&str>) {
         let directive = if agent == "all" {
             "trace".to_string()
         } else {
-            format!("info,[agent{{name=\"{agent}\"}}]=trace")
+            format!(
+                "{},[agent{{name=\"{agent}\"}}]=trace",
+                if debug { "debug" } else { "info" }
+            )
         };
         tracing_subscriber::EnvFilter::new(directive)
     } else if debug {
@@ -138,6 +140,7 @@ autoAllowReadonly = true
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    color_eyre::install()?;
     let cli = commands::Cli::parse();
     if matches!(cli.command, commands::Command::Version) {
         println!("{}", clap::crate_version!());

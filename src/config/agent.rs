@@ -57,9 +57,10 @@ impl Display for KgAgent {
 }
 
 impl KgAgent {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, template: bool) -> Self {
         Self {
             name,
+            template,
             ..Default::default()
         }
     }

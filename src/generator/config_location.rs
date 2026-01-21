@@ -1,6 +1,6 @@
 use {
     super::*,
-    crate::config::ConfigResult,
+    color_eyre::eyre::{WrapErr, bail},
     std::{fmt::Display, path::Path},
 };
 
@@ -11,26 +11,19 @@ fn find_agent_file(
     agent_name: &str,
     current_depth: usize,
     max_depth: usize,
-) -> ConfigResult<Option<PathBuf>> {
+) -> crate::Result<Option<PathBuf>> {
     if current_depth > max_depth || !fs.exists(dir) {
         return Ok(None);
     }
 
-    let entries = fs.read_dir_sync(dir).map_err(|e| {
-        crate::Error::Report(format!("Failed to read directory {}: {}", dir.display(), e))
-    })?;
+    let entries = fs.read_dir_sync(dir)?;
 
     for entry in entries {
-        let entry = entry
-            .map_err(|e| crate::Error::Report(format!("Failed to read directory entry: {}", e)))?;
+        let entry = entry?;
         let path = entry.path();
-        let metadata = entry.metadata().map_err(|e| {
-            crate::Error::Report(format!(
-                "Failed to read metadata for {}: {}",
-                path.display(),
-                e
-            ))
-        })?;
+        let metadata = entry
+            .metadata()
+            .wrap_err_with(|| format!("Failed to read metadata for {}", path.display()))?;
 
         if metadata.is_dir() {
             // Recurse into subdirectory
@@ -74,7 +67,7 @@ impl ConfigLocation {
     /// Validate that there are no duplicate agent names in the agent
     /// directories
     #[allow(clippy::too_many_arguments)]
-    pub fn validate(&self, fs: &Fs, max_entities: usize) -> ConfigResult<()> {
+    pub fn validate(&self, fs: &Fs, max_entities: usize) -> crate::Result<()> {
         fn scan_for_duplicates(
             fs: &Fs,
             dir: &Path,
@@ -84,27 +77,24 @@ impl ConfigLocation {
             scope: &str,
             total_entities: &mut usize,
             max_entities: usize,
-        ) -> ConfigResult<()> {
+        ) -> crate::Result<()> {
             if current_depth > max_depth || !fs.exists(dir) {
                 return Ok(());
             }
 
-            let entries = fs.read_dir_sync(dir).map_err(|e| {
-                crate::Error::Report(format!("Failed to read directory {}: {}", dir.display(), e))
-            })?;
+            let entries = fs.read_dir_sync(dir)?;
             for entry in entries {
-                let entry = entry.map_err(|e| {
-                    crate::Error::Report(format!("Failed to read directory entry: {}", e))
-                })?;
+                let entry = entry?;
                 *total_entities += 1;
                 if *total_entities > max_entities {
                     let path = entry.path();
-                    return Err(crate::Error::MaxEntities(path.display().to_string()));
+                    bail!(
+                        "Directory {} has too many files or directories",
+                        path.display()
+                    );
                 }
                 let path = entry.path();
-                let metadata = entry
-                    .metadata()
-                    .map_err(|e| crate::Error::Report(format!("Failed to read metadata: {}", e)))?;
+                let metadata = entry.metadata().wrap_err("Failed to read metadata")?;
 
                 if metadata.is_dir() {
                     scan_for_duplicates(
@@ -122,12 +112,13 @@ impl ConfigLocation {
                 {
                     let agent_name = stem.to_string();
                     if let Some(existing_path) = seen.get(&agent_name) {
-                        return Err(crate::Error::DuplicateAgent {
-                            name: agent_name,
-                            scope: scope.to_string(),
-                            first: existing_path.display().to_string(),
-                            second: path.display().to_string(),
-                        });
+                        bail!(
+                            "Duplicate agent '{}' found in {}:\n  - {}\n  - {}",
+                            agent_name,
+                            scope,
+                            existing_path.display(),
+                            path.display()
+                        );
                     }
                     seen.insert(agent_name, path);
                 }
@@ -178,7 +169,7 @@ impl ConfigLocation {
 
     /// Get path to agent definition file in agents/ directory (searches
     /// recursively)
-    pub fn global_agent(&self, fs: &Fs, name: impl AsRef<str>) -> ConfigResult<Option<PathBuf>> {
+    pub fn global_agent(&self, fs: &Fs, name: impl AsRef<str>) -> crate::Result<Option<PathBuf>> {
         let agents_dir = match self {
             ConfigLocation::Global(path) | ConfigLocation::Both(path) => path.join("agents"),
             ConfigLocation::Local => return Ok(None),
@@ -195,7 +186,7 @@ impl ConfigLocation {
 
     /// Get path to agent definition file in agents/ directory (searches
     /// recursively)
-    pub fn local_agent(&self, fs: &Fs, name: impl AsRef<str>) -> ConfigResult<Option<PathBuf>> {
+    pub fn local_agent(&self, fs: &Fs, name: impl AsRef<str>) -> crate::Result<Option<PathBuf>> {
         let agents_dir = match self {
             Self::Local | Self::Both(_) => PathBuf::from(".kiro/generators/agents"),
             Self::Global(_) => return Ok(None),
@@ -264,7 +255,7 @@ mod tests {
     use {super::*, crate::os::ACTIVE_USER_HOME};
 
     #[tokio::test]
-    async fn test_validate_local_no_duplicates() -> ConfigResult<()> {
+    async fn test_validate_local_no_duplicates() -> crate::Result<()> {
         let fs = Fs::new();
         let location = ConfigLocation::Local;
         location.validate(&fs, 1000)?;
@@ -272,7 +263,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validate_global_no_duplicates() -> ConfigResult<()> {
+    async fn test_validate_global_no_duplicates() -> crate::Result<()> {
         let fs = Fs::new();
         let g_path = PathBuf::from(ACTIVE_USER_HOME)
             .join(".kiro")
@@ -283,7 +274,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validate_both_no_duplicates() -> ConfigResult<()> {
+    async fn test_validate_both_no_duplicates() -> crate::Result<()> {
         let fs = Fs::new();
         let g_path = PathBuf::from(ACTIVE_USER_HOME)
             .join(".kiro")
@@ -299,11 +290,11 @@ mod tests {
         let location = ConfigLocation::Local;
         let result = location.validate(&fs, 1);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), crate::Error::MaxEntities(_)));
+        assert!(result.unwrap_err().to_string().contains("too many"));
     }
 
     #[tokio::test]
-    async fn test_validate_with_duplicate_agents() -> ConfigResult<()> {
+    async fn test_validate_with_duplicate_agents() -> crate::Result<()> {
         let fs = Fs::new();
         let agents_dir = PathBuf::from(".kiro/generators/agents");
         fs.create_dir_all(&agents_dir).await?;
@@ -321,15 +312,12 @@ mod tests {
         let result = location.validate(&fs, 1000);
 
         assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            crate::Error::DuplicateAgent { .. }
-        ));
+        assert!(result.unwrap_err().to_string().contains("Duplicate"),);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_find_agent_file_in_subdirectory() -> ConfigResult<()> {
+    async fn test_find_agent_file_in_subdirectory() -> crate::Result<()> {
         let fs = Fs::new();
         let agents_dir = PathBuf::from(".kiro/generators/agents");
         fs.create_dir_all(&agents_dir).await?;
@@ -349,7 +337,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_find_agent_file_respects_max_depth() -> ConfigResult<()> {
+    async fn test_find_agent_file_respects_max_depth() -> crate::Result<()> {
         let fs = Fs::new();
         let agents_dir = PathBuf::from(".kiro/generators/agents");
         fs.create_dir_all(&agents_dir).await?;
@@ -372,7 +360,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_find_agent_file_returns_none_when_not_found() -> ConfigResult<()> {
+    async fn test_find_agent_file_returns_none_when_not_found() -> crate::Result<()> {
         let fs = Fs::new();
         let agents_dir = PathBuf::from(".kiro/generators/agents");
         fs.create_dir_all(&agents_dir).await?;

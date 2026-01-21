@@ -29,24 +29,57 @@ pub struct CustomToolConfig {
 impl CustomToolConfig {
     pub fn merge(mut self, other: Self) -> Self {
         // Child wins for explicit values
-        self.timeout = self.timeout.or(other.timeout);
+        if self.timeout.is_none() && other.timeout.is_some() {
+            tracing::trace!("timeout: merged from other");
+            self.timeout = other.timeout;
+        }
+
+        if other.disabled {
+            tracing::trace!("disabled: set from other");
+        }
         self.disabled = self.disabled || other.disabled;
 
-        if self.url.is_empty() {
+        if self.url.is_empty() && !other.url.is_empty() {
+            tracing::trace!("url: merged from other");
             self.url = other.url;
         }
-        if self.command.is_empty() {
+
+        if self.command.is_empty() && !other.command.is_empty() {
+            tracing::trace!("command: merged from other");
             self.command = other.command;
         }
 
-        self.args.extend(other.args);
+        if !other.args.is_empty() {
+            tracing::trace!(count = other.args.len(), "args: extended");
+            self.args.extend(other.args);
+        }
 
+        let parent_env_count = other.env.len();
+        let child_env_count = self.env.len();
         let mut merged = other.env; // Start with parent
         merged.extend(self.env); // Child overwrites parent
+        if merged.len() != child_env_count {
+            tracing::trace!(
+                parent_count = parent_env_count,
+                child_count = child_env_count,
+                "env: merged"
+            );
+        }
         self.env = merged;
+
+        let parent_headers_count = other.headers.len();
+        let child_headers_count = self.headers.len();
         let mut merged = other.headers; // Start with parent
         merged.extend(self.headers); // Child overwrites parent
+        if merged.len() != child_headers_count {
+            tracing::trace!(
+                parent_count = parent_headers_count,
+                child_count = child_headers_count,
+                "headers: merged"
+            );
+        }
         self.headers = merged;
+
         self
     }
 }

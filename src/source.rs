@@ -1,7 +1,7 @@
 use {
     std::{
         collections::{HashMap, HashSet},
-        fmt::Debug,
+        fmt::{Debug, Display},
         ops::{Deref, DerefMut},
         path::PathBuf,
     },
@@ -16,16 +16,23 @@ pub enum KdlAgentSource {
     GlobalFile(PathBuf),
     GlobalInline,
 }
-
+impl Display for KdlAgentSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KdlAgentSource::GlobalInline => write!(f, "global-inline"),
+            KdlAgentSource::GlobalFile(p) => write!(f, "{}", p.display()),
+            KdlAgentSource::LocalInline => write!(f, "local-inline"),
+            KdlAgentSource::LocalFile(p) => write!(f, "{}", p.display()),
+        }
+    }
+}
 impl KdlAgentSource {
     fn is_local(&self) -> bool {
         matches!(self, Self::LocalFile(_) | Self::LocalInline)
     }
-}
 
-impl From<&KdlAgentSource> for Cell {
-    fn from(value: &KdlAgentSource) -> Self {
-        match value {
+    pub fn to_cell(&self) -> Cell {
+        match self {
             KdlAgentSource::GlobalInline => Cell::new("global-inline"),
             KdlAgentSource::GlobalFile(p) => Cell::new(format!("{}", p.display())),
             KdlAgentSource::LocalInline => Cell::new("local-inline"),

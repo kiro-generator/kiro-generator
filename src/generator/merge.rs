@@ -41,7 +41,7 @@ impl Generator {
     }
 
     /// Merge all agents with transitive inheritance resolution
-    #[tracing::instrument(level = "debug")]
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn merge(&self) -> Result<Vec<KgAgent>> {
         let mut resolved_agents: HashMap<String, KgAgent> =
             HashMap::with_capacity(self.resolved.agents.len());
@@ -49,7 +49,12 @@ impl Generator {
         for (name, agent) in &self.resolved.agents {
             let mut visited = HashSet::new();
             let parents = self.resolve_transitive_inheritance(agent, &mut visited)?;
-            let span = tracing::debug_span!("agent", name = ?name, parents = ?parents.len());
+            let span = tracing::debug_span!(
+                "agent",
+                name = name.as_str(),
+                parents = parents.len(),
+                template = agent.template
+            );
             let _enter = span.enter();
 
             let mut merged = agent.clone();
@@ -58,6 +63,7 @@ impl Generator {
                     self.resolved.agents.get(parent_name).ok_or_else(|| {
                         crate::format_err!("Parent agent '{parent_name}' not found")
                     })?;
+                tracing::trace!(parent = %parent_name, parent_template = parent.template, "merging parent");
                 merged = merged.merge(parent.clone());
             }
 

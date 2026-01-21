@@ -5,24 +5,13 @@ mod native;
 
 pub use agent::KgAgent;
 use {
-    crate::{Error, Fs},
+    crate::Fs,
     facet::Facet,
     facet_toml as toml,
     std::{collections::HashMap, fmt::Debug, path::Path},
 };
 
-pub(crate) type ConfigResult<T> = std::result::Result<T, Error>;
-
-#[cfg(test)]
-#[allow(clippy::single_match)]
-fn print_error(e: &crate::Error) {
-    match e {
-        crate::Error::TomlDeserializeError(err) => {
-            eprintln!("{}", err);
-        }
-        _ => {}
-    };
-}
+pub(crate) type ConfigResult<T> = crate::Result<T>;
 
 pub fn toml_parse_path<T>(fs: &Fs, path: impl AsRef<Path>) -> Option<ConfigResult<T>>
 where
@@ -34,12 +23,9 @@ where
     match fs.read_to_string_sync(&path) {
         Ok(content) => match toml::from_str(&content) {
             Ok(r) => Some(Ok(r)),
-            Err(e) => Some(Err(Error::FileDeserializeError(format!(
-                "{} {e}",
-                path.as_ref().display(),
-            )))),
+            Err(e) => Some(Err(e.into())), // facet_toml error auto-converts to eyre::Report
         },
-        Err(e) => Some(Err(e.into())),
+        Err(e) => Some(Err(e)), // io error from Fs already is eyre::Report
     }
 }
 
@@ -48,13 +34,7 @@ pub(crate) fn toml_parse<T>(content: &str) -> ConfigResult<T>
 where
     T: for<'a> facet::Facet<'a>,
 {
-    match toml::from_str::<T>(content).map_err(crate::Error::from) {
-        Err(e) => {
-            print_error(&e);
-            Err(e)
-        }
-        Ok(r) => Ok(r),
-    }
+    Ok(toml::from_str::<T>(content)?)
 }
 
 #[derive(Default, Facet)]
