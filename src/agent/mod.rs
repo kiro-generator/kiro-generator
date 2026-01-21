@@ -4,7 +4,7 @@ pub mod tools;
 pub const DEFAULT_AGENT_RESOURCES: &[&str] = &["file://README.md", "file://AGENTS.md"];
 pub const DEFAULT_APPROVE: [&str; 0] = [];
 use {
-    crate::{Result, config::KgAgent},
+    crate::{Result, agent::hook::AgentHook, config::KgAgent},
     facet::Facet,
     std::{
         collections::{HashMap, HashSet},
@@ -45,7 +45,7 @@ pub struct Agent {
     pub resources: HashSet<String>,
     /// Commands to run when a chat session is created
     #[facet(default, skip_serializing_if = HashMap::is_empty)]
-    pub hooks: HashMap<String, Vec<Hook>>,
+    pub hooks: HashMap<String, Vec<AgentHook>>,
     /// Settings for specific tools. These are mostly for native tools. The
     /// actual schema differs by tools and is documented in detail in our
     /// documentation

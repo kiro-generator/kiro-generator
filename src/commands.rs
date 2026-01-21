@@ -70,6 +70,8 @@ pub enum Command {
     Init(InitArgs),
     /// Display version information
     Version,
+    /// Compare generator files with Kiro agent files
+    Diff,
 }
 
 impl Default for Command {

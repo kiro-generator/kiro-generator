@@ -9,7 +9,7 @@ mod source;
 
 pub use color_eyre::eyre::format_err;
 use {
-    crate::{generator::Generator, os::Fs},
+    crate::{commands::Command, generator::Generator, os::Fs},
     clap::Parser,
     color_eyre::eyre::Context,
     std::path::Path,
@@ -193,19 +193,22 @@ async fn main() -> Result<()> {
     };
 
     let format = cli.format_color();
-    let q_generator_config: Generator = Generator::new(fs, location, format)?;
+    let kq_generator_config: Generator = Generator::new(fs, location, format)?;
     if enabled!(tracing::Level::TRACE) {
         tracing::trace!(
             "Loaded Agent Generator Config:\n{}",
-            facet_json::to_string_pretty(&q_generator_config)
+            facet_json::to_string_pretty(&kq_generator_config)
                 .wrap_err("unable to decode to json")?
         );
     }
 
     match cli.command {
-        commands::Command::Validate(args) | commands::Command::Generate(args) => {
-            let results = q_generator_config.write_all(dry_run).await?;
+        Command::Validate(args) | Command::Generate(args) => {
+            let results = kq_generator_config.write_all(dry_run).await?;
             format.result(dry_run, args.show_templates, results)?;
+        }
+        Command::Diff => {
+            kq_generator_config.diff()?;
         }
         _ => {}
     };

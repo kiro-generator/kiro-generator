@@ -25,6 +25,18 @@ impl Display for HookTrigger {
         }
     }
 }
+
+#[derive(Facet, Default, Debug, Clone, Eq, PartialEq, Hash)]
+pub struct AgentHook {
+    /// The command to run when the hook is triggered
+    pub command: String,
+
+    /// Optional glob matcher for hook
+    /// Currently used for matching tool name of PreToolUse and PostToolUse hook
+    #[facet(skip_serializing_if = Option::is_none)]
+    pub matcher: Option<String>,
+}
+
 #[derive(Facet, Default, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Hook {
     /// The command to run when the hook is triggered

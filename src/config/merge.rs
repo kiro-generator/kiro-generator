@@ -103,7 +103,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            agent::{Hook, hook::HookTrigger},
+            agent::hook::{AgentHook, HookTrigger},
             config,
         },
     };
@@ -154,9 +154,8 @@ mod tests {
         assert!(h.is_some());
         let h = h.unwrap();
         assert!(!h.is_empty());
-        assert_eq!(h[0], Hook {
+        assert_eq!(h[0], AgentHook {
             command: "echo i have spawned".to_string(),
-            hook_type: HookTrigger::AgentSpawn.to_string(),
             matcher: None,
         });
 

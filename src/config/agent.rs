@@ -1,6 +1,6 @@
 use {
     super::native::{AwsTool, ExecuteShellTool, NativeTools, ReadTool, WriteTool},
-    crate::agent::{CustomToolConfig, Hook},
+    crate::agent::{CustomToolConfig, Hook, hook::AgentHook},
     facet::Facet,
     std::{
         collections::{HashMap, HashSet},
@@ -65,13 +65,21 @@ impl KgAgent {
         }
     }
 
-    pub fn hooks(&self) -> HashMap<String, Vec<Hook>> {
-        let mut result: HashMap<String, Vec<Hook>> = HashMap::new();
+    pub fn hooks(&self) -> HashMap<String, Vec<AgentHook>> {
+        let mut result: HashMap<String, Vec<AgentHook>> = HashMap::new();
         for h in self.hooks.values() {
             result
                 .entry(h.hook_type.clone())
-                .and_modify(|e| e.push(h.clone()))
-                .or_insert(vec![h.clone()]);
+                .and_modify(|e| {
+                    e.push(AgentHook {
+                        command: h.command.clone(),
+                        matcher: h.matcher.clone(),
+                    })
+                })
+                .or_insert(vec![AgentHook {
+                    command: h.command.clone(),
+                    matcher: h.matcher.clone(),
+                }]);
         }
         result
     }

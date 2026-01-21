@@ -149,31 +149,6 @@ impl OutputFormat {
         servers.sort();
         row.add_cell(Cell::new(servers.join(", ")));
 
-        // Allowed tools
-        let mut allowed_tools: Vec<String> = result
-            .agent
-            .allowed_tools
-            .iter()
-            .filter(|t| !t.is_empty())
-            .cloned()
-            .collect();
-        allowed_tools.sort();
-        let mut enabled_tools = Vec::with_capacity(allowed_tools.len());
-        let mcps = &result.agent.mcp_servers;
-        for t in allowed_tools {
-            if t.len() < 2 {
-                continue;
-            }
-            if let Some(server_name) = t.strip_prefix("@") {
-                match mcps.get(server_name) {
-                    Some(mcp) if !mcp.disabled => {} // enabled, keep it
-                    _ => continue,                   // disabled or doesn't exist, skip it
-                }
-            }
-            enabled_tools.push(t);
-        }
-        row.add_cell(Cell::new(enabled_tools.join(", ")));
-
         // Override permissions (security-critical)
         let sh = result.force_allow(&ToolTarget::Shell);
         let read = result.force_allow(&ToolTarget::Read);
@@ -188,11 +163,6 @@ impl OutputFormat {
         }
         if let Some(c) = serialize_yaml("write:\n", &write) {
             forced.push(c);
-        }
-
-        // resources
-        if let Some(resources) = serialize_yaml("", &Vec::from_iter(result.resources())) {
-            row.add_cell(resources);
         }
 
         match forced.len() {
@@ -253,14 +223,6 @@ impl OutputFormat {
                             Color::Yellow,
                         ),
                         self.maybe_color(
-                            Cell::new(format!("Allowed Tools {}", emojis_rs::EMOJI_GEAR)),
-                            Color::Yellow,
-                        ),
-                        self.maybe_color(
-                            Cell::new(format!("Resources {}", emojis_rs::EMOJI_DOCUMENT)),
-                            Color::Yellow,
-                        ),
-                        self.maybe_color(
                             Cell::new("Override (Allowed) Permissions")
                                 .set_colspan(3)
                                 .set_alignment(CellAlignment::Center),
@@ -272,8 +234,6 @@ impl OutputFormat {
                         agent_header(),
                         Cell::new("Loc"),
                         Cell::new(format!("MCP {}", emojis_rs::EMOJI_COMPUTER)),
-                        Cell::new(format!("Allowed Tools {}", emojis_rs::EMOJI_GEAR)),
-                        Cell::new(format!("Resources {}", emojis_rs::EMOJI_DOCUMENT)),
                         Cell::new("Override (Allowed) Permissions")
                             .set_colspan(3)
                             .set_alignment(CellAlignment::Center),

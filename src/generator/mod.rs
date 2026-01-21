@@ -7,6 +7,7 @@ use {
     },
     color_eyre::eyre::Context,
     facet::Facet,
+    facet_diff::FacetDiff,
     std::{
         collections::{HashMap, HashSet},
         fmt::{self, Debug},
@@ -131,6 +132,36 @@ impl Generator {
         }
     }
 
+    #[tracing::instrument(level = "info")]
+    pub fn diff(&self) -> Result<()> {
+        let agents: Vec<KgAgent> = self.merge()?.into_iter().filter(|a| !a.template).collect();
+        let all_agents = !self.resolved.has_local;
+        for a in agents {
+            if all_agents || self.is_local(&a.name) {
+                let destination = self
+                    .destination_dir(&a.name)
+                    .join(format!("{}.json", a.name));
+                let kiro_agent = Agent::try_from(&a)?;
+                if self.fs.exists(&destination) {
+                    println!("-----{}-----", destination.display());
+                    let existing = self.fs.read_to_string_sync(&destination)?;
+                    match facet_json::from_str::<Agent>(&existing) {
+                        Err(e) => eprintln!("warning failed to deserialize {} {e}", a.name),
+                        Ok(agent) => {
+                            let diff = kiro_agent.diff(&agent);
+                            println!("{}", facet_diff::format_diff_default(&diff));
+                        }
+                    };
+                    println!("--------------");
+                } else {
+                    println!("agent {} is new", a.name);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[tracing::instrument(skip(dry_run), level = "info")]
     pub async fn write_all(&self, dry_run: bool) -> Result<Vec<AgentResult>> {
         let agents = self.merge()?;
         let mut results = Vec::with_capacity(agents.len());
