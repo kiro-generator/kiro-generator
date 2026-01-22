@@ -1,5 +1,5 @@
 [agents.test]
-includeMcpJson = true
+useLegacyMcpJson = true
 inherits = ["parent"]
 description = "This is a test agent"
 prompt = "Generate a test prompt"

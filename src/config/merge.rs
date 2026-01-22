@@ -1,7 +1,7 @@
 use super::*;
 
-impl KgAgent {
-    pub fn merge(mut self, other: KgAgent) -> Self {
+impl Manifest {
+    pub fn merge(mut self, other: Manifest) -> Self {
         tracing::trace!(
             self_name = %self.name,
             self_template = self.template,
@@ -31,6 +31,16 @@ impl KgAgent {
         if self.model.is_none() && other.model.is_some() {
             tracing::trace!("model: merged from other");
             self.model = other.model;
+        }
+
+        if self.keyboard_shortcut.is_none() && other.keyboard_shortcut.is_some() {
+            tracing::trace!("keyboardShortcut: merged from other");
+            self.keyboard_shortcut = other.keyboard_shortcut;
+        }
+
+        if self.welcome_message.is_none() && other.welcome_message.is_some() {
+            tracing::trace!("welcomeMessage: merged from other");
+            self.welcome_message = other.welcome_message;
         }
 
         // Collections are extended (merged)
@@ -173,6 +183,9 @@ mod tests {
         assert_eq!(h[0], AgentHook {
             command: "echo i have spawned".to_string(),
             matcher: None,
+            timeout_ms: None,
+            max_output_size: None,
+            cache_ttl_seconds: None,
         });
 
         let h = hooks.get(&HookTrigger::UserPromptSubmit.to_string());
@@ -220,6 +233,13 @@ mod tests {
 
         assert_eq!("", format!("{merged}"));
         assert_eq!("", format!("{merged:?}"));
+
+        assert_eq!(
+            merged.welcome_message,
+            Some("children are better than parents".to_string())
+        );
+
+        assert_eq!(merged.keyboard_shortcut, Some("ctrl+shift+a".to_string()));
         Ok(())
     }
 }

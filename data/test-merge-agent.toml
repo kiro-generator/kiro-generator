@@ -6,6 +6,7 @@ model = "claude"
 resources = ["file://parent.md", "file://README.md"]
 tools = ["web_search", "shell"]
 allowedTools = ["write"]
+welcomeMessage = "parents are better than children"
 
 [agents.parent.knowledge.docs]
 source = "file://./parent-docs"
@@ -50,11 +51,13 @@ command = "echo stopped"
 
 [agents.child]
 template = false
-includeMcpJson = true
+useLegacyMcpJson = true
 description = "I am a child"
 resources = ["file://child.md", "file://README.md"]
 inherits = ["parent"]
 tools = ["@awsdocs", "shell"]
+welcomeMessage = "children are better than parents"
+keyboardShortcut = "ctrl+shift+a"
 
 [agents.child.knowledge.docs]
 indexType = "best"

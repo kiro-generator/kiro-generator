@@ -1,7 +1,7 @@
 use {
     super::native::{AwsTool, ExecuteShellTool, NativeTools, ReadTool, WriteTool},
     crate::{
-        agent::{CustomToolConfig, Hook, hook::AgentHook},
+        agent::{CustomToolConfig, KgHook, hook::AgentHook},
         config::Knowledge,
     },
     facet::Facet,
@@ -13,7 +13,7 @@ use {
 
 #[derive(Facet, Clone, Default)]
 #[facet(default, deny_unknown_fields)]
-pub struct KgAgent {
+pub struct Manifest {
     #[facet(default)]
     pub name: String,
     /// Whether this agent is a template. Templates are not written to disk
@@ -30,7 +30,7 @@ pub struct KgAgent {
     pub resources: HashSet<String>,
     #[facet(default)]
     pub knowledge: HashMap<String, Knowledge>,
-    #[facet(default, rename = "includeMcpJson")]
+    #[facet(default, rename = "useLegacyMcpJson")]
     pub include_mcp_json: Option<bool>,
     #[facet(default)]
     pub tools: HashSet<String>,
@@ -38,7 +38,7 @@ pub struct KgAgent {
     pub allowed_tools: HashSet<String>,
     pub model: Option<String>,
     #[facet(default)]
-    pub hooks: HashMap<String, Hook>,
+    pub hooks: HashMap<String, KgHook>,
     #[facet(default, rename = "mcpServers")]
     pub mcp_servers: HashMap<String, CustomToolConfig>,
     #[facet(default, rename = "toolAliases")]
@@ -47,21 +47,29 @@ pub struct KgAgent {
     pub native_tools: NativeTools,
     #[facet(default, rename = "toolSettings")]
     pub tool_settings: HashMap<String, facet_value::Value>,
+
+    /// Keyboard shortcut for swapping to this agent (e.g., "ctrl+shift+a",
+    /// "shift+tab")
+    #[facet(default, rename = "keyboardShortcut")]
+    pub keyboard_shortcut: Option<String>,
+    /// Welcome message displayed when switching to this agent
+    #[facet(default, rename = "welcomeMessage")]
+    pub welcome_message: Option<String>,
 }
 
-impl Debug for KgAgent {
+impl Debug for Manifest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
     }
 }
 
-impl Display for KgAgent {
+impl Display for Manifest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
     }
 }
 
-impl KgAgent {
+impl Manifest {
     pub fn new(name: String, template: bool) -> Self {
         Self {
             name,
@@ -79,11 +87,17 @@ impl KgAgent {
                     e.push(AgentHook {
                         command: h.command.clone(),
                         matcher: h.matcher.clone(),
+                        timeout_ms: h.timeout_ms,
+                        max_output_size: h.max_output_size,
+                        cache_ttl_seconds: h.cache_ttl_seconds,
                     })
                 })
                 .or_insert(vec![AgentHook {
                     command: h.command.clone(),
                     matcher: h.matcher.clone(),
+                    timeout_ms: h.timeout_ms,
+                    max_output_size: h.max_output_size,
+                    cache_ttl_seconds: h.cache_ttl_seconds,
                 }]);
         }
         result

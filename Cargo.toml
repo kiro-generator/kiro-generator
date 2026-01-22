@@ -34,6 +34,7 @@ enum-iterator = "2.3.0"
 facet = { version = "0.42.0", features = ["auto-traits", "reflect", "simd"] }
 facet-diff = "0.42.0"
 facet-json = { version = "0.42.0", features = ["std", "validate"] }
+facet-json-schema = "0.42.0"
 facet-toml = { version = "0.42.0", features = ["std"] }
 facet-value = { version = "0.42.0", features = ["diagnostics", "std"] }
 futures = "0.3"

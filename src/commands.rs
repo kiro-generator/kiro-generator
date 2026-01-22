@@ -72,6 +72,17 @@ pub enum Command {
     Version,
     /// Compare generator files with Kiro agent files
     Diff,
+    /// Output JSON schema for configuration files
+    #[command(subcommand)]
+    Schema(SchemaCommand),
+}
+
+#[derive(Subcommand, Clone)]
+pub enum SchemaCommand {
+    /// Output JSON schema for manifest files (kg.toml)
+    Manifest,
+    /// Output JSON schema for agent definition files
+    Agent,
 }
 
 impl Default for Command {

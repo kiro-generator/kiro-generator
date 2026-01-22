@@ -1,7 +1,7 @@
 description = "agent from file"
 prompt = "Generate a test prompt"
 resources = ["file://resource.md", "file://README.md"]
-includeMcpJson = true
+useLegacyMcpJson = true
 tools = ["*"]
 allowedTools = ["@awsdocs"]
 

@@ -744,6 +744,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "facet-json-schema"
+version = "0.42.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a077c5cbf8c2b548a21663ae21b60198437bee0b39e38a94c2deec7db253eeb3"
+dependencies = [
+ "facet",
+ "facet-core",
+ "facet-json",
+]
+
+[[package]]
 name = "facet-macro-parse"
 version = "0.42.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1496,6 +1507,7 @@ dependencies = [
  "facet",
  "facet-diff",
  "facet-json",
+ "facet-json-schema",
  "facet-toml",
  "facet-value",
  "futures",

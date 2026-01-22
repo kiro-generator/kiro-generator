@@ -167,6 +167,18 @@ async fn main() -> Result<()> {
         return init(&fs, dir).await;
     }
 
+    if let commands::Command::Schema(schema_cmd) = &cli.command {
+        use commands::SchemaCommand;
+        let output = match schema_cmd {
+            SchemaCommand::Manifest => facet_json_schema::to_schema::<config::GeneratorConfig>(),
+            SchemaCommand::Agent => {
+                facet_json_schema::to_schema::<config::agent_file::KgAgentFileDoc>()
+            }
+        };
+        println!("{}", output);
+        return Ok(());
+    }
+
     if global_mode {
         debug!(
             "changing working directory to {}",

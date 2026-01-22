@@ -4,14 +4,14 @@ pub mod tools;
 pub const DEFAULT_AGENT_RESOURCES: &[&str] = &["file://README.md", "file://AGENTS.md"];
 pub const DEFAULT_APPROVE: [&str; 0] = [];
 use {
-    crate::{Result, agent::hook::AgentHook, config::KgAgent},
+    crate::{Result, agent::hook::AgentHook, config::Manifest},
     facet::Facet,
     std::{
         collections::{HashMap, HashSet},
         fmt::Display,
     },
 };
-pub use {custom_tool::CustomToolConfig, hook::Hook, tools::*};
+pub use {custom_tool::CustomToolConfig, hook::KgHook, tools::*};
 
 #[derive(Facet, Debug, Clone, Eq, PartialEq)]
 pub struct Agent {
@@ -55,7 +55,7 @@ pub struct Agent {
     /// model.
     #[facet(default, skip_serializing_if = Option::is_none)]
     pub model: Option<String>,
-    #[facet(default, rename = "includeMcpJson")]
+    #[facet(default, rename = "useLegacyMcpJson")]
     pub include_mcp_json: bool,
 }
 
@@ -82,10 +82,10 @@ impl Agent {
     }
 }
 
-impl TryFrom<&KgAgent> for Agent {
+impl TryFrom<&Manifest> for Agent {
     type Error = color_eyre::Report;
 
-    fn try_from(value: &KgAgent) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &Manifest) -> std::result::Result<Self, Self::Error> {
         let native_tools = &value.native_tools;
         let mut tools_settings = HashMap::new();
 
@@ -196,7 +196,7 @@ mod tests {
         };
         assert_eq!("test", format!("{agent}"));
 
-        let kg_agent = KgAgent::default();
+        let kg_agent = Manifest::default();
         let agent = Agent::try_from(&kg_agent)?;
         assert_eq!(agent.tools, Agent::default().tools);
 

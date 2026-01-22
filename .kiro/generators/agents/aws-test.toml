@@ -6,7 +6,7 @@ resources = [
   "file://README.md",
   "file://.amazonq/rules/**/*.md"
 ]
-includeMcpJson = false
+useLegacyMcpJson = false
 
 [hooks.whoami]
 type = "agentSpawn"

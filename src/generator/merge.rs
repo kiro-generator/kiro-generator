@@ -1,4 +1,4 @@
-use {super::*, crate::config::KgAgent, std::collections::HashSet};
+use {super::*, crate::config::Manifest, std::collections::HashSet};
 
 impl Generator {
     /// Resolve transitive inheritance chain for an agent
@@ -6,7 +6,7 @@ impl Generator {
     #[tracing::instrument(level = "debug", skip(self))]
     fn resolve_transitive_inheritance(
         &self,
-        agent: &KgAgent,
+        agent: &Manifest,
         visited: &mut HashSet<String>,
     ) -> Result<Vec<String>> {
         if visited.contains(&agent.name) {
@@ -42,8 +42,8 @@ impl Generator {
 
     /// Merge all agents with transitive inheritance resolution
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn merge(&self) -> Result<Vec<KgAgent>> {
-        let mut resolved_agents: HashMap<String, KgAgent> =
+    pub fn merge(&self) -> Result<Vec<Manifest>> {
+        let mut resolved_agents: HashMap<String, Manifest> =
             HashMap::with_capacity(self.resolved.agents.len());
 
         for (name, agent) in &self.resolved.agents {
@@ -70,7 +70,7 @@ impl Generator {
             resolved_agents.insert(name.clone(), merged);
         }
 
-        let mut agents: Vec<KgAgent> = resolved_agents.values().cloned().collect();
+        let mut agents: Vec<Manifest> = resolved_agents.values().cloned().collect();
         agents.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(agents)
     }

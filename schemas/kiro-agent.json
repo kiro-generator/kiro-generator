@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Agent",
   "description": "An Agent is a declarative way of configuring a given instance of kiro-cli.",
   "type": "object",
@@ -91,7 +91,7 @@
       },
       "default": {}
     },
-    "includeMcpJson": {
+    "useLegacyMcpJson": {
       "description": "Whether or not to include the legacy global MCP configuration in the agent\nYou can reference tools brought in by these servers as just as you would with the servers\nyou configure in the mcpServers field in this config",
       "type": "boolean",
       "default": false
@@ -100,6 +100,14 @@
       "description": "The model ID to use for this agent. If not specified, uses the default model.",
       "type": ["string", "null"],
       "default": null
+    },
+    "keyboardShortcut": {
+      "description": "Keyboard shortcut for swapping to this agent (e.g., \"ctrl+shift+a\", \"shift+tab\")",
+      "type": ["string", "null"]
+    },
+    "welcomeMessage": {
+      "description": "Welcome message displayed when switching to this agent",
+      "type": ["string", "null"]
     }
   },
   "additionalProperties": false,
@@ -201,8 +209,10 @@
     "ResourcePath": {
       "anyOf": [
         {
-          "type": "string",
-          "pattern": "^(file://)"
+          "type": "string"
+        },
+        {
+          "type": "string"
         },
         {
           "$ref": "#/$defs/ComplexResource"

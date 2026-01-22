@@ -2,7 +2,7 @@ description = "Default agent for Kiro"
 tools = ["*"]
 allowedTools = ["read", "knowledge", "@fetch"]
 resources = ["file://README.md", "file://.amazonq/rules/**/*.md"]
-includeMcpJson = false
+useLegacyMcpJson = false
 
 [hooks.echo]
 type = "agentSpawn"

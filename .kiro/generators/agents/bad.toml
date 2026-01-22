@@ -1,2 +1,2 @@
 [agents.bad]
-includeMcpJson = "not a bool"
+useLegacyMcpJson = "not a bool"

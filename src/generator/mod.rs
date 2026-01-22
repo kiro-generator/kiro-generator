@@ -2,7 +2,7 @@ use {
     crate::{
         Result,
         agent::{Agent, ToolTarget},
-        config::KgAgent,
+        config::Manifest,
         os::Fs,
     },
     color_eyre::eyre::Context,
@@ -29,7 +29,7 @@ use crate::source::*;
 
 pub struct AgentResult {
     pub kiro_agent: Agent,
-    pub agent: KgAgent,
+    pub agent: Manifest,
     pub writable: bool,
     pub destination: PathBuf,
 }
@@ -134,7 +134,7 @@ impl Generator {
 
     #[tracing::instrument(level = "info")]
     pub fn diff(&self) -> Result<()> {
-        let agents: Vec<KgAgent> = self.merge()?.into_iter().filter(|a| !a.template).collect();
+        let agents: Vec<Manifest> = self.merge()?.into_iter().filter(|a| !a.template).collect();
         let all_agents = !self.resolved.has_local;
         for a in agents {
             if all_agents || self.is_local(&a.name) {
@@ -179,7 +179,7 @@ impl Generator {
     }
 
     #[tracing::instrument(skip(dry_run), level = "info")]
-    pub(crate) async fn write(&self, agent: KgAgent, dry_run: bool) -> Result<AgentResult> {
+    pub(crate) async fn write(&self, agent: Manifest, dry_run: bool) -> Result<AgentResult> {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
             kiro_agent: Agent::try_from(&agent)?,

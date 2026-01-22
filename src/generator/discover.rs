@@ -1,6 +1,6 @@
 use {
     super::*,
-    crate::config::{GeneratorConfig, KgAgent},
+    crate::config::{GeneratorConfig, Manifest},
     color_eyre::eyre::bail,
     std::{fmt::Display, ops::Deref, path::Path},
 };
@@ -63,9 +63,9 @@ fn process_local(
     fs: &Fs,
     name: impl AsRef<str>,
     location: &ConfigLocation,
-    inline: Option<&KgAgent>,
+    inline: Option<&Manifest>,
     sources: &mut Vec<KdlAgentSource>,
-) -> crate::Result<Option<KgAgent>> {
+) -> crate::Result<Option<Manifest>> {
     let local_agent_path = location.local_agent(fs, &name)?;
     let template = inline.map(|i| i.template).unwrap_or(false);
 
@@ -73,7 +73,7 @@ fn process_local(
         None => Ok(inline.cloned()),
         Some(path) => {
             // Template status is only defined in manifests, passed via inline config
-            match KgAgent::from_path(fs, &name, path, template) {
+            match Manifest::from_path(fs, &name, path, template) {
                 None => Ok(None),
                 Some(a) => {
                     let agent = a?;
@@ -94,7 +94,7 @@ fn process_local(
 #[facet(opaque)]
 pub struct ResolvedAgents {
     #[facet(default)]
-    pub agents: HashMap<String, KgAgent>,
+    pub agents: HashMap<String, Manifest>,
     #[facet(skip, default)]
     pub sources: KdlSources,
     #[facet(skip, default)]
@@ -102,7 +102,7 @@ pub struct ResolvedAgents {
 }
 
 impl Deref for ResolvedAgents {
-    type Target = HashMap<String, KgAgent>;
+    type Target = HashMap<String, Manifest>;
 
     fn deref(&self) -> &Self::Target {
         &self.agents
@@ -154,7 +154,7 @@ pub fn discover(
     let all_agents_names: HashSet<String> =
         local_names.iter().chain(&global_names).cloned().collect();
 
-    let mut resolved_agents: HashMap<String, KgAgent> =
+    let mut resolved_agents: HashMap<String, Manifest> =
         HashMap::with_capacity(all_agents_names.len());
     let mut sources: KdlSources = KdlSources::from(&all_agents_names);
 
@@ -165,9 +165,9 @@ pub fn discover(
 
         let template = global_agents.get(name).map(|a| a.template).unwrap_or(false);
         let mut global_path_buf: Option<PathBuf> = None;
-        let file_source: Option<KgAgent> = if let Some(global_path) =
+        let file_source: Option<Manifest> = if let Some(global_path) =
             location.global_agent(fs, name)?
-            && let Some(agent) = KgAgent::from_path(fs, name, &global_path, template)
+            && let Some(agent) = Manifest::from_path(fs, name, &global_path, template)
         {
             global_path_buf = Some(global_path);
             Some(agent?)

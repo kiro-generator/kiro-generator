@@ -1,6 +1,6 @@
-mod agent;
-mod agent_file;
+pub(crate) mod agent_file;
 mod knowledge;
+mod manifest;
 mod merge;
 mod native;
 
@@ -10,7 +10,7 @@ use {
     facet_toml as toml,
     std::{collections::HashMap, fmt::Debug, path::Path},
 };
-pub use {agent::KgAgent, knowledge::Knowledge};
+pub use {knowledge::Knowledge, manifest::Manifest};
 
 pub(crate) type ConfigResult<T> = crate::Result<T>;
 
@@ -42,7 +42,7 @@ where
 #[facet(deny_unknown_fields)]
 pub struct GeneratorConfig {
     #[facet(default, rename = "agents")]
-    pub agents: HashMap<String, KgAgent>,
+    pub agents: HashMap<String, Manifest>,
 }
 impl GeneratorConfig {
     pub fn populate_names(mut self) -> Self {
@@ -59,7 +59,7 @@ impl Debug for GeneratorConfig {
 }
 
 impl GeneratorConfig {
-    pub fn get(&self, name: impl AsRef<str>) -> Option<&KgAgent> {
+    pub fn get(&self, name: impl AsRef<str>) -> Option<&Manifest> {
         self.agents.get(name.as_ref())
     }
 }
@@ -73,7 +73,7 @@ mod tests {
 
     #[test_log::test]
     fn test_agent_decoding() -> ConfigResult<()> {
-        let toml_agents = include_str!("../data/test-decoding.toml");
+        let toml_agents = include_str!("../../data/test-decoding.toml");
 
         let config: GeneratorConfig = toml_parse(toml_agents)?;
         assert_eq!(config.agents.len(), 1);
@@ -152,7 +152,7 @@ mod tests {
 
     #[test_log::test]
     fn test_agent_file_source() -> ConfigResult<()> {
-        let agent_str = include_str!("../data/test-file-source.toml");
+        let agent_str = include_str!("../../data/test-file-source.toml");
         let agent: KgAgentFileDoc = toml_parse(agent_str)?;
         assert_eq!(
             agent.description.unwrap_or_default().to_string(),
