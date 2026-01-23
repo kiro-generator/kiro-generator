@@ -1,0 +1,5 @@
+"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/raw/refs/heads/main/schemas/agent.json"
+
+[nativeTools.shell]
+allow = ["git status", "git fetch", "git diff .*", "git log .*"]
+deny = ["git commit .*", "git push .*"]

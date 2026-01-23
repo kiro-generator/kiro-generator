@@ -1,3 +1,5 @@
+"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/kg.json"
+
 [agents.test]
 useLegacyMcpJson = true
 inherits = ["parent"]

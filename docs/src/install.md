@@ -27,7 +27,7 @@ brew install kiro-generator
 ## From Source
 
 ```
-git clone https://github.com/carteraMesh/kiro-generator.git
+git clone https://github.com/dougEfresh/kiro-generator.git
 cd kiro-generator
 cargo install --path .
 ```

@@ -11,7 +11,7 @@ jobs:
   verify:
     name: verify
     if: false
-    uses: carteramesh/ci/.github/workflows/pages.yml@main
+    uses: dougEfresh/ci/.github/workflows/pages.yml@main
     secrets: inherit
     with:
       runner: ${{ vars.RUNNER }}

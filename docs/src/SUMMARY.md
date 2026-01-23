@@ -14,6 +14,7 @@
 
 # Advanced
 
+- [Knowledge Bases](advanced/knowledge-bases.md)
 - [Organizing Agents](advanced/organizing.md)
 
 # Reference

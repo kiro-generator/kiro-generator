@@ -93,6 +93,20 @@ async fn init(fs: &Fs, gen_dir: impl AsRef<Path>) -> Result<()> {
         ));
     }
 
+    if fs.exists(&manifests_dir) {
+        return Err(format_err!(
+            "Directory already exists at {}",
+            manifests_dir.display()
+        ));
+    }
+
+    if fs.exists(&agents_dir) {
+        return Err(format_err!(
+            "Directory already exists at {}",
+            agents_dir.display()
+        ));
+    }
+
     // Create directories
     fs.create_dir_all(&manifests_dir)
         .await
@@ -102,29 +116,21 @@ async fn init(fs: &Fs, gen_dir: impl AsRef<Path>) -> Result<()> {
         .wrap_err(format!("Failed to create {}", agents_dir.display()))?;
 
     // Create manifests/kg.toml
-    let kg_content = r#"# Kiro Generator Manifest
-# Declare your agents and their relationships here
-
-[agents]
-default = { inherits = [] }
-"#;
+    let kg_content = include_str!("../examples/basic/manifests/kg.toml");
     fs.write(&kg_toml, kg_content)
         .await
         .wrap_err(format!("Failed to write {}", kg_toml.display()))?;
 
+    // Create agents/git.toml
+    let git_toml = agents_dir.join("git.toml");
+    let git_content = include_str!("../examples/basic/agents/git.toml");
+    fs.write(&git_toml, git_content)
+        .await
+        .wrap_err(format!("Failed to write {}", git_toml.display()))?;
+
     // Create agents/default.toml
     let default_toml = agents_dir.join("default.toml");
-    let default_content = r#"# Default agent configuration
-description = "Default agent"
-tools = ["*"]
-allowedTools = ["read", "knowledge", "web_search"]
-resources = ["file://README.md"]
-
-[toolsSettings.shell]
-allowedCommands = ["git status", "git fetch", "git diff .*"]
-deniedCommands = ["git commit .*", "git push .*"]
-autoAllowReadonly = true
-"#;
+    let default_content = include_str!("../examples/basic/agents/default.toml");
     fs.write(&default_toml, default_content)
         .await
         .wrap_err(format!("Failed to write {}", default_toml.display()))?;
@@ -132,6 +138,7 @@ autoAllowReadonly = true
     println!("✓ Created {}", manifests_dir.display());
     println!("✓ Created {}", agents_dir.display());
     println!("✓ Created {}", kg_toml.display());
+    println!("✓ Created {}", git_toml.display());
     println!("✓ Created {}", default_toml.display());
     println!("\nInitialized kg configuration in {}", gen_dir.display());
 
@@ -169,13 +176,20 @@ async fn main() -> Result<()> {
 
     if let commands::Command::Schema(schema_cmd) = &cli.command {
         use commands::SchemaCommand;
-        let output = match schema_cmd {
-            SchemaCommand::Manifest => facet_json_schema::to_schema::<config::GeneratorConfig>(),
+        let mut output = match schema_cmd {
+            SchemaCommand::Manifest => {
+                let mut s = facet_json_schema::schema_for::<config::GeneratorConfig>();
+                s.description = Some("Schema for kiro-generator (kg) manifest TOML files".into());
+                s
+            }
             SchemaCommand::Agent => {
-                facet_json_schema::to_schema::<config::agent_file::KgAgentFileDoc>()
+                let mut s = facet_json_schema::schema_for::<config::agent_file::KgAgentFileDoc>();
+                s.description = Some("Schema for kiro-generator (kg) agent TOML files".into());
+                s
             }
         };
-        println!("{}", output);
+        output.schema = Some("https://json-schema.org/draft/2020-12/schema".into());
+        println!("{}", facet_json::to_string_pretty(&output)?);
         return Ok(());
     }
 
@@ -231,19 +245,25 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+    use {super::*, std::path::PathBuf};
+
     #[tokio::test]
     #[test_log::test]
     async fn test_init_config() -> Result<()> {
-        // let fs = Fs::new();
-        // let dir = PathBuf::from("init");
-        // super::init(&fs, &dir).await?;
-        // assert!(fs.exists(&dir));
-        // assert!(fs.exists(dir.join("kg.toml")));
+        let fs = Fs::new();
+        let dir = PathBuf::from("init-test");
 
-        // let result = init(&fs, &dir).await;
-        // assert!(result.is_err());
-        // assert!(result.unwrap_err().to_string().contains("already exists"));
+        init(&fs, &dir).await?;
+        assert!(fs.exists(dir.join("manifests")));
+        assert!(fs.exists(dir.join("agents")));
+        assert!(fs.exists(dir.join("manifests/kg.toml")));
+        assert!(fs.exists(dir.join("agents/git.toml")));
+        assert!(fs.exists(dir.join("agents/default.toml")));
+
+        let result = init(&fs, &dir).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("already exists"));
+
         Ok(())
     }
 }

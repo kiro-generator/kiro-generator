@@ -41,6 +41,8 @@ where
 #[derive(Default, Facet)]
 #[facet(deny_unknown_fields)]
 pub struct GeneratorConfig {
+    #[facet(default, rename = "$schema")]
+    pub schema: Option<String>,
     #[facet(default, rename = "agents")]
     pub agents: HashMap<String, Manifest>,
 }

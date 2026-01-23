@@ -32,4 +32,4 @@ Override permission restrictions in child agents. Ensure critical capabilities a
 
 ### Vendor Packages
 
-Share complete agent configurations (MCP servers + resources + permissions). See [VENDOR.md](https://github.com/CarteraMesh/kiro-generator/blob/main/VENDOR.md) for future plans.
+Share complete agent configurations (MCP servers + resources + permissions). See [VENDOR.md](https://github.com/dougEfresh/kiro-generator/blob/main/VENDOR.md) for future plans.

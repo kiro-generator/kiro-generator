@@ -7,7 +7,7 @@ kg provides JSON schemas for IDE autocompletion and validation.
 For agent declarations in `kg.toml`:
 
 ```toml
-"$schema" = "https://raw.githubusercontent.com/CarteraMesh/kiro-generator/refs/heads/main/schemas/kg.json"
+"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json"
 
 [agents]
 default = { inherits = [] }
@@ -18,29 +18,57 @@ default = { inherits = [] }
 For individual agent files like `default.toml`, `rust.toml`:
 
 ```toml
-"$schema" = "https://raw.githubusercontent.com/CarteraMesh/kiro-generator/refs/heads/main/schemas/kiro-agent.json"
+"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/agent.json"
 
 description = "Default agent"
 allowedTools = ["read", "knowledge"]
+```
+
+## Generating Schemas
+
+Generate schemas locally:
+
+```bash
+# Generate manifest schema
+kg schema manifest > manifest.json
+
+# Generate agent schema
+kg schema agent > agent.json
 ```
 
 ## LSP Configuration
 
 ### taplo (Recommended)
 
-Add to `.taplo.toml` in your project or `~/.config/taplo/.taplo.toml`:
+Add to `.taplo.toml` in your project:
 
 ```toml
 [schema]
 enabled = true
 
 [[schema.associations]]
-path = "**/kg.toml"
-url = "https://raw.githubusercontent.com/CarteraMesh/kiro-generator/refs/heads/main/schemas/kg.json"
+path = "**/.kiro/generators/manifests/*.toml"
+url = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json"
 
 [[schema.associations]]
-path = "**/.kiro/generators/*.toml"
-url = "https://raw.githubusercontent.com/CarteraMesh/kiro-generator/refs/heads/main/schemas/kiro-agent.json"
+path = "**/.kiro/generators/agents/**/*.toml"
+url = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/agent.json"
+```
+
+### tombi
+
+Add to `tombi.toml` in your project:
+
+```toml
+[[schemas]]
+toml-version = "1.0.0"
+path = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json"
+include = ["**/.kiro/generators/manifests/*.toml"]
+
+[[schemas]]
+toml-version = "1.0.0"
+path = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/agent.json"
+include = ["**/.kiro/generators/agents/**/*.toml"]
 ```
 
 ### VS Code
@@ -58,8 +86,8 @@ require('lspconfig').taplo.setup({
       schema = {
         enabled = true,
         associations = {
-          ["**/kg.toml"] = "https://raw.githubusercontent.com/CarteraMesh/kiro-generator/refs/heads/main/schemas/kg.json",
-          ["**/.kiro/generators/*.toml"] = "https://raw.githubusercontent.com/CarteraMesh/kiro-generator/refs/heads/main/schemas/kiro-agent.json"
+          ["**/.kiro/generators/manifests/*.toml"] = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json",
+          ["**/.kiro/generators/agents/**/*.toml"] = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/agent.json"
         }
       }
     }
@@ -80,7 +108,7 @@ With schema validation you get:
 
 The schema is versioned with releases:
 
-- **Latest:** `https://raw.githubusercontent.com/CarteraMesh/kiro-generator/refs/heads/main/schemas/kg.json`
-- **Specific version:** `https://raw.githubusercontent.com/CarteraMesh/kiro-generator/refs/tags/v0.1.0/schemas/kg.json`
+- **Latest:** `https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json`
+- **Specific version:** `https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/tags/v0.1.0/schemas/manifest.json`
 
 Pin to a specific version for stability or use `main` for latest features.

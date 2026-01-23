@@ -107,7 +107,7 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::config::HookBuilder::default()
         .display_env_section(false) // Hide environment vars in production
         .install()?;
-    
+
     // Your CLI logic here
 }
 ```
@@ -232,10 +232,10 @@ struct Cli { /* ... */ }
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    
+
     // Clap handles its own error formatting, which is good
     let cli = Cli::parse();
-    
+
     run(cli)?;
     Ok(())
 }
@@ -300,8 +300,11 @@ pub struct MyStruct {
 - `facet-json` - JSON support (used for agent output)
 - `facet-value` - Dynamic value type
 
-**No untagged enum support:**
-Facet does not support serde's `#[serde(untagged)]` for enums. For dual-type fields (like `resources` which can be String or Knowledge object), handle this at the application level by using separate fields or custom parsing logic.
+### Knowledge
+
+For Kiro Agents, refer to your @knowledge tool for detail documentation about the facet crate ecosystem. This includes examples, tips and tricks, troubleshooting, debugging. This knowledge base covers facet-json, facet-toml, facet-diff crates as well as others.
+Use this knowledge if you are unsure of facet syntax or behavior
+
 
 ### References
 - [facet.rs guide](https://facet.rs/guide/getting-started/)
@@ -348,10 +351,10 @@ When `Fs::new()` is called during tests, it automatically:
 #[tokio::test]
 async fn test_something() -> Result<()> {
     let fs = Fs::new();  // Creates isolated test environment
-    
+
     // All fs operations are scoped to the temp directory
     fs.write("test.toml", b"content").await?;
-    
+
     Ok(())
 }
 ```
@@ -371,7 +374,7 @@ async fn test_something() -> Result<()> {
 - The temp directory is automatically cleaned up after the test
 - Use `#[tokio::test]` for async tests that use `Fs`
 
-## Further Documentation 
+## Further Documentation
 
 The directory `docs` contains mdbook formatted documentation for the project.  Some notiable files:
 

@@ -107,7 +107,7 @@ impl Generator {
         format: crate::output::OutputFormat,
     ) -> Result<Self> {
         let global_path = location.global_path();
-        let resolved = discover::discover(&fs, &location, &format).unwrap();
+        let resolved = discover::discover(&fs, &location, &format)?;
         Ok(Self {
             global_path,
             resolved,

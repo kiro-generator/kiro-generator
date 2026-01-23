@@ -16,8 +16,8 @@ smart-punctuation = true
 mathjax-support = true
 #copy-fonts = true
 no-section-label = false
-git-repository-url = "https://github.com/carteraMesh/kiro-generator"
-edit-url-template = "https://github.com/carteraMesh/kiro-generator/edit/main/docs/{path}"
+git-repository-url = "https://github.com/dougEfresh/kiro-generator"
+edit-url-template = "https://github.com/dougEfresh/kiro-generator/edit/main/docs/{path}"
 
 [output.html.print]
 enable = true
@@ -46,4 +46,4 @@ copy-js = true
 
 # announcement-banner.enable = false
 # announcement-banner.id = "3.0.11"
-# announcement-banner.message = "*New version [3.0.11](https://github.com/carteraMesh/kiro-generator/releases/tag/3.0.11)*"
+# announcement-banner.message = "*New version [3.0.11](https://github.com/dougEfresh/kiro-generator/releases/tag/3.0.11)*"

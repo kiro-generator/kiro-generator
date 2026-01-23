@@ -1,3 +1,0 @@
-[agents]
-default = {  } # default is the agent name
-rust = { inherits = ["default"] }  # rust agent config is merged with default

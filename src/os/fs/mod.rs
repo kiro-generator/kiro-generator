@@ -105,63 +105,109 @@ impl Fs {
             true => {
                 info!("using CHROOT filesystem");
                 let tempdir = tempfile::tempdir().expect("failed creating temporary directory");
-                let fs = Self::Chroot(tempdir.into());
+                let temp_path = tempdir.path().to_path_buf();
+                let chroot_fs = Self::Chroot(tempdir.into());
                 futures::executor::block_on(async {
-                    fs.create_dir_all(ACTIVE_USER_HOME)
+                    chroot_fs
+                        .create_dir_all(ACTIVE_USER_HOME)
                         .await
                         .expect("failed to create test user home");
                     let user_path = PathBuf::from(ACTIVE_USER_HOME)
                         .join(".kiro")
                         .join("generators");
-                    fs.create_dir_all(&user_path)
+                    chroot_fs
+                        .create_dir_all(&user_path)
                         .await
                         .expect("failed to create test user home");
-                    fs.create_dir_all("./.kiro").await.ok();
-                    fs.create_dir_all("./.kiro/generators").await.ok();
-                    fs.create_dir_all("./.kiro/generators/manifests").await.ok();
-                    fs.create_dir_all("./.kiro/generators/agents").await.ok();
-                    fs.create_dir_all("./.kiro/agents").await.ok();
+                    chroot_fs.create_dir_all("./.kiro").await.ok();
+                    chroot_fs.create_dir_all("./.kiro/generators").await.ok();
+                    chroot_fs
+                        .create_dir_all("./.kiro/generators/manifests")
+                        .await
+                        .ok();
+                    chroot_fs
+                        .create_dir_all("./.kiro/generators/agents")
+                        .await
+                        .ok();
+                    chroot_fs.create_dir_all("./.kiro/agents").await.ok();
 
                     // Copy local manifests
-                    if let Ok(entries) = std::fs::read_dir("./.kiro/generators/manifests") {
+                    if let Ok(entries) = std::fs::read_dir("./data/kiro/generators/manifests") {
                         for entry in entries.flatten() {
                             if let Ok(file_type) = entry.file_type()
                                 && file_type.is_file()
                                 && let Ok(config) = std::fs::read_to_string(entry.path())
                                 && let Some(name) = entry.file_name().to_str()
                             {
-                                fs.write(format!("./.kiro/generators/manifests/{}", name), config)
+                                chroot_fs
+                                    .write(format!("./.kiro/generators/manifests/{}", name), config)
                                     .await
                                     .ok();
                             }
                         }
                     }
 
-                    // Copy local agents
-                    if let Ok(entries) = std::fs::read_dir("./.kiro/generators/agents") {
-                        for entry in entries.flatten() {
-                            if let Ok(file_type) = entry.file_type()
-                                && file_type.is_file()
-                                && let Ok(config) = std::fs::read_to_string(entry.path())
-                                && let Some(name) = entry.file_name().to_str()
-                            {
-                                fs.write(format!("./.kiro/generators/agents/{}", name), config)
-                                    .await
-                                    .ok();
+                    // Copy local agents (recursively)
+                    fn copy_agents_recursive(
+                        src: &std::path::Path,
+                        dst: &std::path::Path,
+                        temp_root: &std::path::Path,
+                    ) -> std::io::Result<()> {
+                        if let Ok(entries) = std::fs::read_dir(src) {
+                            for entry in entries.flatten() {
+                                let path = entry.path();
+                                let name = entry.file_name();
+
+                                if let Ok(file_type) = entry.file_type() {
+                                    if file_type.is_dir() {
+                                        let new_dst = dst.join(&name);
+                                        std::fs::create_dir_all(temp_root.join(&new_dst))?;
+                                        copy_agents_recursive(&path, &new_dst, temp_root)?;
+                                    } else if file_type.is_file() {
+                                        let dst_file = temp_root.join(dst).join(&name);
+                                        std::fs::copy(&path, dst_file)?;
+                                    }
+                                }
+                            }
+                        }
+                        Ok(())
+                    }
+
+                    let agents_src = std::path::Path::new("./data/kiro/generators/agents");
+                    let agents_dst = std::path::Path::new("./.kiro/generators/agents");
+                    if let Err(e) = copy_agents_recursive(agents_src, agents_dst, &temp_path) {
+                        tracing::debug!("failed to copy agents: {}", e);
+                    }
+
+                    // Debug: recursively list what was copied
+                    fn debug_list_dir(path: &std::path::Path, indent: usize) {
+                        if let Ok(entries) = std::fs::read_dir(path) {
+                            for entry in entries.flatten() {
+                                let p = entry.path();
+                                tracing::debug!("{:indent$}- {:?}", "", p, indent = indent * 2);
+                                if p.is_dir() {
+                                    debug_list_dir(&p, indent + 1);
+                                }
                             }
                         }
                     }
+                    tracing::debug!("copied local agents:");
+                    debug_list_dir(&temp_path.join("./.kiro/generators/agents"), 1);
 
                     // Copy global manifests
-                    if let Ok(entries) = std::fs::read_dir("./.kiro/global/manifests") {
-                        fs.create_dir_all(user_path.join("manifests")).await.ok();
+                    if let Ok(entries) = std::fs::read_dir("./data/kiro/global/manifests") {
+                        chroot_fs
+                            .create_dir_all(user_path.join("manifests"))
+                            .await
+                            .ok();
                         for entry in entries.flatten() {
                             if let Ok(file_type) = entry.file_type()
                                 && file_type.is_file()
                                 && let Ok(config) = std::fs::read_to_string(entry.path())
                                 && let Some(name) = entry.file_name().to_str()
                             {
-                                fs.write(user_path.join("manifests").join(name), config)
+                                chroot_fs
+                                    .write(user_path.join("manifests").join(name), config)
                                     .await
                                     .ok();
                             }
@@ -169,15 +215,19 @@ impl Fs {
                     }
 
                     // Copy global agents
-                    if let Ok(entries) = std::fs::read_dir("./.kiro/global/agents") {
-                        fs.create_dir_all(user_path.join("agents")).await.ok();
+                    if let Ok(entries) = std::fs::read_dir("./data/kiro/global/agents") {
+                        chroot_fs
+                            .create_dir_all(user_path.join("agents"))
+                            .await
+                            .ok();
                         for entry in entries.flatten() {
                             if let Ok(file_type) = entry.file_type()
                                 && file_type.is_file()
                                 && let Ok(config) = std::fs::read_to_string(entry.path())
                                 && let Some(name) = entry.file_name().to_str()
                             {
-                                fs.write(user_path.join("agents").join(name), config)
+                                chroot_fs
+                                    .write(user_path.join("agents").join(name), config)
                                     .await
                                     .ok();
                             }
@@ -185,7 +235,7 @@ impl Fs {
                     }
                 });
 
-                fs
+                chroot_fs
             }
             false => Self::Real,
         }

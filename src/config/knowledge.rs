@@ -44,15 +44,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_deserialize_knowledge_minimal() {
+    fn test_deserialize_knowledge_minimal() -> crate::Result<()> {
         let toml = r#"
 source = "file://./docs"
 "#;
-        let k: Knowledge = facet_toml::from_str(toml).unwrap();
+        let k: Knowledge = facet_toml::from_str(toml)?;
         assert_eq!(k.source, Some("file://./docs".to_string()));
         assert_eq!(k.description, None);
         assert_eq!(k.index_type, None);
         assert_eq!(k.auto_update, None);
+        Ok(())
     }
 
     #[test]

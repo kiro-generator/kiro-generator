@@ -4,3 +4,5 @@
 .kiro/agents/
 docs/book/
 .kiro/settings/
+node_modules
+tsconfig.json

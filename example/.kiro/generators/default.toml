@@ -1,8 +1,0 @@
-description = "Default agent"
-tools = ["*"]
-allowedTools = ["read", "knowledge", "web_search"]
-resources = ["file://README.md", "file://AGENTS.md"]
-[toolsSettings.shell]
-allowedCommands = ["git status", "git fetch", "git diff .*" ]
-deniedCommands = ["git commit .*", "git push .*" ]
-autoAllowReadonly = true
