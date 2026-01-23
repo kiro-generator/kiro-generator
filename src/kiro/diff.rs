@@ -1,5 +1,5 @@
 use {
-    super::{Agent, Knowledge, tools::*},
+    super::{KiroAgent, Knowledge, tools::*},
     facet::Facet,
     std::collections::HashSet,
 };
@@ -51,7 +51,7 @@ pub struct NormalizedAgent {
     pub other_tools: Vec<String>,
 }
 
-impl Agent {
+impl KiroAgent {
     pub fn normalize(self) -> NormalizedAgent {
         let mut shell = None;
         let mut aws = None;
@@ -121,19 +121,19 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::config::Manifest, facet_diff::FacetDiff};
+    use {super::*, facet_diff::FacetDiff};
 
     #[test]
     fn test_default_agent() -> crate::Result<()> {
-        let agent = Agent {
+        let agent = KiroAgent {
             name: "test".to_string(),
             ..Default::default()
         };
         assert_eq!("test", format!("{agent}"));
 
-        let kg_agent = Manifest::default();
-        let agent = Agent::try_from(&kg_agent)?;
-        assert_eq!(agent.tools, Agent::default().tools);
+        let kg_agent = crate::Manifest::default();
+        let agent = KiroAgent::try_from(&kg_agent)?;
+        assert_eq!(agent.tools, KiroAgent::default().tools);
 
         Ok(())
     }
@@ -304,7 +304,7 @@ mod tests {
     fn test_normalize_malformed_knowledge() {
         use facet_value::Value;
 
-        let agent = Agent {
+        let agent = KiroAgent {
             name: "test".to_string(),
             resources: vec![
                 Value::from("file://valid.md"),

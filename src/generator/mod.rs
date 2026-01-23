@@ -1,8 +1,8 @@
 use {
     crate::{
+        Manifest,
         Result,
-        agent::{Agent, ToolTarget},
-        config::Manifest,
+        kiro::{KiroAgent, ToolTarget},
         os::Fs,
     },
     color_eyre::eyre::Context,
@@ -23,12 +23,13 @@ pub(super) const MAX_AGENT_DIR_ENTRIES: usize = 1000;
 mod config_location;
 mod discover;
 mod merge;
-pub use config_location::ConfigLocation;
+
+pub use config_location::*;
 
 use crate::source::*;
 
 pub struct AgentResult {
-    pub kiro_agent: Agent,
+    pub kiro_agent: KiroAgent,
     pub agent: Manifest,
     pub writable: bool,
     pub destination: PathBuf,
@@ -141,11 +142,11 @@ impl Generator {
                 let destination = self
                     .destination_dir(&a.name)
                     .join(format!("{}.json", a.name));
-                let generated_agent = Agent::try_from(&a)?.normalize();
+                let generated_agent = KiroAgent::try_from(&a)?.normalize();
                 if self.fs.exists(&destination) {
                     println!("-----{}-----", destination.display());
                     let existing = self.fs.read_to_string_sync(&destination)?;
-                    match facet_json::from_str::<Agent>(&existing) {
+                    match facet_json::from_str::<KiroAgent>(&existing) {
                         Err(e) => eprintln!("warning: failed to deserialize {} - {e}", a.name),
                         Ok(existing_agent) => {
                             let normalized_existing = existing_agent.normalize();
@@ -183,7 +184,7 @@ impl Generator {
     pub(crate) async fn write(&self, agent: Manifest, dry_run: bool) -> Result<AgentResult> {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
-            kiro_agent: Agent::try_from(&agent)?,
+            kiro_agent: KiroAgent::try_from(&agent)?,
             writable: !agent.template,
             destination,
             agent,

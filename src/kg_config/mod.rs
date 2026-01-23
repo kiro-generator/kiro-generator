@@ -1,20 +1,18 @@
-pub(crate) mod agent_file;
+mod agent_file;
 mod knowledge;
 mod manifest;
 mod merge;
 mod native;
 
 use {
-    crate::Fs,
+    crate::{Fs, Result},
     facet::Facet,
     facet_toml as toml,
     std::{collections::HashMap, fmt::Debug, path::Path},
 };
-pub use {knowledge::KgKnowledge, manifest::Manifest};
+pub use {agent_file::KgAgentFileDoc, knowledge::KgKnowledge, manifest::Manifest};
 
-pub(crate) type ConfigResult<T> = crate::Result<T>;
-
-pub fn toml_parse_path<T>(fs: &Fs, path: impl AsRef<Path>) -> Option<ConfigResult<T>>
+pub fn toml_parse_path<T>(fs: &Fs, path: impl AsRef<Path>) -> Option<Result<T>>
 where
     T: for<'a> facet::Facet<'a>,
 {
@@ -31,7 +29,7 @@ where
 }
 
 #[cfg(test)]
-pub(crate) fn toml_parse<T>(content: &str) -> ConfigResult<T>
+pub fn toml_parse<T>(content: &str) -> Result<T>
 where
     T: for<'a> facet::Facet<'a>,
 {
@@ -70,11 +68,11 @@ impl GeneratorConfig {
 mod tests {
     use {
         super::*,
-        crate::{agent::hook::HookTrigger, config::agent_file::KgAgentFileDoc},
+        crate::{KgAgentFileDoc, kiro::hook::HookTrigger},
     };
 
     #[test_log::test]
-    fn test_agent_decoding() -> ConfigResult<()> {
+    fn test_agent_decoding() -> Result<()> {
         let toml_agents = include_str!("../../data/test-decoding.toml");
 
         let config: GeneratorConfig = toml_parse(toml_agents)?;
@@ -136,7 +134,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn test_agent_empty() -> ConfigResult<()> {
+    fn test_agent_empty() -> Result<()> {
         let toml_agents = r#"
             [agents.test]
             template=true
@@ -153,7 +151,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn test_agent_file_source() -> ConfigResult<()> {
+    fn test_agent_file_source() -> Result<()> {
         let agent_str = include_str!("../../data/test-file-source.toml");
         let agent: KgAgentFileDoc = toml_parse(agent_str)?;
         assert_eq!(

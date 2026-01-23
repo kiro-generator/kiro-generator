@@ -1,9 +1,8 @@
 use {
-    super::manifest::*,
+    super::{KgKnowledge, Result, manifest::*, native::NativeTools},
     crate::{
         Fs,
-        agent::{CustomToolConfig, KgHook},
-        config::{ConfigResult, KgKnowledge, native::NativeTools},
+        kiro::{CustomToolConfig, KgHook},
     },
     facet::Facet,
     std::{
@@ -56,7 +55,7 @@ impl Manifest {
         name: impl AsRef<str>,
         path: impl AsRef<Path>,
         template: bool,
-    ) -> Option<ConfigResult<Self>> {
+    ) -> Option<Result<Self>> {
         if let Some(result) = super::toml_parse_path::<KgAgentFileDoc>(fs, path) {
             match result {
                 Err(e) => return Some(Err(e)),

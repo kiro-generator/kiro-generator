@@ -1,5 +1,5 @@
 use {
-    crate::agent::{
+    crate::kiro::{
         AwsTool as KiroAwsTool,
         ExecuteShellTool as KiroShellTool,
         ReadTool as KiroReadTool,
@@ -179,19 +179,12 @@ impl From<&NativeTools> for KiroShellTool {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{
-            Result,
-            config::{ConfigResult, toml_parse},
-        },
-        std::fmt::Display,
-    };
+    use {super::*, crate::Result, std::fmt::Display};
     fn into_set<T: Display>(v: Vec<T>) -> HashSet<String> {
         HashSet::from_iter(v.into_iter().map(|t| t.to_string()))
     }
     #[test_log::test]
-    fn parse_shell_tool() -> ConfigResult<()> {
+    fn parse_shell_tool() -> Result<()> {
         let raw = r#"
 [shell]
 denyByDefault=true
@@ -201,7 +194,7 @@ deny = ["rm -rf /"]
 forceAllow = ["git push"]
         "#;
 
-        let doc: NativeTools = toml_parse(raw)?;
+        let doc: NativeTools = crate::toml_parse(raw)?;
         let shell = doc.shell;
         assert_eq!(shell.allows.len(), 2);
         assert_eq!(shell.denies.len(), 1);
@@ -212,7 +205,7 @@ forceAllow = ["git push"]
     }
 
     #[test_log::test]
-    fn parse_aws_tool() -> ConfigResult<()> {
+    fn parse_aws_tool() -> Result<()> {
         let raw = r#"
             [aws]
             disableAutoReadOnly=true
@@ -220,7 +213,7 @@ forceAllow = ["git push"]
             deny = ["iam"]
         "#;
 
-        let doc: NativeTools = toml_parse(raw)?;
+        let doc: NativeTools = crate::toml_parse(raw)?;
         let aws = doc.aws;
         assert!(aws.disable_auto_readonly.is_some());
         assert!(aws.disable_auto_readonly.unwrap_or_default());
@@ -230,7 +223,7 @@ forceAllow = ["git push"]
     }
 
     #[test_log::test]
-    fn parse_read_write_tools() -> ConfigResult<()> {
+    fn parse_read_write_tools() -> Result<()> {
         let raw = r#"
             [read]
             allow= ["*.rs", "*.toml"]
@@ -244,7 +237,7 @@ forceAllow = ["git push"]
 
         "#;
 
-        let doc: NativeTools = toml_parse(raw)?;
+        let doc: NativeTools = crate::toml_parse(raw)?;
         assert_eq!(doc.read.allows.len(), 2);
         assert_eq!(doc.read.denies.len(), 1);
         assert_eq!(doc.read.force_allow.len(), 1);
@@ -255,13 +248,13 @@ forceAllow = ["git push"]
     }
 
     #[test_log::test]
-    pub fn test_native_merge_empty() -> ConfigResult<()> {
+    pub fn test_native_merge_empty() -> Result<()> {
         let child = NativeTools::default();
         let parent = NativeTools::default();
         let merged = child.merge(parent);
 
         assert_eq!(merged, NativeTools::default());
-        toml_parse::<NativeTools>("")?;
+        crate::toml_parse::<NativeTools>("")?;
         Ok(())
     }
 

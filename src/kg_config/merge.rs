@@ -128,17 +128,14 @@ impl Manifest {
 mod tests {
     use {
         super::*,
-        crate::{
-            agent::hook::{AgentHook, HookTrigger},
-            config,
-        },
+        crate::kiro::hook::{AgentHook, HookTrigger},
     };
 
     const CONFIG: &str = include_str!("../../data/test-merge-agent.toml");
 
     #[test_log::test]
-    fn test_agent_merge() -> config::ConfigResult<()> {
-        let config: GeneratorConfig = config::toml_parse(CONFIG)?;
+    fn test_agent_merge() -> Result<()> {
+        let config: GeneratorConfig = toml_parse(CONFIG)?;
         assert_eq!(config.agents.len(), 2);
         let child = config.agents.get("child");
         let parent = config.agents.get("parent");

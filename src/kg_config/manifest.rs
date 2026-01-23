@@ -1,9 +1,9 @@
 use {
-    super::native::{AwsTool, ExecuteShellTool, NativeTools, ReadTool, WriteTool},
-    crate::{
-        agent::{CustomToolConfig, KgHook, hook::AgentHook},
-        config::KgKnowledge,
+    super::{
+        KgKnowledge,
+        native::{AwsTool, ExecuteShellTool, NativeTools, ReadTool, WriteTool},
     },
+    crate::kiro::{CustomToolConfig, KgHook, hook::AgentHook},
     color_eyre::eyre::WrapErr,
     facet::Facet,
     std::{
@@ -128,7 +128,7 @@ impl Manifest {
         }
 
         for (name, kb) in &self.knowledge {
-            let k = crate::agent::Knowledge {
+            let k = crate::kiro::Knowledge {
                 name: name.clone(),
                 knowledge_type: "knowledgeBase".to_string(),
                 description: kb.description.clone(),

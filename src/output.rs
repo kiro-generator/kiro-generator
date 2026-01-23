@@ -1,8 +1,8 @@
 use {
     crate::{
         Result,
-        agent::{Agent, ToolTarget},
         generator::AgentResult,
+        kiro::{KiroAgent, ToolTarget},
         source::KdlSources,
     },
     color_eyre::eyre::Context,
@@ -260,7 +260,8 @@ impl OutputFormat {
                 Ok(())
             }
             Self::Json => {
-                let kiro_agents: Vec<Agent> = results.into_iter().map(|a| a.kiro_agent).collect();
+                let kiro_agents: Vec<KiroAgent> =
+                    results.into_iter().map(|a| a.kiro_agent).collect();
                 println!(
                     "{}",
                     facet_json::to_string_pretty(&kiro_agents)

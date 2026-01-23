@@ -5,7 +5,7 @@ pub mod tools;
 pub const DEFAULT_AGENT_RESOURCES: &[&str] = &["file://README.md", "file://AGENTS.md"];
 pub const DEFAULT_APPROVE: [&str; 0] = [];
 use {
-    crate::{Result, agent::hook::AgentHook, config::Manifest},
+    crate::{Manifest, Result, kiro::hook::AgentHook},
     facet::Facet,
     std::{
         collections::{HashMap, HashSet},
@@ -15,7 +15,7 @@ use {
 pub use {custom_tool::CustomToolConfig, hook::KgHook, tools::*};
 
 #[derive(Facet, Debug, Clone, Eq, PartialEq)]
-pub struct Agent {
+pub struct KiroAgent {
     /// Name of the agent
     pub name: String,
     /// This field is not model facing and is mostly here for users to discern
@@ -60,13 +60,13 @@ pub struct Agent {
     pub include_mcp_json: bool,
 }
 
-impl Display for Agent {
+impl Display for KiroAgent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
     }
 }
 
-impl Agent {
+impl KiroAgent {
     pub fn validate(&self) -> Result<()> {
         let schema: serde_json::Value = serde_json::from_str(crate::schema::SCHEMA)?;
         let validator = jsonschema::validator_for(&schema)?;
@@ -83,7 +83,7 @@ impl Agent {
     }
 }
 
-impl TryFrom<&Manifest> for Agent {
+impl TryFrom<&Manifest> for KiroAgent {
     type Error = color_eyre::Report;
 
     fn try_from(value: &Manifest) -> std::result::Result<Self, Self::Error> {
@@ -151,7 +151,7 @@ impl TryFrom<&Manifest> for Agent {
     }
 }
 
-impl Default for Agent {
+impl Default for KiroAgent {
     fn default() -> Self {
         Self {
             name: "kiro_default".to_string(),

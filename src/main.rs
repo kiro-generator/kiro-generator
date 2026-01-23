@@ -1,13 +1,14 @@
-mod agent;
 mod commands;
-mod config;
 mod generator;
+mod kg_config;
+mod kiro;
 mod os;
 pub mod output;
 mod schema;
 mod source;
 
-pub use color_eyre::eyre::format_err;
+#[cfg(test)]
+pub use kg_config::toml_parse;
 use {
     crate::{commands::Command, generator::Generator, os::Fs},
     clap::Parser,
@@ -17,8 +18,8 @@ use {
     tracing_error::ErrorLayer,
     tracing_subscriber::prelude::*,
 };
+pub use {color_eyre::eyre::format_err, generator::ConfigLocation, kg_config::*};
 pub type Result<T> = color_eyre::Result<T>;
-
 #[allow(dead_code)]
 pub(crate) const DOCS_URL: &str = "https://kiro-generator.ai";
 
@@ -178,12 +179,12 @@ async fn main() -> Result<()> {
         use commands::SchemaCommand;
         let mut output = match schema_cmd {
             SchemaCommand::Manifest => {
-                let mut s = facet_json_schema::schema_for::<config::GeneratorConfig>();
+                let mut s = facet_json_schema::schema_for::<GeneratorConfig>();
                 s.description = Some("Schema for kiro-generator (kg) manifest TOML files".into());
                 s
             }
             SchemaCommand::Agent => {
-                let mut s = facet_json_schema::schema_for::<config::agent_file::KgAgentFileDoc>();
+                let mut s = facet_json_schema::schema_for::<KgAgentFileDoc>();
                 s.description = Some("Schema for kiro-generator (kg) agent TOML files".into());
                 s
             }

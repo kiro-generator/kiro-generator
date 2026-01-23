@@ -1,6 +1,6 @@
 use {
     super::*,
-    crate::config::{GeneratorConfig, Manifest},
+    crate::{GeneratorConfig, Manifest},
     color_eyre::eyre::bail,
     std::{fmt::Display, ops::Deref, path::Path},
 };
@@ -29,7 +29,7 @@ fn load_manifests(fs: &Fs, dir: impl AsRef<Path>) -> crate::Result<GeneratorConf
     agent_files.sort();
 
     for path in agent_files {
-        if let Some(config_result) = crate::config::toml_parse_path(fs, &path) {
+        if let Some(config_result) = crate::toml_parse_path(fs, &path) {
             let config: GeneratorConfig = config_result?;
             let config = config.populate_names();
 
@@ -49,7 +49,7 @@ fn load_manifests(fs: &Fs, dir: impl AsRef<Path>) -> crate::Result<GeneratorConf
 
 #[cfg(test)]
 pub fn load_inline(fs: &Fs, path: impl AsRef<Path>) -> crate::Result<GeneratorConfig> {
-    let doc = crate::config::toml_parse_path(fs, path);
+    let doc = crate::toml_parse_path(fs, path);
     match doc {
         None => Ok(GeneratorConfig::default()),
         Some(d) => {

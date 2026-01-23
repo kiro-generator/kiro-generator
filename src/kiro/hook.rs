@@ -111,7 +111,7 @@ impl KgHook {
 mod tests {
     use super::*;
     #[test]
-    fn hook_merge() -> crate::config::ConfigResult<()> {
+    fn hook_merge() -> crate::Result<()> {
         let parent = KgHook {
             command: "test".into(),
             hook_type: HookTrigger::AgentSpawn.to_string(),
@@ -140,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn hook_merge_child_overrides() -> crate::config::ConfigResult<()> {
+    fn hook_merge_child_overrides() -> crate::Result<()> {
         let parent = KgHook {
             command: "test".into(),
             hook_type: HookTrigger::AgentSpawn.to_string(),

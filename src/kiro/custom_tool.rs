@@ -88,7 +88,7 @@ impl CustomToolConfig {
 mod tests {
     use {
         super::*,
-        crate::config::{ConfigResult, toml_parse},
+        crate::{Result, toml_parse},
     };
 
     #[derive(Facet, Debug)]
@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_basic_mcp() -> ConfigResult<()> {
+    fn parse_basic_mcp() -> Result<()> {
         let raw = r#"
 [mcpServers.rustdocs]
 command = "rust-docs-mcp"
@@ -115,7 +115,7 @@ timeout  =1000
     }
 
     #[test]
-    fn parse_mcp_with_url() -> ConfigResult<()> {
+    fn parse_mcp_with_url() -> Result<()> {
         let raw = r#"
         [mcpServers.remote]
         url="http://localhost:8080"
@@ -129,7 +129,7 @@ timeout  =1000
     }
 
     #[test]
-    fn parse_mcp_with_env_and_headers() -> ConfigResult<()> {
+    fn parse_mcp_with_env_and_headers() -> Result<()> {
         let raw = r#"
         [mcpServers.api]
         command = "api-server"
@@ -163,7 +163,7 @@ timeout  =1000
     }
 
     #[test]
-    fn parse_mcp_with_args() -> ConfigResult<()> {
+    fn parse_mcp_with_args() -> Result<()> {
         let raw = r#"
         [mcpServers.tool]
         command = "my-tool"

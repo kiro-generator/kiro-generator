@@ -1,4 +1,4 @@
-use {super::*, crate::config::Manifest, std::collections::HashSet};
+use {super::*, std::collections::HashSet};
 
 impl Generator {
     /// Resolve transitive inheritance chain for an agent
@@ -78,7 +78,7 @@ impl Generator {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::agent::hook::HookTrigger};
+    use {super::*, crate::kiro::hook::HookTrigger};
 
     #[tokio::test]
     #[test_log::test]
