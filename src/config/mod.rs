@@ -10,7 +10,7 @@ use {
     facet_toml as toml,
     std::{collections::HashMap, fmt::Debug, path::Path},
 };
-pub use {knowledge::Knowledge, manifest::Manifest};
+pub use {knowledge::KgKnowledge, manifest::Manifest};
 
 pub(crate) type ConfigResult<T> = crate::Result<T>;
 

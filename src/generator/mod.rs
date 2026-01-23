@@ -141,14 +141,15 @@ impl Generator {
                 let destination = self
                     .destination_dir(&a.name)
                     .join(format!("{}.json", a.name));
-                let kiro_agent = Agent::try_from(&a)?;
+                let generated_agent = Agent::try_from(&a)?.normalize();
                 if self.fs.exists(&destination) {
                     println!("-----{}-----", destination.display());
                     let existing = self.fs.read_to_string_sync(&destination)?;
                     match facet_json::from_str::<Agent>(&existing) {
-                        Err(e) => eprintln!("warning failed to deserialize {} {e}", a.name),
-                        Ok(agent) => {
-                            let diff = kiro_agent.diff(&agent);
+                        Err(e) => eprintln!("warning: failed to deserialize {} - {e}", a.name),
+                        Ok(existing_agent) => {
+                            let normalized_existing = existing_agent.normalize();
+                            let diff = normalized_existing.diff(&generated_agent);
                             println!("{}", facet_diff::format_diff_default(&diff));
                         }
                     };

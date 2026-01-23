@@ -4,6 +4,64 @@
   "$defs": null,
   "type": "object",
   "properties": {
+    "$schema": {
+      "$schema": null,
+      "$ref": null,
+      "$defs": null,
+      "type": null,
+      "properties": null,
+      "required": null,
+      "additionalProperties": null,
+      "items": null,
+      "enum": null,
+      "minimum": null,
+      "maximum": null,
+      "oneOf": null,
+      "anyOf": [
+        {
+          "$schema": null,
+          "$ref": null,
+          "$defs": null,
+          "type": "string",
+          "properties": null,
+          "required": null,
+          "additionalProperties": null,
+          "items": null,
+          "enum": null,
+          "minimum": null,
+          "maximum": null,
+          "oneOf": null,
+          "anyOf": null,
+          "allOf": null,
+          "description": null,
+          "title": null,
+          "const": null
+        },
+        {
+          "$schema": null,
+          "$ref": null,
+          "$defs": null,
+          "type": "null",
+          "properties": null,
+          "required": null,
+          "additionalProperties": null,
+          "items": null,
+          "enum": null,
+          "minimum": null,
+          "maximum": null,
+          "oneOf": null,
+          "anyOf": null,
+          "allOf": null,
+          "description": null,
+          "title": null,
+          "const": null
+        }
+      ],
+      "allOf": null,
+      "description": null,
+      "title": null,
+      "const": null
+    },
     "allowedTools": {
       "$schema": null,
       "$ref": null,
@@ -2400,7 +2458,7 @@
   "oneOf": null,
   "anyOf": null,
   "allOf": null,
-  "description": "Schema for kiro-generator (kg) manifest TOML files",
+  "description": "Schema for kiro-generator (kg) agent TOML files",
   "title": "KgAgentFileDoc",
   "const": null
 }

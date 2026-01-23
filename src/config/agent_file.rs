@@ -3,7 +3,7 @@ use {
     crate::{
         Fs,
         agent::{CustomToolConfig, KgHook},
-        config::{ConfigResult, Knowledge, native::NativeTools},
+        config::{ConfigResult, KgKnowledge, native::NativeTools},
     },
     facet::Facet,
     std::{
@@ -22,7 +22,7 @@ pub struct KgAgentFileDoc {
     #[facet(default)]
     pub resources: HashSet<String>,
     #[facet(default)]
-    pub knowledge: HashMap<String, Knowledge>,
+    pub knowledge: HashMap<String, KgKnowledge>,
     #[facet(default, rename = "useLegacyMcpJson")]
     pub include_mcp_json: Option<bool>,
     #[facet(default)]

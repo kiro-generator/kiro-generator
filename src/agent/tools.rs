@@ -56,7 +56,7 @@ impl Default for AwsTool {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Facet, PartialEq, Eq)]
+#[derive(Debug, Facet, PartialEq, Eq, Clone)]
 #[facet(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ExecuteShellTool {
     #[facet(default, skip_serializing_if = HashSet::is_empty)]
@@ -80,7 +80,7 @@ impl Default for ExecuteShellTool {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Facet, Default, PartialEq, Eq)]
+#[derive(Debug, Facet, Default, PartialEq, Eq, Clone)]
 #[facet(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReadTool {
     #[facet(default, skip_serializing_if = HashSet::is_empty)]
@@ -90,7 +90,7 @@ pub struct ReadTool {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Facet, Default, PartialEq, Eq)]
+#[derive(Debug, Facet, Default, PartialEq, Eq, Clone)]
 #[facet(rename_all = "camelCase", deny_unknown_fields)]
 pub struct WriteTool {
     #[facet(default, skip_serializing_if = HashSet::is_empty)]

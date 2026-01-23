@@ -376,7 +376,7 @@ async fn test_something() -> Result<()> {
 
 ## Further Documentation
 
-The directory `docs` contains mdbook formatted documentation for the project.  Some notiable files:
+The directory `docs` contains mdbook formatted documentation for the project.  Some notable files:
 
 - [SUMMARY.md](./docs/src/SUMMARY.md)
 - [index.md](./docs/src/index.md)

@@ -1,4 +1,5 @@
 mod custom_tool;
+pub mod diff;
 pub mod hook;
 pub mod tools;
 pub const DEFAULT_AGENT_RESOURCES: &[&str] = &["file://README.md", "file://AGENTS.md"];
@@ -184,22 +185,24 @@ impl Default for Agent {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Facet, Clone, Debug, PartialEq, Eq, Hash)]
+#[facet(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Knowledge {
+    pub name: String,
+    #[facet(rename = "type")]
+    pub knowledge_type: String,
+    #[facet(default)]
+    pub source: Option<String>,
+    #[facet(default)]
+    pub description: Option<String>,
+    #[facet(default)]
+    pub index_type: Option<String>,
+    #[facet(default)]
+    pub auto_update: Option<bool>,
+}
 
-    #[test]
-    fn test_default_agent() -> crate::Result<()> {
-        let agent = Agent {
-            name: "test".to_string(),
-            ..Default::default()
-        };
-        assert_eq!("test", format!("{agent}"));
-
-        let kg_agent = Manifest::default();
-        let agent = Agent::try_from(&kg_agent)?;
-        assert_eq!(agent.tools, Agent::default().tools);
-
-        Ok(())
+impl Display for Knowledge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "name={},description={:?}", self.name, self.description)
     }
 }

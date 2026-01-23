@@ -2,7 +2,7 @@ use facet::Facet;
 
 #[derive(Facet, Clone, Debug, PartialEq, Eq, Hash)]
 #[facet(deny_unknown_fields, rename_all = "camelCase")]
-pub struct Knowledge {
+pub struct KgKnowledge {
     #[facet(default)]
     pub source: Option<String>,
     #[facet(default)]
@@ -13,7 +13,7 @@ pub struct Knowledge {
     pub auto_update: Option<bool>,
 }
 
-impl Knowledge {
+impl KgKnowledge {
     pub fn merge(mut self, other: Self) -> Self {
         if self.source.is_none() && other.source.is_some() {
             tracing::trace!("source: merged from other");
@@ -48,7 +48,7 @@ mod tests {
         let toml = r#"
 source = "file://./docs"
 "#;
-        let k: Knowledge = facet_toml::from_str(toml)?;
+        let k: KgKnowledge = facet_toml::from_str(toml)?;
         assert_eq!(k.source, Some("file://./docs".to_string()));
         assert_eq!(k.description, None);
         assert_eq!(k.index_type, None);
@@ -64,7 +64,7 @@ description = "Project documentation and guides"
 indexType = "best"
 autoUpdate = true
 "#;
-        let k: Knowledge = facet_toml::from_str(toml).unwrap();
+        let k: KgKnowledge = facet_toml::from_str(toml).unwrap();
         assert_eq!(k.source, Some("file://./docs".to_string()));
         assert_eq!(
             k.description,
@@ -76,14 +76,14 @@ autoUpdate = true
 
     #[test]
     fn test_knowledge_merge() {
-        let base = Knowledge {
+        let base = KgKnowledge {
             source: Some("file://./base".to_string()),
             description: Some("Base docs".to_string()),
             index_type: None,
             auto_update: None,
         };
 
-        let child = Knowledge {
+        let child = KgKnowledge {
             source: None,
             description: None,
             index_type: Some("fast".to_string()),

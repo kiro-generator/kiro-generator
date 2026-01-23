@@ -2,8 +2,9 @@ use {
     super::native::{AwsTool, ExecuteShellTool, NativeTools, ReadTool, WriteTool},
     crate::{
         agent::{CustomToolConfig, KgHook, hook::AgentHook},
-        config::Knowledge,
+        config::KgKnowledge,
     },
+    color_eyre::eyre::WrapErr,
     facet::Facet,
     std::{
         collections::{HashMap, HashSet},
@@ -29,7 +30,7 @@ pub struct Manifest {
     #[facet(default)]
     pub resources: HashSet<String>,
     #[facet(default)]
-    pub knowledge: HashMap<String, Knowledge>,
+    pub knowledge: HashMap<String, KgKnowledge>,
     #[facet(default, rename = "useLegacyMcpJson")]
     pub include_mcp_json: Option<bool>,
     #[facet(default)]
@@ -120,51 +121,25 @@ impl Manifest {
     }
 
     pub fn resources(&self) -> crate::Result<Vec<facet_value::Value>> {
-        let mut result = Vec::new();
+        let mut result: Vec<facet_value::Value> = Vec::new();
 
         for r in &self.resources {
-            result.push(facet_value::Value::from(r.as_str()));
+            result.push(facet_value::value!(r));
         }
 
         for (name, kb) in &self.knowledge {
-            let source = kb.source.as_ref().ok_or_else(|| {
-                color_eyre::eyre::eyre!("Knowledge '{}' missing required 'source' field", name)
-            })?;
-
-            let mut obj = facet_value::VObject::new();
-            obj.insert(
-                facet_value::VString::from("type"),
-                facet_value::Value::from("knowledgeBase"),
+            let k = crate::agent::Knowledge {
+                name: name.clone(),
+                knowledge_type: "knowledgeBase".to_string(),
+                description: kb.description.clone(),
+                source: kb.source.clone(),
+                index_type: kb.index_type.clone(),
+                auto_update: kb.auto_update,
+            };
+            result.push(
+                facet_value::to_value(&k)
+                    .wrap_err_with(|| format!("Failed to serialize knowledge base '{name}'"))?,
             );
-            obj.insert(
-                facet_value::VString::from("name"),
-                facet_value::Value::from(name.as_str()),
-            );
-            obj.insert(
-                facet_value::VString::from("source"),
-                facet_value::Value::from(source.as_str()),
-            );
-
-            if let Some(desc) = &kb.description {
-                obj.insert(
-                    facet_value::VString::from("description"),
-                    facet_value::Value::from(desc.as_str()),
-                );
-            }
-            if let Some(idx) = &kb.index_type {
-                obj.insert(
-                    facet_value::VString::from("indexType"),
-                    facet_value::Value::from(idx.as_str()),
-                );
-            }
-            if let Some(auto) = kb.auto_update {
-                obj.insert(
-                    facet_value::VString::from("autoUpdate"),
-                    facet_value::Value::from(auto),
-                );
-            }
-
-            result.push(facet_value::Value::from(obj));
         }
 
         Ok(result)

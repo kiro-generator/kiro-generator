@@ -12,13 +12,15 @@
 - [Inheritance](config/inheritance.md)
 - [Templates](config/templates.md)
 
+# Reference
+
+- [CLI Commands](reference/cli.md)
+- [Schema](reference/schema.md)
+- [Troubleshooting](reference/troubleshooting.md)
+
 # Advanced
 
 - [Knowledge Bases](advanced/knowledge-bases.md)
 - [Organizing Agents](advanced/organizing.md)
+- [Debugging](advanced/debugging.md)
 
-# Reference
-
-- [CLI Commands](reference/cli.md)
-- [Configuration Schema](reference/schema.md)
-- [Troubleshooting](reference/troubleshooting.md)

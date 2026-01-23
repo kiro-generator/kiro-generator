@@ -1,22 +1,6 @@
 # CLI Commands
 
-## Global Options
-
-```
-kg [OPTIONS] <COMMAND>
-```
-
-**Options:**
-- `-d, --debug` - Enable debug output
-- `-t, --trace <AGENT_NAME>` - Enable trace logging for specific agent (use `all` for everything)
-- `-c, --color <WHEN>` - Control color output: `always`, `auto`, `never` (default: `auto`)
-- `-f, --format <FORMAT>` - Output format: `table`, `json` (default: `table`)
-- `-h, --help` - Show help
-- `-V, --version` - Show version
-
-## Commands
-
-### validate
+## validate
 
 Validate configuration without generating files.
 
@@ -25,9 +9,13 @@ kg validate [OPTIONS]
 ```
 
 **Options:**
-- `--local` - Ignore global `~/.kiro/generators/` config
-- `--global` - Ignore local `.kiro/generators/` config
-- `--show-templates` - Include template agents in output
+- `--local` - Use only local configuration (ignore global `~/.kiro/generators/`)
+- `-g, --global` - Use only global configuration (ignore local `.kiro/generators/`)
+- `--show-templates` - Show template agents in output
+- `-d, --debug` - Enable debug output
+- `-t, --trace <AGENT_NAME>` - Enable trace level debug for an agent (use `all` for everything, very verbose)
+- `-c, --color <WHEN>` - When to show color: `always`, `auto`, `never` (default: `auto`)
+- `-f, --format <FORMAT>` - Format of console output: `table`, `json` (default: `table`)
 
 **Output:**
 
@@ -35,9 +23,7 @@ Table view shows:
 - Agent name
 - Location (📁 local, 🏠 global, 🌍 both)
 - MCP servers configured
-- Allowed tools
-- Resources
-- Forced permissions
+- Override (Allowed) Permissions
 
 **Examples:**
 
@@ -55,7 +41,7 @@ kg validate --show-templates
 kg validate --format json
 ```
 
-### generate
+## generate
 
 Generate agent JSON files for kiro-cli.
 
@@ -64,9 +50,13 @@ kg generate [OPTIONS]
 ```
 
 **Options:**
-- `--local` - Ignore global config, only generate local agents
-- `--global` - Ignore local config, only generate global agents
-- `--show-templates` - Include template agents in output
+- `--local` - Use only local configuration (ignore global `~/.kiro/generators/`)
+- `-g, --global` - Use only global configuration (ignore local `.kiro/generators/`)
+- `--show-templates` - Show template agents in output
+- `-d, --debug` - Enable debug output
+- `-t, --trace <AGENT_NAME>` - Enable trace level debug for an agent (use `all` for everything, very verbose)
+- `-c, --color <WHEN>` - When to show color: `always`, `auto`, `never` (default: `auto`)
+- `-f, --format <FORMAT>` - Format of console output: `table`, `json` (default: `table`)
 
 **Output:**
 
@@ -87,20 +77,59 @@ kg generate --global
 
 # Only generate local agents
 kg generate --local
-
-# Debug specific agent generation
-kg generate --trace rust
 ```
 
-### version
+## diff
 
-Display version information.
+Show differences between generated and existing agent files.
 
 ```bash
-kg version
+kg diff [OPTIONS]
 ```
 
-Shows kg version and build info.
+**Options:**
+- `-d, --debug` - Enable debug output
+- `-t, --trace <AGENT_NAME>` - Enable trace level debug for an agent (use `all` for everything, very verbose)
+- `-c, --color <WHEN>` - When to show color: `always`, `auto`, `never` (default: `auto`)
+- `-f, --format <FORMAT>` - Format of console output: `table`, `json` (default: `table`)
+
+**Output:**
+
+Shows element-level differences between what would be generated and what currently exists:
+
+```
+Agent: rust
+  resources.[3]: - "file://dummy.md"
+  toolsSettings.shell.allowedCommands.[2]: + "cargo test .*"
+  knowledge.facet.description: "old description" → "new description"
+```
+
+**Stability:**
+
+The diff output is deterministic - running it multiple times on unchanged files produces identical results. This is achieved by normalizing both generated and existing agents before comparison.
+
+**Examples:**
+
+```bash
+# Diff all agents
+kg diff
+
+# JSON output for scripting
+kg diff --format json
+```
+
+**Use Cases:**
+
+- Preview changes before running `kg generate`
+- Verify configuration changes have expected effects
+- Debug inheritance and merge behavior
+- CI/CD validation (exit code 0 = no changes, 1 = differences found)
+
+## schema
+
+Generate JSON schemas for IDE autocompletion and validation.
+
+See [Configuration Schema](./schema.md) for details.
 
 ## Output Formats
 
@@ -109,11 +138,11 @@ Shows kg version and build info.
 Human-readable table with agent details:
 
 ```
-╭────────────────────┬─────┬─────────────────┬────────────────────────────────────────────────╮
-│ Agent 🤖 (PREVIEW) ┆ Loc ┆ MCP 💻          ┆ Allowed Tools ⚙️                               │
-╞════════════════════╪═════╪═════════════════╪════════════════════════════════════════════════╡
-│ rust               ┆ 📁  ┆ cargo, rustdocs ┆ @cargo, @rustdocs, knowledge, read, web_search │
-╰────────────────────┴─────┴─────────────────┴────────────────────────────────────────────────╯
+╭────────────────────┬─────┬──────────┬────────────────────────────────────╮
+│ Agent 🤖 (PREVIEW) ┆ Loc ┆ MCP 💻   ┆    Override (Allowed) Permissions  │
+╞════════════════════╪═════╪══════════╪════════════════════════════════════╡
+│ rust               ┆ 📁  ┆ context7 ┆                                    │
+╰────────────────────┴─────┴──────────┴────────────────────────────────────╯
 ```
 
 ### JSON
@@ -123,24 +152,3 @@ Machine-readable output for scripting:
 ```bash
 kg validate --format json | jq '.agents[] | select(.name == "rust")'
 ```
-
-## Debugging
-
-Use trace logging to debug configuration issues:
-
-```bash
-# Trace specific agent
-kg validate --trace rust
-
-# Trace all agents (very verbose)
-kg validate --trace all
-
-# Debug mode (less verbose than trace)
-kg validate --debug
-```
-
-Trace output shows:
-- Configuration file loading
-- Inheritance resolution
-- Merge operations
-- Force property application
