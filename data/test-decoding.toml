@@ -9,6 +9,9 @@ resources = ["file://resource.md", "file://README.md"]
 tools = ["*"]
 allowedTools = ["@awsdocs"]
 
+[agents.test.subagents]
+allow = ["backend"]
+
 [agents.test.hooks.spawn]
 type = "agentSpawn"
 command = "echo i have spawned"

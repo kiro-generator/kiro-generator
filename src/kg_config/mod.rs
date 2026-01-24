@@ -3,6 +3,7 @@ mod knowledge;
 mod manifest;
 mod merge;
 mod native;
+mod subagent;
 
 use {
     crate::{Fs, Result},
@@ -10,7 +11,12 @@ use {
     facet_toml as toml,
     std::{collections::HashMap, fmt::Debug, path::Path},
 };
-pub use {agent_file::KgAgentFileDoc, knowledge::KgKnowledge, manifest::Manifest};
+pub use {
+    agent_file::KgAgentFileDoc,
+    knowledge::KgKnowledge,
+    manifest::Manifest,
+    subagent::SubagentConfig,
+};
 
 pub fn toml_parse_path<T>(fs: &Fs, path: impl AsRef<Path>) -> Option<Result<T>>
 where
@@ -112,6 +118,11 @@ mod tests {
         assert_eq!(allowed.len(), 1);
         assert!(allowed.contains("@awsdocs"));
 
+        let subagents = &agent.subagents;
+        assert_eq!(subagents.allow.len(), 1);
+        assert!(subagents.allow.contains("backend"));
+        assert!(subagents.deny.is_empty());
+
         let mcp = &agent.mcp_servers;
         assert_eq!(mcp.len(), 1);
         assert!(mcp.contains_key("awsdocs"));
@@ -158,6 +169,11 @@ mod tests {
             agent.description.unwrap_or_default().to_string(),
             "agent from file"
         );
+
+        let subagents = &agent.subagents;
+        assert_eq!(subagents.allow.len(), 1);
+        assert!(subagents.allow.contains("pr-review"));
+        assert!(subagents.deny.is_empty());
 
         Ok(())
     }

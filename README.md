@@ -19,7 +19,7 @@ Stop writing JSON. Define your Kiro agents in TOML with inheritance, templates, 
 - **Hierarchical**: Global and project-specific agents
 - **DRY**: Inherit and extend configurations
 
-## Quick Start 
+## Quick Start
 
 ```shell
 # Initialize configuration
@@ -35,7 +35,7 @@ kg validate
 kg generate
 ```
 
-See [documentation](https://kg.cartera-mesh.com) for detailed guides and examples.
+See [documentation](https://kg.com) for detailed guides and examples.
 
 ---
 

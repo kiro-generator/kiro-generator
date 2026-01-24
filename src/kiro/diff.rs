@@ -47,6 +47,8 @@ pub struct NormalizedAgent {
     pub read: Option<ReadTool>,
     #[facet(default, skip_serializing_if = Option::is_none)]
     pub write: Option<WriteTool>,
+    #[facet(default, skip_serializing_if = Option::is_none)]
+    pub subagent: Option<SubagentTool>,
     #[facet(default, skip_serializing_if = Vec::is_empty)]
     pub other_tools: Vec<String>,
 }
@@ -57,6 +59,7 @@ impl KiroAgent {
         let mut aws = None;
         let mut read = None;
         let mut write = None;
+        let mut subagent = None;
         let mut other_tools = Vec::new();
 
         for (tool_name, value) in self.tools_settings {
@@ -66,6 +69,7 @@ impl KiroAgent {
                 "aws" => aws = facet_json::from_str(&json).ok(),
                 "read" => read = facet_json::from_str(&json).ok(),
                 "write" => write = facet_json::from_str(&json).ok(),
+                "subagent" => subagent = facet_json::from_str(&json).ok(),
                 _ => {
                     other_tools.push(tool_name);
                 }
@@ -114,6 +118,7 @@ impl KiroAgent {
             aws,
             read,
             write,
+            subagent,
             other_tools,
         }
     }

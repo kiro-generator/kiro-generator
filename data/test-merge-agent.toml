@@ -49,6 +49,9 @@ command = "echo after tool"
 type = "stop"
 command = "echo stopped"
 
+[agents.parent.subagents]
+allow = ["frontend", "backend"]
+
 [agents.child]
 template = false
 useLegacyMcpJson = true
@@ -78,3 +81,6 @@ forceAllow = ["git push .*"]
 [agents.child.hooks.spawn]
 type = "agentSpawn"
 command = "echo i have spawned"
+
+[agents.child.subagents]
+deny = ["backend"]

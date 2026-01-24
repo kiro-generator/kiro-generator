@@ -99,6 +99,13 @@ pub struct WriteTool {
     pub denied_paths: HashSet<String>,
 }
 
+#[derive(Debug, Clone, Facet, Default, PartialEq, Eq)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SubagentTool {
+    #[facet(default, skip_serializing_if = HashSet::is_empty)]
+    pub allowed_agents: HashSet<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

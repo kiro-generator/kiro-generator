@@ -1,5 +1,5 @@
 use {
-    super::{KgKnowledge, Result, manifest::*, native::NativeTools},
+    super::{KgKnowledge, Result, SubagentConfig, manifest::*, native::NativeTools},
     crate::{
         Fs,
         kiro::{CustomToolConfig, KgHook},
@@ -47,6 +47,8 @@ pub struct KgAgentFileDoc {
     /// Welcome message displayed when switching to this agent
     #[facet(default, rename = "welcomeMessage")]
     pub welcome_message: Option<String>,
+    #[facet(default)]
+    pub subagents: SubagentConfig,
 }
 
 impl Manifest {
@@ -91,6 +93,7 @@ impl Manifest {
             mcp_servers: file_source.mcp_servers,
             keyboard_shortcut: file_source.keyboard_shortcut,
             welcome_message: file_source.welcome_message,
+            subagents: file_source.subagents,
         }
     }
 }

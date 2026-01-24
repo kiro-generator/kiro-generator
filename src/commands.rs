@@ -29,9 +29,6 @@ pub struct Cli {
     /// When to show color.
     #[arg(long = "color", short = 'c',  global = true, default_value_t = ColorOverride::default(), value_name = "WHEN")]
     pub color_override: ColorOverride,
-    /// Format of the console output
-    #[arg(short = 'f', long,  global = true , default_value_t = OutputFormatArg::default())]
-    pub format: OutputFormatArg,
     #[command(subcommand)]
     pub command: Command,
 }
@@ -54,6 +51,16 @@ pub struct Args {
     /// Show template agents in output
     #[arg(long, default_value = "false")]
     pub show_templates: bool,
+    /// Format of the console output
+    #[arg(short = 'f', long,  default_value_t = OutputFormatArg::default())]
+    pub format: OutputFormatArg,
+}
+
+#[derive(clap::Args, Clone, Default)]
+pub struct DiffArgs {
+    /// Use only global configuration (ignore local .kiro/generators/)
+    #[arg(short = 'g', long)]
+    pub global: bool,
 }
 
 #[derive(Subcommand, Clone)]
@@ -71,7 +78,7 @@ pub enum Command {
     /// Display version information
     Version,
     /// Compare generator files with Kiro agent files
-    Diff,
+    Diff(DiffArgs),
     /// Output JSON schema for configuration files
     #[command(subcommand)]
     Schema(SchemaCommand),
@@ -93,9 +100,12 @@ impl Default for Command {
 
 impl Cli {
     pub fn format_color(&self) -> OutputFormat {
-        match &self.format {
-            OutputFormatArg::Table => OutputFormat::Table(self.color()),
-            OutputFormatArg::Json => OutputFormat::Json,
+        match &self.command {
+            Command::Validate(a) | Command::Generate(a) => match &a.format {
+                OutputFormatArg::Table => OutputFormat::Table(self.color()),
+                OutputFormatArg::Json => OutputFormat::Json,
+            },
+            _ => OutputFormat::Table(self.color()),
         }
     }
 
@@ -127,6 +137,7 @@ impl Cli {
         match &self.command {
             Command::Generate(args) => args.global,
             Command::Validate(args) => args.global,
+            Command::Diff(args) => args.global,
             _ => false,
         }
     }
@@ -149,7 +160,6 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Auto,
-            format: OutputFormatArg::Table,
             command: Command::Validate(Args::default()),
         };
         assert!(cli.dry_run());
@@ -167,7 +177,6 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Auto,
-            format: OutputFormatArg::Table,
             command: Command::Validate(Args {
                 local: true,
                 ..Args::default()
@@ -183,7 +192,6 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Auto,
-            format: OutputFormatArg::Table,
             command: Command::Generate(Args {
                 global: true,
                 ..Args::default()
@@ -199,7 +207,6 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Auto,
-            format: OutputFormatArg::Table,
             command: Command::default(),
         };
         // Color depends on terminal and env vars, just verify it doesn't panic
@@ -212,7 +219,6 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Always,
-            format: OutputFormatArg::Table,
             command: Command::default(),
         };
         assert!(cli.color());
@@ -224,7 +230,6 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Never,
-            format: OutputFormatArg::Table,
             command: Command::default(),
         };
         assert!(!cli.color());
@@ -236,13 +241,15 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Always,
-            format: OutputFormatArg::Table,
             command: Command::default(),
         };
         assert!(matches!(cli.format_color(), OutputFormat::Table(true)));
 
         let cli = Cli {
-            format: OutputFormatArg::Json,
+            command: Command::Validate(Args {
+                format: OutputFormatArg::Json,
+                ..Default::default()
+            }),
             ..cli
         };
         assert!(matches!(cli.format_color(), OutputFormat::Json));
@@ -254,7 +261,6 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Auto,
-            format: OutputFormatArg::Table,
             command: Command::default(),
         };
         let result = cli.config();

@@ -90,6 +90,9 @@ impl Manifest {
             self.tool_settings.extend(other.tool_settings);
         }
 
+        tracing::trace!("subagents: merging");
+        self.subagents = self.subagents.merge(other.subagents);
+
         // Merge hooks - child force_allow parent for same key
         for (key, parent_hook) in other.hooks {
             self.hooks
@@ -237,6 +240,14 @@ mod tests {
         );
 
         assert_eq!(merged.keyboard_shortcut, Some("ctrl+shift+a".to_string()));
+
+        let subagents = &merged.subagents;
+        assert_eq!(subagents.allow.len(), 2);
+        assert!(subagents.allow.contains("frontend"));
+        assert!(subagents.allow.contains("backend"));
+        assert_eq!(subagents.deny.len(), 1);
+        assert!(subagents.deny.contains("backend"));
+
         Ok(())
     }
 }

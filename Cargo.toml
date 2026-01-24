@@ -31,12 +31,12 @@ colored = "3.0.0"
 dirs = "6"
 emojis-rs = "0.1.3"
 enum-iterator = "2.3.0"
-facet = { version = "0.43.1", features = ["auto-traits", "reflect", "simd"] }
-facet-diff = "0.43.1"
-facet-json = { version = "0.43.1", features = ["std", "validate"] }
-facet-json-schema = "0.43.1"
-facet-toml = { version = "0.43.1", features = ["std"] }
-facet-value = { version = "0.43.1", features = ["std"] }
+facet = { version = "0.43.2", features = ["auto-traits", "reflect", "simd"] }
+facet-diff = "0.43.2"
+facet-json = { version = "0.43.2", features = ["std", "validate"] }
+facet-json-schema = "0.43.2"
+facet-toml = { version = "0.43.2", features = ["std"] }
+facet-value = { version = "0.43.2", features = ["std"] }
 futures = "0.3"
 jsonschema = { version = "0.37", default-features = false, features = [
   "resolve-async",

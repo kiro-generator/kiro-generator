@@ -6,6 +6,7 @@ pub const DEFAULT_AGENT_RESOURCES: &[&str] = &["file://README.md", "file://AGENT
 pub const DEFAULT_APPROVE: [&str; 0] = [];
 use {
     crate::{Manifest, Result, kiro::hook::AgentHook},
+    color_eyre::eyre::WrapErr,
     facet::Facet,
     std::{
         collections::{HashMap, HashSet},
@@ -121,6 +122,24 @@ impl TryFrom<&Manifest> for KiroAgent {
 
         let extra_tool_settings = value.tool_settings.clone();
         tools_settings.extend(extra_tool_settings);
+
+        // Convert subagents to toolsSettings.subagent format
+        if !value.subagents.allow.is_empty() || !value.subagents.deny.is_empty() {
+            let final_allow: Vec<String> = value
+                .subagents
+                .allow
+                .difference(&value.subagents.deny)
+                .cloned()
+                .collect();
+
+            if !final_allow.is_empty() {
+                let mut subagent_map = HashMap::new();
+                subagent_map.insert("allowedAgents".to_string(), final_allow);
+                let subagent_value = facet_value::to_value(&subagent_map)
+                    .wrap_err("Failed to serialize subagent settings")?;
+                tools_settings.insert("subagent".to_string(), subagent_value);
+            }
+        }
 
         Ok(Self {
             name: value.name.clone(),

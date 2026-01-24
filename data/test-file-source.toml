@@ -5,6 +5,9 @@ useLegacyMcpJson = true
 tools = ["*"]
 allowedTools = ["@awsdocs"]
 
+[subagents]
+allow = ["pr-review"]
+
 [hooks.spawn]
 type = "agentSpawn"
 command = "echo i have spawned"

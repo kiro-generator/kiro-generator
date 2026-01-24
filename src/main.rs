@@ -215,8 +215,17 @@ async fn main() -> Result<()> {
     } else if global_mode {
         generator::ConfigLocation::Global(home_config)
     } else {
-        // Default: merge both global and local
-        generator::ConfigLocation::Both(home_config)
+        // Check if we're in the home directory - if so, only use global config
+        // to avoid treating ~/.kiro/generators as both local and global
+        let current_dir = std::env::current_dir().wrap_err("Failed to get current directory")?;
+
+        if current_dir == home_dir {
+            debug!("Current directory is home directory, using global config only");
+            generator::ConfigLocation::Global(home_config)
+        } else {
+            // Default: merge both global and local
+            generator::ConfigLocation::Both(home_config)
+        }
     };
 
     let format = cli.format_color();
@@ -234,7 +243,7 @@ async fn main() -> Result<()> {
             let results = kq_generator_config.write_all(dry_run).await?;
             format.result(dry_run, args.show_templates, results)?;
         }
-        Command::Diff => {
+        Command::Diff(_) => {
             kq_generator_config.diff()?;
         }
         _ => {}

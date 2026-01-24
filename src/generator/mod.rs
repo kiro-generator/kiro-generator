@@ -137,6 +137,9 @@ impl Generator {
     pub fn diff(&self) -> Result<()> {
         let agents: Vec<Manifest> = self.merge()?.into_iter().filter(|a| !a.template).collect();
         let all_agents = !self.resolved.has_local;
+        let mut changed = 0;
+        let mut unchanged = 0;
+
         for a in agents {
             if all_agents || self.is_local(&a.name) {
                 let destination = self
@@ -144,22 +147,37 @@ impl Generator {
                     .join(format!("{}.json", a.name));
                 let generated_agent = KiroAgent::try_from(&a)?.normalize();
                 if self.fs.exists(&destination) {
-                    println!("-----{}-----", destination.display());
                     let existing = self.fs.read_to_string_sync(&destination)?;
                     match facet_json::from_str::<KiroAgent>(&existing) {
                         Err(e) => eprintln!("warning: failed to deserialize {} - {e}", a.name),
                         Ok(existing_agent) => {
                             let normalized_existing = existing_agent.normalize();
                             let diff = normalized_existing.diff(&generated_agent);
-                            println!("{}", facet_diff::format_diff_default(&diff));
+
+                            if !diff.is_equal() {
+                                println!("{}:", destination.display());
+                                println!("{}", facet_diff::format_diff_default(&diff));
+                                println!();
+                                changed += 1;
+                            } else {
+                                unchanged += 1;
+                            }
                         }
                     };
-                    println!("--------------");
                 } else {
-                    println!("agent {} is new", a.name);
+                    println!("{}: (new agent)", destination.display());
+                    println!();
+                    changed += 1;
                 }
             }
         }
+
+        if changed == 0 {
+            println!("No changes ({} agents checked)", unchanged);
+        } else {
+            println!("{} changed, {} unchanged", changed, unchanged);
+        }
+
         Ok(())
     }
 
