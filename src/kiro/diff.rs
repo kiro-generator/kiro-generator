@@ -40,15 +40,15 @@ pub struct NormalizedAgent {
     #[facet(default, skip_serializing_if = Vec::is_empty)]
     pub knowledge: Vec<Knowledge>,
     #[facet(default, skip_serializing_if = Option::is_none)]
-    pub shell: Option<ExecuteShellTool>,
+    pub shell: Option<NormalizedExecuteShellTool>,
     #[facet(default, skip_serializing_if = Option::is_none)]
-    pub aws: Option<AwsTool>,
+    pub aws: Option<NormalizedAwsTool>,
     #[facet(default, skip_serializing_if = Option::is_none)]
-    pub read: Option<ReadTool>,
+    pub read: Option<NormalizedReadTool>,
     #[facet(default, skip_serializing_if = Option::is_none)]
-    pub write: Option<WriteTool>,
+    pub write: Option<NormalizedWriteTool>,
     #[facet(default, skip_serializing_if = Option::is_none)]
-    pub subagent: Option<SubagentTool>,
+    pub subagent: Option<NormalizedSubagentTool>,
     #[facet(default, skip_serializing_if = Vec::is_empty)]
     pub other_tools: Vec<String>,
 }
@@ -65,11 +65,31 @@ impl KiroAgent {
         for (tool_name, value) in self.tools_settings {
             let json = facet_json::to_string(&value).unwrap_or_default();
             match tool_name.as_str() {
-                "shell" => shell = facet_json::from_str(&json).ok(),
-                "aws" => aws = facet_json::from_str(&json).ok(),
-                "read" => read = facet_json::from_str(&json).ok(),
-                "write" => write = facet_json::from_str(&json).ok(),
-                "subagent" => subagent = facet_json::from_str(&json).ok(),
+                "shell" => {
+                    if let Ok(tool) = facet_json::from_str::<ExecuteShellTool>(&json) {
+                        shell = Some(tool.into());
+                    }
+                }
+                "aws" => {
+                    if let Ok(tool) = facet_json::from_str::<AwsTool>(&json) {
+                        aws = Some(tool.into());
+                    }
+                }
+                "read" => {
+                    if let Ok(tool) = facet_json::from_str::<ReadTool>(&json) {
+                        read = Some(tool.into());
+                    }
+                }
+                "write" => {
+                    if let Ok(tool) = facet_json::from_str::<WriteTool>(&json) {
+                        write = Some(tool.into());
+                    }
+                }
+                "subagent" => {
+                    if let Ok(tool) = facet_json::from_str::<SubagentTool>(&json) {
+                        subagent = Some(tool.into());
+                    }
+                }
                 _ => {
                     other_tools.push(tool_name);
                 }
@@ -249,20 +269,21 @@ mod tests {
     fn test_normalized_agent_diff_shell_tool_changed() {
         let agent1 = NormalizedAgent {
             name: "test".to_string(),
-            shell: Some(ExecuteShellTool {
-                allowed_commands: HashSet::from(["git status".to_string()]),
-                ..Default::default()
+            shell: Some(NormalizedExecuteShellTool {
+                allowed_commands: vec!["git status".to_string()],
+                denied_commands: vec![],
+                deny_by_default: false,
+                auto_allow_readonly: true,
             }),
             ..Default::default()
         };
         let agent2 = NormalizedAgent {
             name: "test".to_string(),
-            shell: Some(ExecuteShellTool {
-                allowed_commands: HashSet::from([
-                    "git status".to_string(),
-                    "git fetch".to_string(),
-                ]),
-                ..Default::default()
+            shell: Some(NormalizedExecuteShellTool {
+                allowed_commands: vec!["git fetch".to_string(), "git status".to_string()],
+                denied_commands: vec![],
+                deny_by_default: false,
+                auto_allow_readonly: true,
             }),
             ..Default::default()
         };
@@ -297,7 +318,12 @@ mod tests {
         let agent2 = NormalizedAgent {
             name: "test".to_string(),
             resources: vec!["file://a.md".to_string()],
-            shell: Some(ExecuteShellTool::default()),
+            shell: Some(NormalizedExecuteShellTool {
+                allowed_commands: vec![],
+                denied_commands: vec![],
+                deny_by_default: false,
+                auto_allow_readonly: true,
+            }),
             ..Default::default()
         };
 

@@ -1,15 +1,18 @@
+[agents.kg-resources]
+template = true
 resources = [
   "file://docs/src/**/*.md",
   "file://AGENTS.md",
+  "file://README.md",
 ]
 
-[knowledge.facet]
+[agents.kg-resources.knowledge.facet]
 source = "file://./docs/facet"
 description = "Information about the Rust crates facet-json, facet-toml, facet-diff and other facet libraries"
 autoUpdate = true
 indexType = "best"
 
-[knowledge.kiro]
+[agents.kg-resources.knowledge.kiro]
 source = "file://./docs/kiro"
 description = "Kiro CLI configuration reference for JSON agents"
 autoUpdate = true

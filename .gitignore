@@ -6,3 +6,5 @@ docs/book/
 .kiro/settings/
 node_modules
 tsconfig.json
+.kiro/generators/manifests/*.toml
+!.kiro/generators/manifests/kg.toml

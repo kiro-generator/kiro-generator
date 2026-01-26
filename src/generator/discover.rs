@@ -70,7 +70,14 @@ fn process_local(
     let template = inline.map(|i| i.template).unwrap_or(false);
 
     match &local_agent_path {
-        None => Ok(inline.cloned()),
+        None => {
+            if let Some(i) = inline {
+                sources.push(KdlAgentSource::LocalInline);
+                Ok(Some(i.clone()))
+            } else {
+                Ok(None)
+            }
+        }
         Some(path) => {
             // Template status is only defined in manifests, passed via inline config
             match Manifest::from_path(fs, &name, path, template) {

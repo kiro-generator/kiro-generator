@@ -106,6 +106,121 @@ pub struct SubagentTool {
     pub allowed_agents: HashSet<String>,
 }
 
+// Normalized variants for stable diffing (Vec instead of HashSet)
+
+#[derive(Debug, Clone, Facet, PartialEq, Eq)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NormalizedAwsTool {
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub allowed_services: Vec<String>,
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub denied_services: Vec<String>,
+    #[facet(default)]
+    pub auto_allow_readonly: bool,
+}
+
+impl From<AwsTool> for NormalizedAwsTool {
+    fn from(tool: AwsTool) -> Self {
+        let mut allowed: Vec<_> = tool.allowed_services.into_iter().collect();
+        let mut denied: Vec<_> = tool.denied_services.into_iter().collect();
+        allowed.sort();
+        denied.sort();
+        Self {
+            allowed_services: allowed,
+            denied_services: denied,
+            auto_allow_readonly: tool.auto_allow_readonly,
+        }
+    }
+}
+
+#[derive(Debug, Facet, PartialEq, Eq, Clone)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NormalizedExecuteShellTool {
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub allowed_commands: Vec<String>,
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub denied_commands: Vec<String>,
+    #[facet(default)]
+    pub deny_by_default: bool,
+    pub auto_allow_readonly: bool,
+}
+
+impl From<ExecuteShellTool> for NormalizedExecuteShellTool {
+    fn from(tool: ExecuteShellTool) -> Self {
+        let mut allowed: Vec<_> = tool.allowed_commands.into_iter().collect();
+        let mut denied: Vec<_> = tool.denied_commands.into_iter().collect();
+        allowed.sort();
+        denied.sort();
+        Self {
+            allowed_commands: allowed,
+            denied_commands: denied,
+            deny_by_default: tool.deny_by_default,
+            auto_allow_readonly: tool.auto_allow_readonly,
+        }
+    }
+}
+
+#[derive(Debug, Facet, Default, PartialEq, Eq, Clone)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NormalizedReadTool {
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub allowed_paths: Vec<String>,
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub denied_paths: Vec<String>,
+}
+
+impl From<ReadTool> for NormalizedReadTool {
+    fn from(tool: ReadTool) -> Self {
+        let mut allowed: Vec<_> = tool.allowed_paths.into_iter().collect();
+        let mut denied: Vec<_> = tool.denied_paths.into_iter().collect();
+        allowed.sort();
+        denied.sort();
+        Self {
+            allowed_paths: allowed,
+            denied_paths: denied,
+        }
+    }
+}
+
+#[derive(Debug, Facet, Default, PartialEq, Eq, Clone)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NormalizedWriteTool {
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub allowed_paths: Vec<String>,
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub denied_paths: Vec<String>,
+}
+
+impl From<WriteTool> for NormalizedWriteTool {
+    fn from(tool: WriteTool) -> Self {
+        let mut allowed: Vec<_> = tool.allowed_paths.into_iter().collect();
+        let mut denied: Vec<_> = tool.denied_paths.into_iter().collect();
+        allowed.sort();
+        denied.sort();
+        Self {
+            allowed_paths: allowed,
+            denied_paths: denied,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Facet, Default, PartialEq, Eq)]
+#[facet(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NormalizedSubagentTool {
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub allowed_agents: Vec<String>,
+}
+
+impl From<SubagentTool> for NormalizedSubagentTool {
+    fn from(tool: SubagentTool) -> Self {
+        let mut allowed: Vec<_> = tool.allowed_agents.into_iter().collect();
+        allowed.sort();
+        Self {
+            allowed_agents: allowed,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
