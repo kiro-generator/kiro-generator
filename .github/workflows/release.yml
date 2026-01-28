@@ -18,16 +18,11 @@ on:
           - alpha
           - major
           - release
-      runner:
-        description: "Runner to use"
-        required: false
 jobs:
   releaser:
     name: release
-    if: false
     uses: dougEfresh/ci/.github/workflows/rust-release.yml@main
     secrets: inherit
     with:
-      runner: ${{ vars.RUNNER }}
       version: ${{ inputs.version }}
       package: "kiro-generator"
