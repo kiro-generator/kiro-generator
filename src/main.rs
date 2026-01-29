@@ -19,9 +19,25 @@ use {
     tracing_subscriber::prelude::*,
 };
 pub use {color_eyre::eyre::format_err, generator::ConfigLocation, kg_config::*};
+
 pub type Result<T> = color_eyre::Result<T>;
 #[allow(dead_code)]
 pub(crate) const DOCS_URL: &str = "https://kiro-generator.ai";
+
+#[cfg(target_os = "linux")]
+fn send_notification(summary: &str, body: &str, icon: &str) -> Result<()> {
+    use notify_rust::Notification;
+    debug!("Sending desktop notification {icon}");
+    Notification::new()
+        .summary(summary)
+        .body(body)
+        .icon(icon)
+        .show()
+        .wrap_err("Failed to send desktop notification")
+        .wrap_err("Ensure notification daemon (e.g. mako, dunst) is running")?;
+
+    Ok(())
+}
 
 fn init_tracing(debug: bool, trace_agent: Option<&str>) {
     let filter = if let Some(agent) = trace_agent {
@@ -238,10 +254,30 @@ async fn main() -> Result<()> {
         );
     }
 
-    match cli.command {
-        Command::Validate(args) | Command::Generate(args) => {
+    match &cli.command {
+        Command::Validate(args) => {
             let results = kq_generator_config.write_all(dry_run).await?;
             format.result(dry_run, args.show_templates, results)?;
+        }
+        Command::Generate(args) => {
+            let result = kq_generator_config.write_all(dry_run).await;
+
+            #[cfg(target_os = "linux")]
+            if args.notify {
+                match &result {
+                    Ok(results) => {
+                        let generated = results.iter().filter(|a| !a.is_template()).count();
+                        let body = format!("✓ Generated {} agents", generated);
+                        send_notification("kg generate", &body, "dialog-information")?;
+                    }
+                    Err(e) => {
+                        let body = format!("Error: {e}");
+                        send_notification("kg generate", &body, "dialog-error")?;
+                    }
+                }
+            }
+
+            format.result(dry_run, args.show_templates, result?)?;
         }
         Command::Diff(_) => {
             kq_generator_config.diff()?;

@@ -41,7 +41,7 @@ pub struct InitArgs {
 }
 
 #[derive(clap::Args, Clone, Default)]
-pub struct Args {
+pub struct ValidateArgs {
     /// Use only local configuration (ignore global ~/.kiro/generators/)
     #[arg(long, conflicts_with = "global")]
     pub local: bool,
@@ -57,6 +57,26 @@ pub struct Args {
 }
 
 #[derive(clap::Args, Clone, Default)]
+pub struct GenerateArgs {
+    /// Use only local configuration (ignore global ~/.kiro/generators/)
+    #[arg(long, conflicts_with = "global")]
+    pub local: bool,
+    /// Use only global configuration (ignore local .kiro/generators/)
+    #[arg(short = 'g', long, conflicts_with = "local")]
+    pub global: bool,
+    /// Show template agents in output
+    #[arg(long, default_value = "false")]
+    pub show_templates: bool,
+    /// Format of the console output
+    #[arg(short = 'f', long,  default_value_t = OutputFormatArg::default())]
+    pub format: OutputFormatArg,
+    /// Display desktop notification when generation completes or errors
+    #[arg(long, default_value = "false")]
+    #[cfg(target_os = "linux")]
+    pub notify: bool,
+}
+
+#[derive(clap::Args, Clone, Default)]
 pub struct DiffArgs {
     /// Use only global configuration (ignore local .kiro/generators/)
     #[arg(short = 'g', long)]
@@ -67,11 +87,11 @@ pub struct DiffArgs {
 pub enum Command {
     /// Validate the agent configuration files but do not generate kiro agents
     #[command(alias = "v")]
-    Validate(Args),
+    Validate(ValidateArgs),
     /// Generate agent configuration JSON files, if local config found only
     /// local agents are generated. Use --global to generate $HOME agents
     #[command(alias = "g")]
-    Generate(Args),
+    Generate(GenerateArgs),
     /// Create default configuration in directory ~/.kiro/generators
     #[command()]
     Init(InitArgs),
@@ -94,18 +114,21 @@ pub enum SchemaCommand {
 
 impl Default for Command {
     fn default() -> Self {
-        Command::Validate(Args::default())
+        Command::Validate(ValidateArgs::default())
     }
 }
 
 impl Cli {
     pub fn format_color(&self) -> OutputFormat {
-        match &self.command {
-            Command::Validate(a) | Command::Generate(a) => match &a.format {
-                OutputFormatArg::Table => OutputFormat::Table(self.color()),
-                OutputFormatArg::Json => OutputFormat::Json,
-            },
-            _ => OutputFormat::Table(self.color()),
+        let format = match &self.command {
+            Command::Validate(a) => &a.format,
+            Command::Generate(a) => &a.format,
+            _ => return OutputFormat::Table(self.color()),
+        };
+
+        match format {
+            OutputFormatArg::Table => OutputFormat::Table(self.color()),
+            OutputFormatArg::Json => OutputFormat::Json,
         }
     }
 
@@ -160,12 +183,12 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Auto,
-            command: Command::Validate(Args::default()),
+            command: Command::Validate(ValidateArgs::default()),
         };
         assert!(cli.dry_run());
 
         let cli = Cli {
-            command: Command::Generate(Args::default()),
+            command: Command::Generate(GenerateArgs::default()),
             ..cli
         };
         assert!(!cli.dry_run());
@@ -177,9 +200,9 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Auto,
-            command: Command::Validate(Args {
+            command: Command::Validate(ValidateArgs {
                 local: true,
-                ..Args::default()
+                ..Default::default()
             }),
         };
         assert!(cli.is_local());
@@ -192,9 +215,9 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Auto,
-            command: Command::Generate(Args {
+            command: Command::Generate(GenerateArgs {
                 global: true,
-                ..Args::default()
+                ..Default::default()
             }),
         };
         assert!(cli.is_global());
@@ -246,7 +269,7 @@ mod tests {
         assert!(matches!(cli.format_color(), OutputFormat::Table(true)));
 
         let cli = Cli {
-            command: Command::Validate(Args {
+            command: Command::Validate(ValidateArgs {
                 format: OutputFormatArg::Json,
                 ..Default::default()
             }),
