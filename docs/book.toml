@@ -14,7 +14,7 @@ default-theme = "Rust"
 preferred-dark-theme = "Ayu"
 smart-punctuation = true
 mathjax-support = true
-#copy-fonts = true
+# copy-fonts = true
 no-section-label = false
 git-repository-url = "https://github.com/dougEfresh/kiro-generator"
 edit-url-template = "https://github.com/dougEfresh/kiro-generator/edit/main/docs/{path}"
@@ -37,13 +37,3 @@ boost-paragraph = 1
 expand = true
 heading-split-level = 3
 copy-js = true
-
-[preprocessor]
-# [preprocessor.embedify]
-# scroll-to-top.enable = true
-# footer.enable = true
-# footer.message = "Copyright © 2025 • Created with SOL by [dougEfresh](https://github.com/dougeEfresh)"
-
-# announcement-banner.enable = false
-# announcement-banner.id = "3.0.11"
-# announcement-banner.message = "*New version [3.0.11](https://github.com/dougEfresh/kiro-generator/releases/tag/3.0.11)*"

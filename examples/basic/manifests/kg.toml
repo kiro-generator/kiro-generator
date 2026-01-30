@@ -1,4 +1,4 @@
-"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/kg.json"
+"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json"
 
 # Kiro Generator Manifest
 # Declare your agents and their relationships here

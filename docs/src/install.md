@@ -14,7 +14,7 @@ paru -S kiro-generator
 ```
 
 ## Ubuntu/Debian
-```bash 
+```bash
 todo
 ```
 
@@ -32,7 +32,7 @@ cd kiro-generator
 cargo install --path .
 ```
 
-## Verify 
+## Verify
 
 ```
 kg --version

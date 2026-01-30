@@ -10,11 +10,11 @@ mod source;
 #[cfg(test)]
 pub use kg_config::toml_parse;
 use {
-    crate::{commands::Command, generator::Generator, os::Fs},
+    crate::{generator::Generator, os::Fs},
     clap::Parser,
     color_eyre::eyre::Context,
     std::path::Path,
-    tracing::{debug, enabled},
+    tracing::enabled,
     tracing_error::ErrorLayer,
     tracing_subscriber::prelude::*,
 };
@@ -22,22 +22,7 @@ pub use {color_eyre::eyre::format_err, generator::ConfigLocation, kg_config::*};
 
 pub type Result<T> = color_eyre::Result<T>;
 #[allow(dead_code)]
-pub(crate) const DOCS_URL: &str = "https://kiro-generator.ai";
-
-#[cfg(target_os = "linux")]
-fn send_notification(summary: &str, body: &str, icon: &str) -> Result<()> {
-    use notify_rust::Notification;
-    debug!("Sending desktop notification {icon}");
-    Notification::new()
-        .summary(summary)
-        .body(body)
-        .icon(icon)
-        .show()
-        .wrap_err("Failed to send desktop notification")
-        .wrap_err("Ensure notification daemon (e.g. mako, dunst) is running")?;
-
-    Ok(())
-}
+pub(crate) const DOCS_URL: &str = "https://kiro-generator.io";
 
 fn init_tracing(debug: bool, trace_agent: Option<&str>) {
     let filter = if let Some(agent) = trace_agent {
@@ -177,10 +162,7 @@ async fn main() -> Result<()> {
         local_mode = tracing::field::Empty
     );
     let _guard = span.enter();
-
-    let local_mode = cli.is_local();
-    let global_mode = cli.is_global();
-    let (home_dir, home_config) = cli.config()?;
+    let home_dir = dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?;
     let fs = Fs::new();
 
     if let commands::Command::Init(args) = &cli.command {
@@ -192,58 +174,11 @@ async fn main() -> Result<()> {
     }
 
     if let commands::Command::Schema(schema_cmd) = &cli.command {
-        use commands::SchemaCommand;
-        let mut output = match schema_cmd {
-            SchemaCommand::Manifest => {
-                let mut s = facet_json_schema::schema_for::<GeneratorConfig>();
-                s.description = Some("Schema for kiro-generator (kg) manifest TOML files".into());
-                s
-            }
-            SchemaCommand::Agent => {
-                let mut s = facet_json_schema::schema_for::<KgAgentFileDoc>();
-                s.description = Some("Schema for kiro-generator (kg) agent TOML files".into());
-                s
-            }
-        };
-        output.schema = Some("https://json-schema.org/draft/2020-12/schema".into());
-        println!("{}", facet_json::to_string_pretty(&output)?);
-        return Ok(());
+        return schema::handle_schema_command(schema_cmd);
     }
 
-    if global_mode {
-        debug!(
-            "changing working directory to {}",
-            home_dir.as_os_str().display()
-        );
-        std::env::set_current_dir(&home_dir)
-            .wrap_err(format!("failed to set CWD {}", home_dir.display()))?;
-    }
-    if local_mode {
-        span.record("local_mode", true);
-    }
-    let dry_run = cli.dry_run();
-    if dry_run {
-        span.record("dry_run", true);
-    }
-
-    let location = if local_mode {
-        generator::ConfigLocation::Local
-    } else if global_mode {
-        generator::ConfigLocation::Global(home_config)
-    } else {
-        // Check if we're in the home directory - if so, only use global config
-        // to avoid treating ~/.kiro/generators as both local and global
-        let current_dir = std::env::current_dir().wrap_err("Failed to get current directory")?;
-
-        if current_dir == home_dir {
-            debug!("Current directory is home directory, using global config only");
-            generator::ConfigLocation::Global(home_config)
-        } else {
-            // Default: merge both global and local
-            generator::ConfigLocation::Both(home_config)
-        }
-    };
-
+    cli.record_span(&span);
+    let location = cli.config_location(home_dir)?;
     let format = cli.format_color();
     let kq_generator_config: Generator = Generator::new(fs, location, format)?;
     if enabled!(tracing::Level::TRACE) {
@@ -254,36 +189,7 @@ async fn main() -> Result<()> {
         );
     }
 
-    match &cli.command {
-        Command::Validate(args) => {
-            let results = kq_generator_config.write_all(dry_run).await?;
-            format.result(dry_run, args.show_templates, results)?;
-        }
-        Command::Generate(args) => {
-            let result = kq_generator_config.write_all(dry_run).await;
-
-            #[cfg(target_os = "linux")]
-            if args.notify {
-                match &result {
-                    Ok(results) => {
-                        let generated = results.iter().filter(|a| !a.is_template()).count();
-                        let body = format!("✓ Generated {} agents", generated);
-                        send_notification("kg generate", &body, "dialog-information")?;
-                    }
-                    Err(e) => {
-                        let body = format!("Error: {e}");
-                        send_notification("kg generate", &body, "dialog-error")?;
-                    }
-                }
-            }
-
-            format.result(dry_run, args.show_templates, result?)?;
-        }
-        Command::Diff(_) => {
-            kq_generator_config.diff()?;
-        }
-        _ => {}
-    };
+    cli.execute(&kq_generator_config).await?;
 
     Ok(())
 }

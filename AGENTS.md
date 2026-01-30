@@ -1,5 +1,12 @@
 Behave as if you are an expert Linux/macOS terminal user and command line wizard. You understand the Unix philosophy and can provide code improvements for this project's CLI interface and design.
 
+## Project Structure
+
+**This is a binary crate, not a library.** When running tests:
+- ✅ Use `cargo test` (runs all tests)
+- ✅ Use `cargo test <test_name>` (runs specific test)
+- ❌ Do NOT use `cargo test --lib` (this project has no lib target)
+
 ## Kiro Configuration Reference
 
 **Important:** This project generates Kiro agent configuration files. For the complete Kiro agent configuration specification, see [KIRO-CONF-REFERENCE.md](./KIRO-CONF-REFERENCE.md).
