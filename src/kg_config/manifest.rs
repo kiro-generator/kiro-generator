@@ -40,7 +40,7 @@ pub struct Manifest {
     pub allowed_tools: HashSet<String>,
     pub model: Option<String>,
     #[facet(default)]
-    pub hooks: HashMap<String, KgHook>,
+    pub hooks: HashMap<String, HashMap<String, KgHook>>,
     #[facet(default, rename = "mcpServers")]
     pub mcp_servers: HashMap<String, CustomToolConfig>,
     #[facet(default, rename = "toolAliases")]
@@ -84,25 +84,18 @@ impl Manifest {
 
     pub fn hooks(&self) -> HashMap<String, Vec<AgentHook>> {
         let mut result: HashMap<String, Vec<AgentHook>> = HashMap::new();
-        for h in self.hooks.values() {
-            result
-                .entry(h.hook_type.clone())
-                .and_modify(|e| {
-                    e.push(AgentHook {
-                        command: h.command.clone(),
-                        matcher: h.matcher.clone(),
-                        timeout_ms: h.timeout_ms,
-                        max_output_size: h.max_output_size,
-                        cache_ttl_seconds: h.cache_ttl_seconds,
-                    })
-                })
-                .or_insert(vec![AgentHook {
-                    command: h.command.clone(),
-                    matcher: h.matcher.clone(),
-                    timeout_ms: h.timeout_ms,
-                    max_output_size: h.max_output_size,
-                    cache_ttl_seconds: h.cache_ttl_seconds,
-                }]);
+        for (hook_type, hooks_map) in &self.hooks {
+            let mut hooks_vec = Vec::new();
+            for hook in hooks_map.values() {
+                hooks_vec.push(AgentHook {
+                    command: hook.command.clone(),
+                    matcher: hook.matcher.clone(),
+                    timeout_ms: hook.timeout_ms,
+                    max_output_size: hook.max_output_size,
+                    cache_ttl_seconds: hook.cache_ttl_seconds,
+                });
+            }
+            result.insert(hook_type.clone(), hooks_vec);
         }
         result
     }

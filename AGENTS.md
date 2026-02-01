@@ -24,7 +24,7 @@ When reviewing this CLI, prioritize:
 
 ## Clap Implementation
 
-This project uses [clap](https://docs.rs/clap/latest/clap/) with the derive feature in `./src/commands.rs`.
+This project uses [clap](https://docs.rs/clap/latest/clap/) with the derive feature in `./src/commands/mod.rs`.
 
 Reference guides:
 - https://docs.rs/clap/latest/clap/_concepts/index.html

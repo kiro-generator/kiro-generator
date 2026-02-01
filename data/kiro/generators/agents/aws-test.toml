@@ -8,8 +8,7 @@ resources = [
 ]
 useLegacyMcpJson = false
 
-[hooks.whoami]
-type = "agentSpawn"
+[hooks.agentSpawn.whoami]
 command = "aws sts get-caller-identity"
 
 [nativeTools.aws]

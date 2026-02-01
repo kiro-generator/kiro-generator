@@ -72,10 +72,7 @@ impl GeneratorConfig {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{KgAgentFileDoc, kiro::hook::HookTrigger},
-    };
+    use {super::*, crate::KgAgentFileDoc};
 
     #[test_log::test]
     fn test_agent_decoding() -> Result<()> {
@@ -103,16 +100,17 @@ mod tests {
         assert!(resources.contains(&"file://README.md".to_string()));
 
         let hooks = &agent.hooks;
-        let hook = &hooks.get("spawn");
-        assert!(hook.is_some());
-        let hook = hook.unwrap();
-        assert_eq!(hook.command, "echo i have spawned");
-        assert_eq!(hook.hook_type, HookTrigger::AgentSpawn.to_string());
+        let agent_spawn_hooks = hooks.get("agentSpawn");
+        assert!(agent_spawn_hooks.is_some());
+        let agent_spawn_hooks = agent_spawn_hooks.unwrap();
+        let spawn_hook = agent_spawn_hooks.get("spawn");
+        assert!(spawn_hook.is_some());
+        assert_eq!(spawn_hook.unwrap().command, "echo i have spawned");
 
-        assert!(hooks.contains_key("pre"));
+        assert!(hooks.contains_key("preToolUse"));
         assert!(hooks.contains_key("stop"));
-        assert!(hooks.contains_key("post"));
-        assert!(hooks.contains_key("submit"));
+        assert!(hooks.contains_key("postToolUse"));
+        assert!(hooks.contains_key("userPromptSubmit"));
 
         let allowed = &agent.allowed_tools;
         assert_eq!(allowed.len(), 1);

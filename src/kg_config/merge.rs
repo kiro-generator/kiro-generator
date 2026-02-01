@@ -93,17 +93,27 @@ impl Manifest {
         tracing::trace!("subagents: merging");
         self.subagents = self.subagents.merge(other.subagents);
 
-        // Merge hooks - child force_allow parent for same key
-        for (key, parent_hook) in other.hooks {
+        // Merge hooks - child overrides parent for same hook_type.hook_name
+        for (hook_type, parent_hooks_map) in other.hooks {
             self.hooks
-                .entry(key.clone())
-                .and_modify(|child_hook| {
-                    tracing::trace!(hook = %key, "hook: merged");
-                    *child_hook = child_hook.clone().merge(parent_hook.clone())
+                .entry(hook_type.clone())
+                .and_modify(|child_hooks_map| {
+                    for (hook_name, parent_hook) in parent_hooks_map.clone() {
+                        child_hooks_map
+                            .entry(hook_name.clone())
+                            .and_modify(|child_hook| {
+                                tracing::trace!(hook_type = %hook_type, hook_name = %hook_name, "hook: merged");
+                                *child_hook = child_hook.clone().merge(parent_hook.clone())
+                            })
+                            .or_insert_with(|| {
+                                tracing::trace!(hook_type = %hook_type, hook_name = %hook_name, "hook: inserted from parent");
+                                parent_hook
+                            });
+                    }
                 })
                 .or_insert_with(|| {
-                    tracing::trace!(hook = %key, "hook: inserted");
-                    parent_hook
+                    tracing::trace!(hook_type = %hook_type, "hook_type: inserted from parent");
+                    parent_hooks_map
                 });
         }
 

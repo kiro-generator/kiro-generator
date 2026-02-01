@@ -9,6 +9,5 @@ aws-secops = { inherits = ["base", "iam", "eks"] }
 [agents.aws-test]
 inherits = ["base"]
 
-[agents.aws-test.hooks.whoami]
+[agents.aws-test.hooks.agentSpawn.whoami]
 command = "aws get caller-identity"
-type = "agentSpawn"

@@ -4,8 +4,7 @@ allowedTools = ["read", "knowledge", "@fetch"]
 resources = ["file://README.md", "file://.amazonq/rules/**/*.md"]
 useLegacyMcpJson = false
 
-[hooks.echo]
-type = "agentSpawn"
+[hooks.agentSpawn.echo]
 command = "echo My name is Bob"
 
 [nativeTools]

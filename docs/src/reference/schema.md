@@ -7,7 +7,7 @@ kg provides JSON schemas for IDE autocompletion and validation.
 For agent declarations in `kg.toml`:
 
 ```toml
-"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json"
+"$schema" = "https://kiro-generator.io/manifest.json"
 
 [agents]
 default = { inherits = [] }
@@ -18,7 +18,7 @@ default = { inherits = [] }
 For individual agent files like `default.toml`, `rust.toml`:
 
 ```toml
-"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/agent.json"
+"$schema" = "https://kiro-generator.io/agent.json"
 
 description = "Default agent"
 allowedTools = ["read", "knowledge"]
@@ -48,11 +48,11 @@ enabled = true
 
 [[schema.associations]]
 path = "**/.kiro/generators/manifests/*.toml"
-url = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json"
+url = "https://kiro-generator.io/manifest.json"
 
 [[schema.associations]]
 path = "**/.kiro/generators/agents/**/*.toml"
-url = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/agent.json"
+url = "https://kiro-generator.io/agent.json"
 ```
 
 ### tombi
@@ -62,12 +62,12 @@ Add to `tombi.toml` in your project:
 ```toml
 [[schemas]]
 toml-version = "1.0.0"
-path = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json"
+path = "https://kiro-generator.io/manifest.json"
 include = ["**/.kiro/generators/manifests/*.toml"]
 
 [[schemas]]
 toml-version = "1.0.0"
-path = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/agent.json"
+path = "https://kiro-generator.io/agent.json"
 include = ["**/.kiro/generators/agents/**/*.toml"]
 ```
 
@@ -86,8 +86,8 @@ require('lspconfig').taplo.setup({
       schema = {
         enabled = true,
         associations = {
-          ["**/.kiro/generators/manifests/*.toml"] = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json",
-          ["**/.kiro/generators/agents/**/*.toml"] = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/agent.json"
+          ["**/.kiro/generators/manifests/*.toml"] = "https://kiro-generator.io/manifest.json",
+          ["**/.kiro/generators/agents/**/*.toml"] = "https://kiro-generator.io/agent.json"
         }
       }
     }
@@ -103,12 +103,3 @@ With schema validation you get:
 - **Validation** - Immediate feedback on typos and invalid values
 - **Documentation** - Hover tooltips explaining each field
 - **Type checking** - Catch errors before running `kg validate`
-
-## Schema Location
-
-The schema is versioned with releases:
-
-- **Latest:** `https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json`
-- **Specific version:** `https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/tags/v0.1.0/schemas/manifest.json`
-
-Pin to a specific version for stability or use `main` for latest features.

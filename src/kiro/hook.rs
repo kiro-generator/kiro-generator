@@ -1,8 +1,11 @@
 use {facet::Facet, std::fmt::Display};
 
-#[allow(dead_code)]
+#[derive(Facet, Default, Debug, Clone, Eq, PartialEq, Hash)]
+#[facet(default, rename_all = "camelCase")]
+#[repr(C)]
 pub enum HookTrigger {
     /// Triggered during agent spawn
+    #[default]
     AgentSpawn,
     /// Triggered per user message submission
     UserPromptSubmit,
@@ -56,9 +59,6 @@ pub struct AgentHook {
 pub struct KgHook {
     /// The command to run when the hook is triggered
     pub command: String,
-
-    #[facet(rename = "type", skip_serializing)]
-    pub hook_type: String,
 
     /// Max time the hook can run before it throws a timeout error (default:
     /// 30000ms)
@@ -114,7 +114,6 @@ mod tests {
     fn hook_merge() -> crate::Result<()> {
         let parent = KgHook {
             command: "test".into(),
-            hook_type: HookTrigger::AgentSpawn.to_string(),
             matcher: Some("*.rs".into()),
             timeout_ms: Some(5000),
             max_output_size: Some(2048),
@@ -123,7 +122,6 @@ mod tests {
 
         let child = KgHook {
             command: "test-child".into(),
-            hook_type: HookTrigger::AgentSpawn.to_string(),
             matcher: None,
             timeout_ms: None,
             max_output_size: None,
@@ -143,7 +141,6 @@ mod tests {
     fn hook_merge_child_overrides() -> crate::Result<()> {
         let parent = KgHook {
             command: "test".into(),
-            hook_type: HookTrigger::AgentSpawn.to_string(),
             matcher: Some("*.rs".into()),
             timeout_ms: Some(5000),
             max_output_size: Some(2048),
@@ -152,7 +149,6 @@ mod tests {
 
         let child = KgHook {
             command: "test-child".into(),
-            hook_type: HookTrigger::AgentSpawn.to_string(),
             matcher: Some("*.toml".into()),
             timeout_ms: Some(10000),
             max_output_size: Some(4096),

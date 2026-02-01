@@ -1,8 +1,7 @@
-"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/manifest.json"
+"$schema" = "https://kiro-generator.io/manifest.json"
 
 # Kiro Generator Manifest
 # Declare your agents and their relationships here
-
 [agents]
 # git is a simple template what allows and denies access to git CLI commands
 # see agents/git.toml for details

@@ -5,68 +5,24 @@ mod kiro;
 mod os;
 pub mod output;
 mod schema;
+mod schema_optional;
 mod source;
+mod tracing_init;
 
 #[cfg(test)]
 pub use kg_config::toml_parse;
 use {
-    crate::{generator::Generator, os::Fs},
+    crate::{generator::Generator, os::Fs, tracing_init::init_tracing},
     clap::Parser,
     color_eyre::eyre::Context,
     std::path::Path,
     tracing::enabled,
-    tracing_error::ErrorLayer,
-    tracing_subscriber::prelude::*,
 };
 pub use {color_eyre::eyre::format_err, generator::ConfigLocation, kg_config::*};
 
 pub type Result<T> = color_eyre::Result<T>;
 #[allow(dead_code)]
 pub(crate) const DOCS_URL: &str = "https://kiro-generator.io";
-
-fn init_tracing(debug: bool, trace_agent: Option<&str>) {
-    let filter = if let Some(agent) = trace_agent {
-        let directive = if agent == "all" {
-            "trace".to_string()
-        } else {
-            format!(
-                "{},[agent{{name=\"{agent}\"}}]=trace",
-                if debug { "debug" } else { "info" }
-            )
-        };
-        tracing_subscriber::EnvFilter::new(directive)
-    } else if debug {
-        tracing_subscriber::EnvFilter::new("debug")
-    } else {
-        tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
-    };
-
-    if debug {
-        tracing_subscriber::registry()
-            .with(filter)
-            .with(
-                tracing_subscriber::fmt::layer()
-                    .with_level(true)
-                    .with_writer(std::io::stderr)
-                    .with_target(true),
-            )
-            .with(ErrorLayer::default())
-            .init();
-    } else {
-        tracing_subscriber::registry()
-            .with(filter)
-            .with(
-                tracing_subscriber::fmt::layer()
-                    .without_time()
-                    .with_target(false)
-                    .with_level(true)
-                    .with_writer(std::io::stderr),
-            )
-            .with(ErrorLayer::default())
-            .init();
-    }
-}
 
 /// Initialize a new kg configuration directory.
 ///

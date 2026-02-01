@@ -25,6 +25,15 @@ Enable detailed trace logging for specific agents with `-t` or `--trace`:
 # Trace specific agent
 kg validate --trace rust
 
+```
+TRACE main{dry_run=true}:discover{fs= location=[global,local]}:agent{name="rust"}: matching location
+TRACE main{dry_run=true}:discover{fs= location=[global,local]}:agent{name="rust"}: found inline global and global file source
+TRACE main{dry_run=true}:discover{fs= location=[global,local]}:agent{name="rust"}: merge start self_name=rust self_template=false other_name=rust other_template=false
+TRACE main{dry_run=true}:discover{fs= location=[global,local]}:agent{name="rust"}: inherits: extended count=1
+TRACE main{dry_run=true}:discover{fs= location=[global,local]}:agent{name="rust"}: subagents: merging
+TRACE main{dry_run=true}:write_all{self=global_path=/home/user/.kiro/generators exists=true local_agents=false}:agent{name="rust" local=false}:write{self=global_path=/home/user/.kiro/generators exists=true local_agents=false agent=rust}: {
+```
+
 # Trace all agents (very verbose)
 kg validate --trace all
 ```

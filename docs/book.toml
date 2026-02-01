@@ -18,6 +18,15 @@ mathjax-support = true
 no-section-label = false
 git-repository-url = "https://github.com/dougEfresh/kiro-generator"
 edit-url-template = "https://github.com/dougEfresh/kiro-generator/edit/main/docs/{path}"
+additional-css = []
+additional-js = []
+
+# Copy schema files to output
+[output.html.copy-files]
+files = [
+    "../schemas/agent.json",
+    "../schemas/manifest.json",
+]
 
 [output.html.print]
 enable = true

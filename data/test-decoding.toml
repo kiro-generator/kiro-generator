@@ -12,24 +12,19 @@ allowedTools = ["@awsdocs"]
 [agents.test.subagents]
 allow = ["backend"]
 
-[agents.test.hooks.spawn]
-type = "agentSpawn"
+[agents.test.hooks.agentSpawn.spawn]
 command = "echo i have spawned"
 
-[agents.test.hooks.submit]
-type = "userPromptSubmit"
+[agents.test.hooks.userPromptSubmit.submit]
 command = "echo user submitted"
 
-[agents.test.hooks.post]
-type = "postToolUse"
+[agents.test.hooks.postToolUse.post]
 command = "echo after tool"
 
-[agents.test.hooks.stop]
-type = "stop"
+[agents.test.hooks.stop.stop]
 command = "echo stopped"
 
-[agents.test.hooks.pre]
-type = "preToolUse"
+[agents.test.hooks.preToolUse.pre]
 command = "echo before tool"
 matcher = "git.*"
 

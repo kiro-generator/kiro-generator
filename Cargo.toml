@@ -38,8 +38,7 @@ facet-json-schema = "0.43.2"
 facet-toml = { version = "0.43.2", features = ["std"] }
 facet-value = { version = "0.43.2", features = ["std"] }
 futures = "0.3"
-jsonschema = { version = "0.37", default-features = false, features = [
-  "resolve-async",
+jsonschema = { version = "0.40", default-features = false, features = [
   "resolve-file"
 ] }
 serde_json = { version = "1" }

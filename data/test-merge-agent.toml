@@ -28,25 +28,20 @@ deny = ["Cargo.loc"]
 allow = ["./src/*", "./scripts/**"]
 deny = ["Cargo.loc"]
 
-[agents.parent.hooks.spawn]
-type = "agentSpawn"
+[agents.parent.hooks.agentSpawn.spawn]
 command = "echo override me"
 
-[agents.parent.hooks.submit]
-type = "userPromptSubmit"
+[agents.parent.hooks.userPromptSubmit.submit]
 command = "echo user submitted"
 
-[agents.parent.hooks.pre]
-type = "preToolUse"
+[agents.parent.hooks.preToolUse.pre]
 command = "echo before tool"
 matcher = "git.*"
 
-[agents.parent.hooks.post]
-type = "postToolUse"
+[agents.parent.hooks.postToolUse.post]
 command = "echo after tool"
 
-[agents.parent.hooks.stop]
-type = "stop"
+[agents.parent.hooks.stop.stop]
 command = "echo stopped"
 
 [agents.parent.subagents]
@@ -78,8 +73,7 @@ forceAllow = ["Cargo.lock"]
 [agents.child.nativeTools.shell]
 forceAllow = ["git push .*"]
 
-[agents.child.hooks.spawn]
-type = "agentSpawn"
+[agents.child.hooks.agentSpawn.spawn]
 command = "echo i have spawned"
 
 [agents.child.subagents]

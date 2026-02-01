@@ -1,5 +1,11 @@
 use {
-    crate::{GeneratorConfig, KgAgentFileDoc, Result, commands::SchemaCommand},
+    crate::{
+        GeneratorConfig,
+        KgAgentFileDoc,
+        Result,
+        commands::SchemaCommand,
+        schema_optional::JsonSchemaOptional,
+    },
     color_eyre::eyre::Context,
 };
 
@@ -13,10 +19,11 @@ fn get_schema_description(cmd: &SchemaCommand) -> &'static str {
 }
 
 fn build_schema(cmd: &SchemaCommand) -> Result<String> {
-    let mut output = match cmd {
+    let schema = match cmd {
         SchemaCommand::Manifest => facet_json_schema::schema_for::<GeneratorConfig>(),
         SchemaCommand::Agent => facet_json_schema::schema_for::<KgAgentFileDoc>(),
     };
+    let mut output: JsonSchemaOptional = schema.into();
     output.description = Some(get_schema_description(cmd).into());
     output.schema = Some("https://json-schema.org/draft/2020-12/schema".into());
     facet_json::to_string_pretty(&output).wrap_err(format!("unable to generate schema for {cmd}"))

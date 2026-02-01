@@ -10,7 +10,7 @@ use {
     facet_diff::FacetDiff,
     std::{
         collections::{HashMap, HashSet},
-        fmt::{self, Debug},
+        fmt::{self, Debug, Display},
         path::PathBuf,
     },
 };
@@ -27,6 +27,22 @@ mod merge;
 pub use config_location::*;
 
 use crate::source::*;
+
+#[derive(Debug, Clone)]
+pub enum AgentDiff {
+    New,
+    Same,
+    Changed(String),
+}
+impl Display for AgentDiff {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::New => write!(f, "new agent"),
+            Self::Same => write!(f, "no changes"),
+            Self::Changed(s) => write!(f, "{s}"),
+        }
+    }
+}
 
 pub struct AgentResult {
     pub kiro_agent: KiroAgent,
@@ -133,6 +149,35 @@ impl Generator {
         }
     }
 
+    /// Compute diff between existing agent file and generated agent
+    fn compute_diff(&self, agent_name: &str, generated: &KiroAgent) -> Result<AgentDiff> {
+        let destination = self
+            .destination_dir(agent_name)
+            .join(format!("{}.json", agent_name));
+
+        if !self.fs.exists(&destination) {
+            return Ok(AgentDiff::New);
+        }
+
+        let existing = self.fs.read_to_string_sync(&destination)?;
+        let existing_agent = facet_json::from_str::<KiroAgent>(&existing).wrap_err_with(|| {
+            format!(
+                "Failed to parse existing agent file {}",
+                destination.display()
+            )
+        })?;
+
+        let normalized_existing = existing_agent.normalize();
+        let normalized_generated = generated.clone().normalize();
+        let diff = normalized_existing.diff(&normalized_generated);
+
+        if diff.is_equal() {
+            Ok(AgentDiff::Same)
+        } else {
+            Ok(AgentDiff::Changed(facet_diff::format_diff_default(&diff)))
+        }
+    }
+
     #[tracing::instrument(level = "info")]
     pub fn diff(&self) -> Result<()> {
         let agents: Vec<Manifest> = self.merge()?.into_iter().filter(|a| !a.template).collect();
@@ -145,29 +190,23 @@ impl Generator {
                 let destination = self
                     .destination_dir(&a.name)
                     .join(format!("{}.json", a.name));
-                let generated_agent = KiroAgent::try_from(&a)?.normalize();
-                if self.fs.exists(&destination) {
-                    let existing = self.fs.read_to_string_sync(&destination)?;
-                    match facet_json::from_str::<KiroAgent>(&existing) {
-                        Err(e) => eprintln!("warning: failed to deserialize {} - {e}", a.name),
-                        Ok(existing_agent) => {
-                            let normalized_existing = existing_agent.normalize();
-                            let diff = normalized_existing.diff(&generated_agent);
+                let generated_agent = KiroAgent::try_from(&a)?;
 
-                            if !diff.is_equal() {
-                                println!("{}:", destination.display());
-                                println!("{}", facet_diff::format_diff_default(&diff));
-                                println!();
-                                changed += 1;
-                            } else {
-                                unchanged += 1;
-                            }
-                        }
-                    };
-                } else {
-                    println!("{}: (new agent)", destination.display());
-                    println!();
-                    changed += 1;
+                match self.compute_diff(&a.name, &generated_agent)? {
+                    AgentDiff::New => {
+                        println!("{}: (new agent)", destination.display());
+                        println!();
+                        changed += 1;
+                    }
+                    AgentDiff::Changed(diff_output) => {
+                        println!("{}:", destination.display());
+                        println!("{}", diff_output);
+                        println!();
+                        changed += 1;
+                    }
+                    AgentDiff::Same => {
+                        unchanged += 1;
+                    }
                 }
             }
         }
@@ -198,7 +237,7 @@ impl Generator {
         Ok(results)
     }
 
-    #[tracing::instrument(skip(dry_run), level = "info")]
+    #[tracing::instrument(skip(dry_run), level = "info", fields(out = tracing::field::Empty))]
     pub(crate) async fn write(&self, agent: Manifest, dry_run: bool) -> Result<AgentResult> {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
@@ -231,10 +270,25 @@ impl Generator {
                 .destination
                 .join(format!("{}.json", result.agent.name));
 
-            self.fs
-                .write(&out, facet_json::to_string_pretty(&result.kiro_agent)?)
-                .await
-                .wrap_err_with(|| format!("failed to write file {}", out.display()))?;
+            tracing::Span::current().record("out", tracing::field::display(&out.display()));
+
+            let diff = self.compute_diff(&result.agent.name, &result.kiro_agent)?;
+            tracing::debug!("{diff}");
+            match diff {
+                AgentDiff::New => {
+                    self.fs
+                        .write(&out, facet_json::to_string_pretty(&result.kiro_agent)?)
+                        .await
+                        .wrap_err_with(|| format!("failed to write file {}", out.display()))?;
+                }
+                AgentDiff::Changed(_) => {
+                    self.fs
+                        .write(&out, facet_json::to_string_pretty(&result.kiro_agent)?)
+                        .await
+                        .wrap_err_with(|| format!("failed to write file {}", out.display()))?;
+                }
+                AgentDiff::Same => {}
+            }
         }
         Ok(result)
     }

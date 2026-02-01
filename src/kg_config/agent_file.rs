@@ -30,7 +30,7 @@ pub struct KgAgentFileDoc {
     pub allowed_tools: HashSet<String>,
     pub model: Option<String>,
     #[facet(default)]
-    pub hooks: HashMap<String, KgHook>,
+    pub hooks: HashMap<String, HashMap<String, KgHook>>,
     #[facet(default, rename = "mcpServers")]
     pub mcp_servers: HashMap<String, CustomToolConfig>,
     #[facet(default, rename = "toolAliases")]
