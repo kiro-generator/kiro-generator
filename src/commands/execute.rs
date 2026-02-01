@@ -17,13 +17,13 @@ impl Cli {
     }
 
     async fn execute_validate(&self, generator: &Generator, args: &ValidateArgs) -> Result<()> {
-        let results = generator.write_all(self.dry_run()).await?;
+        let results = generator.write_all(self.dry_run(), false).await?;
         self.format_color()
             .result(self.dry_run(), args.show_templates, results)
     }
 
     async fn execute_generate(&self, generator: &Generator, args: &GenerateArgs) -> Result<()> {
-        let result = generator.write_all(self.dry_run()).await;
+        let result = generator.write_all(self.dry_run(), args.force).await;
 
         #[cfg(target_os = "linux")]
         if args.notify {

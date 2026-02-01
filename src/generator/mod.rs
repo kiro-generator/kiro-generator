@@ -220,8 +220,8 @@ impl Generator {
         Ok(())
     }
 
-    #[tracing::instrument(skip(dry_run), level = "info")]
-    pub async fn write_all(&self, dry_run: bool) -> Result<Vec<AgentResult>> {
+    #[tracing::instrument(skip(dry_run, force), level = "info")]
+    pub async fn write_all(&self, dry_run: bool, force: bool) -> Result<Vec<AgentResult>> {
         let agents = self.merge()?;
         let mut results = Vec::with_capacity(agents.len());
         // If no local agents defined, write all (global) agents
@@ -231,14 +231,19 @@ impl Generator {
             let span = tracing::debug_span!("agent", name = ?agent.name, local = self.is_local(&agent.name));
             let _enter = span.enter();
             if write_all_agents || self.is_local(&agent.name) {
-                results.push(self.write(agent, dry_run).await?);
+                results.push(self.write(agent, dry_run, force).await?);
             }
         }
         Ok(results)
     }
 
-    #[tracing::instrument(skip(dry_run), level = "info", fields(out = tracing::field::Empty))]
-    pub(crate) async fn write(&self, agent: Manifest, dry_run: bool) -> Result<AgentResult> {
+    #[tracing::instrument(skip(dry_run,force), level = "info", fields(out = tracing::field::Empty))]
+    pub(crate) async fn write(
+        &self,
+        agent: Manifest,
+        dry_run: bool,
+        force: bool,
+    ) -> Result<AgentResult> {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
             kiro_agent: KiroAgent::try_from(&agent)?,
@@ -271,6 +276,14 @@ impl Generator {
                 .join(format!("{}.json", result.agent.name));
 
             tracing::Span::current().record("out", tracing::field::display(&out.display()));
+
+            if force {
+                self.fs
+                    .write(&out, facet_json::to_string_pretty(&result.kiro_agent)?)
+                    .await
+                    .wrap_err_with(|| format!("failed to write file {}", out.display()))?;
+                return Ok(result);
+            }
 
             let diff = self.compute_diff(&result.agent.name, &result.kiro_agent)?;
             tracing::debug!("{diff}");

@@ -70,6 +70,9 @@ pub struct GenerateArgs {
     /// Show template agents in output
     #[arg(long, default_value = "false")]
     pub show_templates: bool,
+    /// Always write agent config even if nothing has changed
+    #[arg(long, default_value = "false")]
+    pub force: bool,
     /// Format of the console output
     #[arg(short = 'f', long,  default_value_t = OutputFormatArg::default())]
     pub format: OutputFormatArg,

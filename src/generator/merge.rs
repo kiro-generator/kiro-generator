@@ -156,7 +156,7 @@ mod tests {
         assert!(aws.allows.contains("s3"));
 
         // check try_from
-        let results = generator.write_all(true).await?;
+        let results = generator.write_all(true, false).await?;
         assert!(!results.is_empty());
 
         Ok(())
