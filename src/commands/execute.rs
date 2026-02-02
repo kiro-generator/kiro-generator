@@ -62,3 +62,58 @@ impl Cli {
         Ok(())
     }
 }
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::{
+            commands::DiffArgs,
+            os::{ACTIVE_USER_HOME, Fs},
+            output::ColorOverride,
+        },
+    };
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_exec() -> Result<()> {
+        let fs = Fs::new();
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Never,
+            command: Command::Validate(ValidateArgs {
+                local: true,
+                ..Default::default()
+            }),
+        };
+
+        let generator: Generator = Generator::new(
+            fs,
+            cli.config_location(ACTIVE_USER_HOME.into())?,
+            crate::output::OutputFormat::Json,
+        )?;
+
+        cli.execute(&generator).await?;
+
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Never,
+            command: Command::Generate(GenerateArgs {
+                local: true,
+                ..Default::default()
+            }),
+        };
+
+        cli.execute(&generator).await?;
+        let cli = Cli {
+            debug: false,
+            trace: None,
+            color_override: ColorOverride::Never,
+            command: Command::Diff(DiffArgs { global: false }),
+        };
+
+        cli.execute(&generator).await?;
+        Ok(())
+    }
+}

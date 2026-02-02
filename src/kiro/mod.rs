@@ -115,6 +115,24 @@ impl TryFrom<&Manifest> for KiroAgent {
             let v: facet_value::Value = facet_json::from_str(&facet_json::to_string(&tool)?)?;
             tools_settings.insert(tool_name.to_string(), v);
         }
+        let tool: GlobTool = native_tools.into();
+        let tool_name = ToolTarget::Glob.to_string();
+        if tool != GlobTool::default() {
+            let v: facet_value::Value = facet_json::from_str(&facet_json::to_string(&tool)?)?;
+            tools_settings.insert(tool_name.to_string(), v);
+        }
+        let tool: GrepTool = native_tools.into();
+        let tool_name = ToolTarget::Grep.to_string();
+        if tool != GrepTool::default() {
+            let v: facet_value::Value = facet_json::from_str(&facet_json::to_string(&tool)?)?;
+            tools_settings.insert(tool_name.to_string(), v);
+        }
+        let tool: WebFetchTool = native_tools.into();
+        let tool_name = ToolTarget::WebFetch.to_string();
+        if tool != WebFetchTool::default() {
+            let v: facet_value::Value = facet_json::from_str(&facet_json::to_string(&tool)?)?;
+            tools_settings.insert(tool_name.to_string(), v);
+        }
         let default_agent = Self::default();
         let tools = value.tools.clone();
         let allowed_tools = value.allowed_tools.clone();

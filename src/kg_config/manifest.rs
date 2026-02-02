@@ -141,3 +141,24 @@ impl Manifest {
         Ok(result)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn manifest_new() {
+        let m = Manifest::new("test-agent".to_string(), true);
+        assert_eq!(m.name, "test-agent");
+        assert!(m.template);
+    }
+
+    #[test]
+    fn manifest_resources() -> crate::Result<()> {
+        let mut m = Manifest::default();
+        m.resources.insert("file://README.md".to_string());
+        let res = m.resources()?;
+        assert_eq!(res.len(), 1);
+        Ok(())
+    }
+}

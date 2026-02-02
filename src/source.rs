@@ -82,3 +82,54 @@ impl DerefMut for KdlSources {
         &mut self.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kdl_agent_source_display() {
+        assert_eq!(KdlAgentSource::GlobalInline.to_string(), "global-inline");
+        assert_eq!(KdlAgentSource::LocalInline.to_string(), "local-inline");
+        assert_eq!(
+            KdlAgentSource::GlobalFile(PathBuf::from("/foo")).to_string(),
+            "/foo"
+        );
+        assert_eq!(
+            KdlAgentSource::LocalFile(PathBuf::from("bar")).to_string(),
+            "bar"
+        );
+    }
+
+    #[test]
+    fn kdl_agent_source_to_cell() {
+        assert_eq!(
+            KdlAgentSource::GlobalInline.to_cell().content(),
+            "global-inline"
+        );
+        assert_eq!(
+            KdlAgentSource::LocalInline.to_cell().content(),
+            "local-inline"
+        );
+        assert_eq!(
+            KdlAgentSource::GlobalFile(PathBuf::from("/foo"))
+                .to_cell()
+                .content(),
+            "/foo"
+        );
+        assert_eq!(
+            KdlAgentSource::LocalFile(PathBuf::from("bar"))
+                .to_cell()
+                .content(),
+            "bar"
+        );
+    }
+
+    #[test]
+    fn kdl_sources_debug() {
+        let mut sources = KdlSources::default();
+        sources.add("agent1");
+        sources.add("agent2");
+        assert_eq!(format!("{:?}", sources), "sources=2");
+    }
+}

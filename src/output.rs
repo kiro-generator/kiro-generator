@@ -272,3 +272,27 @@ impl OutputFormat {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn color_override_display() {
+        assert_eq!(ColorOverride::Always.to_string(), "always");
+        assert_eq!(ColorOverride::Auto.to_string(), "auto");
+        assert_eq!(ColorOverride::Never.to_string(), "never");
+    }
+
+    #[test]
+    fn output_format_arg_display() {
+        assert_eq!(OutputFormatArg::Table.to_string(), "table");
+        assert_eq!(OutputFormatArg::Json.to_string(), "json");
+    }
+
+    #[test]
+    fn output_format_default() {
+        let fmt = OutputFormat::default();
+        assert!(matches!(fmt, OutputFormat::Table(true)));
+    }
+}

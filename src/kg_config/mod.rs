@@ -139,6 +139,31 @@ mod tests {
         let result = facet_value::format_value(agent.tool_settings.get("whoami").unwrap());
         assert_eq!(raw, result.replace("\n", "").replace(" ", ""));
 
+        // Test native tools
+        let native = &agent.native_tools;
+
+        // glob tool
+        assert_eq!(native.glob.allows.len(), 2);
+        assert!(native.glob.allows.contains("./src/**"));
+        assert!(native.glob.allows.contains("./tests/**"));
+        assert_eq!(native.glob.denies.len(), 1);
+        assert!(native.glob.denies.contains("/etc/**"));
+        assert_eq!(native.glob.auto_allow_readonly, Some(true));
+
+        // grep tool
+        assert_eq!(native.grep.allows.len(), 2);
+        assert!(native.grep.allows.contains("./src/**"));
+        assert!(native.grep.allows.contains("./docs/**"));
+        assert_eq!(native.grep.denies.len(), 1);
+        assert!(native.grep.denies.contains("/var/**"));
+
+        // web_fetch tool
+        assert_eq!(native.web_fetch.allows.len(), 2);
+        assert!(native.web_fetch.allows.contains(".*github\\.com.*"));
+        assert!(native.web_fetch.allows.contains(".*docs\\.rs.*"));
+        assert_eq!(native.web_fetch.denies.len(), 1);
+        assert!(native.web_fetch.denies.contains(".*pastebin\\.com.*"));
+
         Ok(())
     }
 
@@ -172,6 +197,22 @@ mod tests {
         assert_eq!(subagents.allow.len(), 1);
         assert!(subagents.allow.contains("pr-review"));
         assert!(subagents.deny.is_empty());
+
+        // Test native tools
+        let native = &agent.native_tools;
+
+        // glob tool
+        assert_eq!(native.glob.allows.len(), 2);
+        assert!(native.glob.allows.contains("./src/**"));
+        assert_eq!(native.glob.auto_allow_readonly, Some(true));
+
+        // grep tool
+        assert_eq!(native.grep.allows.len(), 2);
+        assert_eq!(native.grep.denies.len(), 1);
+
+        // web_fetch tool
+        assert_eq!(native.web_fetch.allows.len(), 2);
+        assert_eq!(native.web_fetch.denies.len(), 1);
 
         Ok(())
     }

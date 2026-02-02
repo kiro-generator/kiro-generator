@@ -10,7 +10,7 @@ command = "echo My name is Bob"
 [nativeTools]
 read = { deny = [".*Cargo.toml.*", ".*yarn.lock.*"] }
 write = { deny = [".*Cargo.toml.*"] }
-aws = { disableAutoReadOnly = true }
+aws = { autoAllowReadonly = true }
 
 [nativeTools.shell]
 allow = [
@@ -37,7 +37,7 @@ deny = [
   ".*rollout.*",
   ".*kill.*"
 ]
-disableAutoReadOnly = true
+autoAllowReadonly = true
 
 [mcpServers.rustdocs]
 command = "rust-docs-mcp"

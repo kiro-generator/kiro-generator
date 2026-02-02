@@ -54,5 +54,18 @@ allow = ["git status .*"]
 deny = ["git push .*"]
 forceAllow = ["git pull .*"]
 
+[agents.test.nativeTools.glob]
+allow = ["./src/**", "./tests/**"]
+deny = ["/etc/**"]
+autoAllowReadonly = true
+
+[agents.test.nativeTools.grep]
+allow = ["./src/**", "./docs/**"]
+deny = ["/var/**"]
+
+[agents.test.nativeTools.web-fetch]
+allow = [".*github\\.com.*", ".*docs\\.rs.*"]
+deny = [".*pastebin\\.com.*"]
+
 [agents.test.toolSettings.whoami]
 env = { LOG_LEVEL = "debug" }

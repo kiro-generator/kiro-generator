@@ -14,7 +14,7 @@ command = "aws sts get-caller-identity"
 [nativeTools.aws]
 allow = ["ec2", "s3"]
 deny = ["iam"]
-disableAutoReadOnly = false
+autoAllowReadonly = false
 
 [mcpServers.awsbilling]
 command = "uvx"

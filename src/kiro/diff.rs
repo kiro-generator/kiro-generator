@@ -273,7 +273,7 @@ mod tests {
                 allowed_commands: vec!["git status".to_string()],
                 denied_commands: vec![],
                 deny_by_default: false,
-                auto_allow_readonly: true,
+                auto_allow_readonly: Some(true),
             }),
             ..Default::default()
         };
@@ -283,7 +283,7 @@ mod tests {
                 allowed_commands: vec!["git fetch".to_string(), "git status".to_string()],
                 denied_commands: vec![],
                 deny_by_default: false,
-                auto_allow_readonly: true,
+                auto_allow_readonly: Some(true),
             }),
             ..Default::default()
         };
@@ -322,7 +322,7 @@ mod tests {
                 allowed_commands: vec![],
                 denied_commands: vec![],
                 deny_by_default: false,
-                auto_allow_readonly: true,
+                auto_allow_readonly: Some(true),
             }),
             ..Default::default()
         };
