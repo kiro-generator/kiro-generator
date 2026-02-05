@@ -733,20 +733,17 @@ dependencies = [
 [[package]]
 name = "facet"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e338357cf598728b41e45744d024bdc063338214992361766928a1421bd7541d"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "autocfg",
  "facet-core",
  "facet-macros",
- "facet-reflect",
 ]
 
 [[package]]
 name = "facet-core"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a63e0ade4c53b40220614b8fc2a0a0ce21975941b553081521a195c848b2e9c2"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "autocfg",
  "const-fnv1a-hash",
@@ -757,65 +754,28 @@ dependencies = [
 [[package]]
 name = "facet-dessert"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "637aa74d6510e43019c8bb764fce5e999d7cdc1d068a9b993bb2f2325fb533af"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-core",
  "facet-reflect",
-]
-
-[[package]]
-name = "facet-diff"
-version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56d1d34fd87cc441e5ef3ebf27c2de78739da453e7ac29c325df8d206849e5b0"
-dependencies = [
- "facet",
- "facet-core",
- "facet-diff-core",
- "facet-pretty",
- "facet-reflect",
- "log",
- "owo-colors",
-]
-
-[[package]]
-name = "facet-diff-core"
-version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12c909fda835c207f3d6fd65ed5d2431d1c127047368419e4bca1a5f6f012d6f"
-dependencies = [
- "confusables",
- "facet",
- "facet-core",
- "facet-pretty",
- "facet-reflect",
- "indextree",
- "owo-colors",
- "palette",
- "tracing",
- "unicode-width",
 ]
 
 [[package]]
 name = "facet-format"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ae2f526d1c4797fffe1e41ccb53104473f947b1f146d0e91a7290658078e22b"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-core",
  "facet-dessert",
  "facet-path",
  "facet-reflect",
  "facet-solver",
- "facet-validate",
 ]
 
 [[package]]
 name = "facet-json"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e761fe27fd484eeef93c996d2dfeadfc04f84c8191ea7f061be864da821778f7"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet",
  "facet-core",
@@ -827,8 +787,7 @@ dependencies = [
 [[package]]
 name = "facet-json-schema"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21a5e3726df1439890d46ee0cfe41931a8693b0266a7cc8dae9f60a8ef4b2dcb"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet",
  "facet-core",
@@ -838,8 +797,7 @@ dependencies = [
 [[package]]
 name = "facet-macro-parse"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83ea29147986d0e184600cec533c41d6065c3c3d4b5b5745a8403494ca216b09"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-macro-types",
  "proc-macro2",
@@ -849,8 +807,7 @@ dependencies = [
 [[package]]
 name = "facet-macro-types"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31b0035cf41c0d4eeee82effc9161512d216d1378dd89c4d8721258429e38597"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -860,8 +817,7 @@ dependencies = [
 [[package]]
 name = "facet-macros"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77a784f2fa36d3165b95639af790249dee0d8efdef7d53f9417cace91697e2e3"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-macros-impl",
 ]
@@ -869,8 +825,7 @@ dependencies = [
 [[package]]
 name = "facet-macros-impl"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf8f45c6380398bf74e59b97a20012de571502c609e580d84579d1140e491c1c"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-macro-parse",
  "facet-macro-types",
@@ -883,8 +838,7 @@ dependencies = [
 [[package]]
 name = "facet-path"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfbb5bdb426428005af0658b46e0c8d73c42b73c59a2a9e47cb52fa2f4dbc8b8"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-core",
 ]
@@ -892,8 +846,7 @@ dependencies = [
 [[package]]
 name = "facet-pretty"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ba778a1d80d7e972f4c0014b4b1280ad041a7878e1a9806be455b8604c79a4d"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-core",
  "facet-reflect",
@@ -903,17 +856,19 @@ dependencies = [
 [[package]]
 name = "facet-reflect"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4418c9fceaac9adcd055cc3732954d79b5d67ef04fb855dd219f2b314ba26cff"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-core",
+ "facet-path",
+ "hashbrown 0.16.1",
+ "regex",
+ "smallvec 2.0.0-alpha.12",
 ]
 
 [[package]]
 name = "facet-solver"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e658ff4822b1ece03ab0cfeee867d41e7483b593be63345468806994d6fcd942"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-core",
  "facet-reflect",
@@ -922,8 +877,7 @@ dependencies = [
 [[package]]
 name = "facet-toml"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29f797b9c282cc5249e1844aa30bfc70747a4e34b86c074d00c90f4d09690929"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-core",
  "facet-format",
@@ -932,21 +886,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "facet-validate"
-version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9231e90d95d0f767c3e41cba54c7dab50e1be4f7ad764bd971e212a288a50a07"
-dependencies = [
- "facet",
- "facet-core",
- "regex",
-]
-
-[[package]]
 name = "facet-value"
 version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "483dc76f7e999de82d8013a3f1f08463d97227bb7af34dd5e39a8dd9c4f24472"
+source = "git+https://github.com/facet-rs/facet?branch=main#aef8b6555a1fff97927f0c8cbd51cb094073f884"
 dependencies = [
  "facet-core",
  "facet-format",
@@ -1227,7 +1169,7 @@ dependencies = [
  "icu_normalizer_data",
  "icu_properties",
  "icu_provider",
- "smallvec",
+ "smallvec 1.15.1",
  "zerovec",
 ]
 
@@ -1292,7 +1234,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b0875f23caa03898994f6ddc501886a45c7d3d62d04d2d90788d47be1b1e4de"
 dependencies = [
  "idna_adapter",
- "smallvec",
+ "smallvec 1.15.1",
  "utf8_iter",
 ]
 
@@ -1438,7 +1380,6 @@ dependencies = [
  "emojis-rs",
  "enum-iterator",
  "facet",
- "facet-diff",
  "facet-json",
  "facet-json-schema",
  "facet-toml",
@@ -1447,6 +1388,7 @@ dependencies = [
  "jsonschema",
  "nix",
  "notify-rust",
+ "rediff",
  "serde_json",
  "serde_yaml2",
  "super-table",
@@ -1840,7 +1782,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "redox_syscall",
- "smallvec",
+ "smallvec 1.15.1",
  "windows-link 0.2.1",
 ]
 
@@ -1996,6 +1938,22 @@ name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
+
+[[package]]
+name = "rediff"
+version = "1.0.0"
+source = "git+https://github.com/bearcove/rediff.git?branch=main#04e57d7feeec611dcf400eb6650dc5319ee250ac"
+dependencies = [
+ "confusables",
+ "facet",
+ "facet-core",
+ "facet-pretty",
+ "facet-reflect",
+ "indextree",
+ "owo-colors",
+ "palette",
+ "unicode-width",
+]
 
 [[package]]
 name = "redox_syscall"
@@ -2225,6 +2183,12 @@ name = "smallvec"
 version = "1.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+
+[[package]]
+name = "smallvec"
+version = "2.0.0-alpha.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef784004ca8777809dcdad6ac37629f0a97caee4c685fcea805278d81dd8b857"
 
 [[package]]
 name = "stable_deref_trait"
@@ -2552,7 +2516,7 @@ dependencies = [
  "once_cell",
  "regex-automata",
  "sharded-slab",
- "smallvec",
+ "smallvec 1.15.1",
  "thread_local",
  "tracing",
  "tracing-core",

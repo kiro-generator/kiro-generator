@@ -7,7 +7,7 @@ use {
     },
     color_eyre::eyre::Context,
     facet::Facet,
-    facet_diff::FacetDiff,
+    rediff::FacetDiff,
     std::{
         collections::{HashMap, HashSet},
         fmt::{self, Debug, Display},
@@ -174,7 +174,7 @@ impl Generator {
         if diff.is_equal() {
             Ok(AgentDiff::Same)
         } else {
-            Ok(AgentDiff::Changed(facet_diff::format_diff_default(&diff)))
+            Ok(AgentDiff::Changed(rediff::format_diff_default(&diff)))
         }
     }
 

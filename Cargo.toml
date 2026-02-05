@@ -31,16 +31,26 @@ colored = "3.0.0"
 dirs = "6"
 emojis-rs = "0.1.3"
 enum-iterator = "2.3.0"
-facet = { version = "0.43.2", features = ["auto-traits", "reflect", "simd"] }
-facet-diff = "0.43.2"
-facet-json = { version = "0.43.2", features = ["std", "validate"] }
-facet-json-schema = "0.43.2"
-facet-toml = { version = "0.43.2", features = ["std"] }
-facet-value = { version = "0.43.2", features = ["std"] }
+# Core facet dependencies
+facet = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+facet-json = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+facet-json-schema = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+# facet-pretty = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+# facet-reflect = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+facet-toml = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+facet-value = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+# facet = { version = "0.43.2", features = ["auto-traits", "reflect", "simd"] }
+# facet-diff = "0.43.2"
+# facet-json = { version = "0.43.2", features = ["std", "validate"] }
+# facet-json-schema = "0.43.2"
+# facet-toml = { version = "0.43.2", features = ["std"] }
+# facet-value = { version = "0.43.2", features = ["std"] }
 futures = "0.3"
 jsonschema = { version = "0.40", default-features = false, features = [
   "resolve-file"
 ] }
+# facet-core = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+rediff = { git = "https://github.com/bearcove/rediff.git", branch = "main", version = "1.0.0" }
 serde_json = { version = "1" }
 serde_yaml2 = "0.1.3"
 super-table = { version = "1", features = ["custom_styling"] }

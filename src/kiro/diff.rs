@@ -146,7 +146,7 @@ impl KiroAgent {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, facet_diff::FacetDiff};
+    use {super::*, rediff::FacetDiff};
 
     #[test]
     fn test_default_agent() -> crate::Result<()> {
