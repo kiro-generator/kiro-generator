@@ -13,5 +13,3 @@ jobs:
     if: false
     uses: dougEfresh/ci/.github/workflows/pages.yml@main
     secrets: inherit
-    with:
-      runner: ${{ vars.RUNNER }}
