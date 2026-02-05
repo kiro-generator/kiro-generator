@@ -8,8 +8,7 @@ on:
     branches: [main]
   workflow_dispatch:
 jobs:
-  verify:
-    name: verify
-    if: false
+  mdbook:
+    name: mdbook
     uses: dougEfresh/ci/.github/workflows/pages.yml@main
     secrets: inherit
