@@ -5,6 +5,11 @@ use {
     tracing::debug,
 };
 
+#[cfg(target_os = "linux")]
+use super::watch_linux::execute_watch;
+#[cfg(not(target_os = "linux"))]
+use super::watch_peasants::execute_watch;
+
 impl Cli {
     /// Execute the CLI command
     pub async fn execute(&self, generator: &Generator) -> Result<()> {
@@ -12,6 +17,7 @@ impl Cli {
             Command::Validate(args) => self.execute_validate(generator, args).await,
             Command::Generate(args) => self.execute_generate(generator, args).await,
             Command::Diff(_) => generator.diff(),
+            Command::Watch(args) => execute_watch(args).await,
             _ => Ok(()),
         }
     }
@@ -23,6 +29,10 @@ impl Cli {
     }
 
     async fn execute_generate(&self, generator: &Generator, args: &GenerateArgs) -> Result<()> {
+        if args.diff {
+            generator.diff()?;
+        }
+
         let result = generator.write_all(self.dry_run(), args.force).await;
 
         #[cfg(target_os = "linux")]

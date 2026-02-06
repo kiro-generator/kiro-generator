@@ -1,5 +1,9 @@
 mod execute;
 mod runtime;
+#[cfg(target_os = "linux")]
+mod watch_linux;
+#[cfg(not(target_os = "linux"))]
+mod watch_peasants;
 
 use {
     crate::output::{ColorOverride, OutputFormat, OutputFormatArg},
@@ -23,25 +27,21 @@ fn __cli_styles() -> Styles {
 #[derive(Parser)]
 #[command(name = "kg", version, about, long_about = "", styles=__cli_styles())]
 pub struct Cli {
-    #[arg(long, global = true, short = 'd' , short_aliases = ['v'], aliases = ["verbose", "debug"], default_value = "false")]
+    #[arg(long, global = true, short = 'd' , short_aliases = ['v'], aliases = ["verbose", "debug"], default_value = "false", env = "KG_DEBUG")]
     pub debug: bool,
     /// Enable trace level debug for an agent. Use keyword 'all' to debug all
     /// agents. Note, this is very verbose
     #[arg(long, short = 't', global = true, value_name = "AGENT_NAME")]
     pub trace: Option<String>,
     /// When to show color.
-    #[arg(long = "color", short = 'c',  global = true, default_value_t = ColorOverride::default(), value_name = "WHEN")]
+    #[arg(long = "color", short = 'c',  global = true, default_value_t = ColorOverride::default(), value_name = "WHEN", env = "KG_COLOR")]
     pub color_override: ColorOverride,
     #[command(subcommand)]
     pub command: Command,
 }
 
 #[derive(clap::Args, Clone, Default)]
-pub struct InitArgs {
-    /// Directory where configuration will be created.
-    /// Defaults to $HOME/.kiro/generators if not specified.
-    pub location: Option<PathBuf>,
-}
+pub struct InitArgs {}
 
 #[derive(clap::Args, Clone, Default)]
 pub struct ValidateArgs {
@@ -55,7 +55,7 @@ pub struct ValidateArgs {
     #[arg(long, default_value = "false")]
     pub show_templates: bool,
     /// Format of the console output
-    #[arg(short = 'f', long,  default_value_t = OutputFormatArg::default())]
+    #[arg(short = 'f', long,  default_value_t = OutputFormatArg::default(), env = "KG_FORMAT")]
     pub format: OutputFormatArg,
 }
 
@@ -71,13 +71,16 @@ pub struct GenerateArgs {
     #[arg(long, default_value = "false")]
     pub show_templates: bool,
     /// Always write agent config even if nothing has changed
-    #[arg(long, default_value = "false")]
+    #[arg(long, default_value = "false", env = "KG_FORCE")]
     pub force: bool,
+    /// Show diff of changes before writing
+    #[arg(long, default_value = "false", env = "KG_DIFF")]
+    pub diff: bool,
     /// Format of the console output
-    #[arg(short = 'f', long,  default_value_t = OutputFormatArg::default())]
+    #[arg(short = 'f', long,  default_value_t = OutputFormatArg::default(), env = "KG_FORMAT")]
     pub format: OutputFormatArg,
     /// Display desktop notification when generation completes or errors
-    #[arg(long, default_value = "false")]
+    #[arg(long, default_value = "false", env = "KG_NOTIFY")]
     #[cfg(target_os = "linux")]
     pub notify: bool,
 }
@@ -87,6 +90,19 @@ pub struct DiffArgs {
     /// Use only global configuration (ignore local .kiro/generators/)
     #[arg(short = 'g', long)]
     pub global: bool,
+}
+
+#[derive(clap::Args, Clone)]
+pub struct WatchArgs {
+    /// Disable the watcher instead of enabling it
+    #[arg(long)]
+    pub disable: bool,
+    /// List active watchers
+    #[arg(long, short = 'l', conflicts_with_all = ["disable", "path"])]
+    pub list: bool,
+    /// Project path to watch (defaults to current directory)
+    #[arg(value_name = "PATH")]
+    pub path: Option<PathBuf>,
 }
 
 #[derive(Subcommand, Clone)]
@@ -99,7 +115,9 @@ pub enum Command {
     #[command(alias = "g")]
     Generate(GenerateArgs),
     /// Create default configuration in directory ~/.kiro/generators
-    #[command()]
+    #[command(
+        after_help = "To init in a custom location, override HOME:\n  HOME=$(mktemp -d) kg init"
+    )]
     Init(InitArgs),
     /// Display version information
     Version,
@@ -108,6 +126,10 @@ pub enum Command {
     /// Output JSON schema for configuration files
     #[command(subcommand)]
     Schema(SchemaCommand),
+    /// Enable/disable systemd path watcher for automatic regeneration on config
+    /// changes
+    #[command(alias = "w")]
+    Watch(WatchArgs),
 }
 
 #[derive(Subcommand, Clone)]
@@ -144,6 +166,7 @@ impl Cli {
         match format {
             OutputFormatArg::Table => OutputFormat::Table(self.color()),
             OutputFormatArg::Json => OutputFormat::Json,
+            OutputFormatArg::Plain => OutputFormat::Plain,
         }
     }
 

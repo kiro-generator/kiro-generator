@@ -40,12 +40,14 @@ pub enum OutputFormatArg {
     #[default]
     Table,
     Json,
+    Plain,
 }
 
 #[derive(Copy, Clone, Debug)]
 pub enum OutputFormat {
     Table(bool),
     Json,
+    Plain,
 }
 
 impl Default for OutputFormat {
@@ -59,6 +61,7 @@ impl Display for OutputFormatArg {
         match self {
             Self::Table => write!(f, "table"),
             Self::Json => write!(f, "json"),
+            Self::Plain => write!(f, "plain"),
         }
     }
 }
@@ -115,6 +118,7 @@ impl OutputFormat {
                 Ok(())
             }
             Self::Json => Ok(()),
+            Self::Plain => Ok(()),
         }
     }
 
@@ -269,6 +273,14 @@ impl OutputFormat {
                 );
                 Ok(())
             }
+            Self::Plain => {
+                for result in &results {
+                    if show_templates || !result.agent.template {
+                        println!("{}", result.agent.name);
+                    }
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -288,6 +300,7 @@ mod tests {
     fn output_format_arg_display() {
         assert_eq!(OutputFormatArg::Table.to_string(), "table");
         assert_eq!(OutputFormatArg::Json.to_string(), "json");
+        assert_eq!(OutputFormatArg::Plain.to_string(), "plain");
     }
 
     #[test]

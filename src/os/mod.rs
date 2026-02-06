@@ -1,4 +1,6 @@
 mod fs;
+#[cfg(target_os = "linux")]
+pub mod systemd;
 pub use fs::Fs;
 #[cfg(test)]
 const WINDOWS_USER_HOME: &str = "C:\\Users\\testuser";

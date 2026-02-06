@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch kiro config for %I
+
+[Path]
+PathChanged=%I/.kiro/generators/manifests
+PathChanged=%I/.kiro/generators/agents
+PathChanged=%h/.kiro/agents
+TriggerLimitIntervalSec=5s
+TriggerLimitBurst=3
+
+[Install]
+WantedBy=graphical-session.target

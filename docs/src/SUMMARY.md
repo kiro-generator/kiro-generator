@@ -23,4 +23,5 @@
 - [Knowledge Bases](advanced/knowledge-bases.md)
 - [Organizing Agents](advanced/organizing.md)
 - [Debugging](advanced/debugging.md)
+- [Systemd Watch](advanced/systemd-watch.md)
 
