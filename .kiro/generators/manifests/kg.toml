@@ -4,13 +4,8 @@ resources = [
   "file://docs/src/**/*.md",
   "file://AGENTS.md",
   "file://README.md",
+  "file://resources/SKILL.md",
 ]
-
-[agents.kg-resources.knowledge.facet]
-source = "file://./docs/facet"
-description = "Information about the Rust crates facet-json, facet-toml, facet-diff and other facet libraries"
-autoUpdate = true
-indexType = "best"
 
 [agents.kg-resources.knowledge.kiro]
 source = "file://./docs/kiro"

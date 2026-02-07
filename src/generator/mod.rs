@@ -21,7 +21,7 @@ pub(super) const MAX_AGENT_DIR_DEPTH: usize = 5;
 pub(super) const MAX_AGENT_DIR_ENTRIES: usize = 1000;
 
 mod config_location;
-mod discover;
+pub(crate) mod discover;
 mod merge;
 
 pub use config_location::*;
@@ -96,7 +96,7 @@ impl AgentResult {
 #[facet(opaque)]
 pub struct Generator {
     global_path: PathBuf,
-    resolved: discover::ResolvedAgents,
+    pub(crate) resolved: discover::ResolvedAgents,
     #[facet(skip, default)]
     fs: Fs,
     #[facet(skip, default)]

@@ -1,5 +1,5 @@
 use {
-    super::{Cli, Command, GenerateArgs, ValidateArgs},
+    super::{Cli, Command, GenerateArgs, ValidateArgs, tree::execute_tree},
     crate::{Result, generator::Generator},
     color_eyre::eyre::Context,
     tracing::debug,
@@ -18,6 +18,11 @@ impl Cli {
             Command::Generate(args) => self.execute_generate(generator, args).await,
             Command::Diff(_) => generator.diff(),
             Command::Watch(args) => execute_watch(args).await,
+            Command::Tree(args) => {
+                let value = execute_tree(generator, args)?;
+                println!("{}", facet_json::to_string_pretty(&value)?);
+                Ok(())
+            }
             _ => Ok(()),
         }
     }
@@ -124,6 +129,42 @@ mod tests {
         };
 
         cli.execute(&generator).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_tree_nonexistent_returns_empty() -> Result<()> {
+        let fs = Fs::new();
+        let generator = Generator::new(
+            fs,
+            crate::ConfigLocation::Local,
+            crate::output::OutputFormat::Json,
+        )?;
+        let args = super::super::TreeArgs {
+            agents: vec!["nonexistent".to_string()],
+        };
+        let value = execute_tree(&generator, &args)?;
+        assert_eq!(value, facet_value::Value::from(facet_value::VObject::new()));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_tree_known_agents() -> Result<()> {
+        let fs = Fs::new();
+        let generator = Generator::new(
+            fs,
+            crate::ConfigLocation::Local,
+            crate::output::OutputFormat::Json,
+        )?;
+        let args = super::super::TreeArgs {
+            agents: vec!["base".to_string(), "dependabot".to_string()],
+        };
+        let value = execute_tree(&generator, &args)?;
+        let obj = value.as_object().expect("expected object");
+        assert!(obj.get("base").is_some(), "base agent missing");
+        assert!(obj.get("dependabot").is_some(), "dependabot agent missing");
         Ok(())
     }
 }
