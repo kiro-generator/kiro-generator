@@ -4,6 +4,7 @@ Description=Watch global kiro config
 [Path]
 PathChanged=%h/.kiro/generators/manifests
 PathChanged=%h/.kiro/generators/agents
+PathChanged=%h/.kiro/generators/agents/templates
 TriggerLimitIntervalSec=5s
 TriggerLimitBurst=3
 
