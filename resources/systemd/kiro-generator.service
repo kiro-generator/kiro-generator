@@ -11,8 +11,8 @@ StandardOutput=journal
 StandardError=journal
 
 # Environment
-EnvironmentFile=-"%E/kg/systemd/global.env"
-EnvironmentFile=-"%E/kg/systemd/home.env"
+EnvironmentFile=-%E/kg/systemd/global.env
+EnvironmentFile=-%E/kg/systemd/home.env
 
 # Security hardening
 PrivateTmp=yes
