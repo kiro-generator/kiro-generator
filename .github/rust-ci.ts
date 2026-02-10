@@ -1,4 +1,4 @@
-import { Arch, createRustWorkflow } from '@dougefresh/ci';
+import { Arch, createRustWorkflow } from '@kiro-generator/ci';
 
 export default function () {
   return createRustWorkflow()

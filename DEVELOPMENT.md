@@ -11,7 +11,7 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/dougEfresh/kiro-generator.git
+   git clone https://github.com/kiro-generator/kiro-generator.git
    cd kiro-generator
    ```
 

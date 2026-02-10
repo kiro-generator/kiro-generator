@@ -14,5 +14,5 @@ on:
 jobs:
   verify:
     name: verify
-    uses: dougefresh/ci/.github/workflows/rust.yml@main
+    uses: kiro-generator/ci/.github/workflows/rust.yml@main
     secrets: inherit

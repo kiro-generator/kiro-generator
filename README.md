@@ -2,8 +2,8 @@
 
 [![Crates.io](https://img.shields.io/crates/v/kiro-generator.svg)](https://crates.io/crates/kiro-generator)
 [![Docs.rs](https://docs.rs/kiro-generator/badge.svg)](https://docs.rs/kiro-generator)
-[![ci](https://github.com/dougEfresh/kiro-generator/actions/workflows/test.yml/badge.svg)](https://github.com/dougEfresh/kiro-generator/actions/workflows/test.yml)
-[![Cov](https://codecov.io/github/dougEfresh/kiro-generator/graph/badge.svg?token=dILa1k9tlW)](https://codecov.io/github/dougEfresh/kiro-generator)
+[![ci](https://github.com/kiro-generator/kiro-generator/actions/workflows/test.yml/badge.svg)](https://github.com/kiro-generator/kiro-generator/actions/workflows/test.yml)
+[![Cov](https://codecov.io/github/kiro-generator/kiro-generator/graph/badge.svg?token=dILa1k9tlW)](https://codecov.io/github/kiro-generator/kiro-generator)
 
 ## About
 

@@ -1,4 +1,4 @@
-"$schema" = "https://raw.githubusercontent.com/dougEfresh/kiro-generator/refs/heads/main/schemas/kg.json"
+"$schema" = "https://raw.githubusercontent.com/kiro-generator/kiro-generator/refs/heads/main/schemas/kg.json"
 
 [agents.test]
 useLegacyMcpJson = true

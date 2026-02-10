@@ -10,5 +10,5 @@ permissions:
 jobs:
   jobtaker:
     name: bot
-    uses: dougefresh/ci/.github/workflows/pr-review.yml@main
+    uses: kiro-generator/ci/.github/workflows/pr-review.yml@main
     secrets: inherit
