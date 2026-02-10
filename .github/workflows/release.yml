@@ -21,7 +21,7 @@ on:
 jobs:
   releaser:
     name: release
-    uses: dougEfresh/ci/.github/workflows/rust-release.yml@main
+    uses: kiro-generator/ci/.github/workflows/rust-release.yml@main
     secrets: inherit
     with:
       version: ${{ inputs.version }}

@@ -16,8 +16,8 @@ smart-punctuation = true
 mathjax-support = true
 # copy-fonts = true
 no-section-label = false
-git-repository-url = "https://github.com/dougEfresh/kiro-generator"
-edit-url-template = "https://github.com/dougEfresh/kiro-generator/edit/main/docs/{path}"
+git-repository-url = "https://github.com/kiro-generator/kiro-generator"
+edit-url-template = "https://github.com/kiro-generator/kiro-generator/edit/main/docs/{path}"
 additional-css = []
 additional-js = []
 

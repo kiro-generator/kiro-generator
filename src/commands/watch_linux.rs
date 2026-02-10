@@ -97,7 +97,7 @@ pub async fn execute_watch(args: &WatchArgs) -> Result<()> {
             .enable_unit_files(&[&unit], false, false)
             .await
             .wrap_err_with(|| format!("Failed to enable {unit}"))
-            .wrap_err("Unit files not found in ~/.config/systemd/user/\n  Install them from: https://github.com/dougEfresh/kiro-generator/tree/main/resources/systemd")?;
+            .wrap_err("Unit files not found in ~/.config/systemd/user/\n  Install them from: https://github.com/kiro-generator/kiro-generator/tree/main/resources/systemd")?;
         manager
             .start_unit(&unit, "replace")
             .await
