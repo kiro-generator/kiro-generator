@@ -8,6 +8,7 @@ mod schema;
 mod schema_optional;
 mod source;
 mod tracing_init;
+mod util;
 
 #[cfg(test)]
 pub use kg_config::toml_parse;
@@ -153,6 +154,10 @@ async fn main() -> Result<()> {
 
     if matches!(cli.command, commands::Command::Init(..)) {
         return init(&fs, &home_dir).await;
+    }
+
+    if let commands::Command::Bootstrap(args) = &cli.command {
+        return commands::bootstrap::execute(&fs, &home_dir, args.install.clone()).await;
     }
 
     if let commands::Command::Schema(schema_cmd) = &cli.command {

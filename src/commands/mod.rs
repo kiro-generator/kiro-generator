@@ -1,3 +1,4 @@
+pub(crate) mod bootstrap;
 mod execute;
 mod runtime;
 mod tree;
@@ -43,6 +44,13 @@ pub struct Cli {
 
 #[derive(clap::Args, Clone, Default)]
 pub struct InitArgs {}
+
+#[derive(clap::Args, Clone, Default)]
+pub struct BootstrapArgs {
+    /// Install SKILL.md from a reviewed file
+    #[arg(long, value_name = "PATH")]
+    pub install: Option<PathBuf>,
+}
 
 #[derive(clap::Args, Clone, Default)]
 pub struct ValidateArgs {
@@ -140,6 +148,13 @@ pub enum Command {
     /// Display agent hierarchy and configuration sources as a tree
     #[command(alias = "t")]
     Tree(TreeArgs),
+    /// Scan existing .kiro/agents/*.json files and install the kg-helper skill
+    #[command(
+        alias = "b",
+        after_help = "After bootstrap, start kiro-cli and ask:\n  \"Help me set up kg for my \
+                      project\""
+    )]
+    Bootstrap(BootstrapArgs),
 }
 
 #[derive(Subcommand, Clone)]

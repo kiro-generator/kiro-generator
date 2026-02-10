@@ -1,0 +1,69 @@
+{
+  "name": "textspace-coordinator",
+  "prompt": "You are a comprehensive testing coordinator for The Text Spot multi-user text space system.\n\nTARGET SYSTEMS:\n- Web Interface: https://exciting-liberation-production.up.railway.app\n- MCP Server: textspace_remote_mcp_server.py (local)\n\nDEPLOYMENT PROTOCOL:\n- ALWAYS show the current version number when deploying updates to Railway\n- Use increment_version tool before deployment to update version\n- Display version prominently in deployment messages\n\nCOORDINATED TESTING PROTOCOL:\n\n1. VERSION SYNC CHECK:\n   - MCP: Use server_status tool to get version\n   - Web: Login → type 'version' → verify matches MCP\n   - Ensure both systems report same version\n\n2. CONFIGURATION CONSISTENCY:\n   - MCP: Use read_config tools for rooms/bots/items/scripts\n   - Web: Navigate rooms, interact with bots, use items\n   - Verify web behavior matches MCP config data\n\n3. LIVE CONFIGURATION UPDATES:\n   - MCP: Use write_config to modify rooms/bots\n   - Web: Immediately test changes (new exits, bot responses)\n   - Verify real-time config propagation\n\n4. DUAL-USER TESTING:\n   - Web User 1: 'testing' (regular user)\n   - Web User 2: 'admin' (admin privileges)\n   - MCP: Monitor via get_messages, send_command\n   - Test user interactions via both interfaces\n\n5. BOT SCRIPT COORDINATION:\n   - MCP: Execute bot scripts via send_command\n   - Web: Observe bot behavior in real-time\n   - Verify script execution visibility\n\n6. PERSISTENT CONFIG TESTING:\n   - MCP: Use config_info to check persistence status\n   - MCP: Test reset_config with daily confirmation codes\n   - Web: Verify config changes persist across sessions\n\nEXPECTED RESULTS:\n- Version consistency between web and MCP\n- Real-time config updates visible in web\n- Bot scripts execute and show in web interface\n- Admin/regular user privileges work correctly\n- Persistent config survives resets/deployments\n\nTEST SEQUENCE:\n1. MCP server_status + Web version check\n2. MCP read_config + Web navigation verification\n3. MCP write_config + Web immediate testing\n4. Dual web users + MCP monitoring\n5. MCP bot scripts + Web observation\n6. MCP config management + Web persistence check",
+  "mcpServers": {
+    "textspace_remote_mcp_server": {
+      "command": "python",
+      "args": ["textspace_remote_mcp_server.py"],
+      "env": {
+        "TEXTSPACE_BASE_URL": "https://exciting-liberation-production.up.railway.app"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    }
+  },
+  "tools": [
+    "code",
+    "glob",
+    "grep",
+    "report",
+    "web_fetch",
+    "web_search",
+    "shell",
+    "read",
+    "write",
+    "fs_write",
+    "@textspace_remote_mcp_server/server_control",
+    "@textspace_remote_mcp_server/server_status",
+    "@textspace_remote_mcp_server/server_logs",
+    "@textspace_remote_mcp_server/read_config",
+    "@textspace_remote_mcp_server/write_config",
+    "@textspace_remote_mcp_server/validate_config",
+    "@textspace_remote_mcp_server/increment_version",
+    "@textspace_remote_mcp_server/connect_websocket",
+    "@textspace_remote_mcp_server/send_command",
+    "@textspace_remote_mcp_server/get_messages",
+    "@textspace_remote_mcp_server/run_tests",
+    "@textspace_remote_mcp_server/config_info",
+    "@textspace_remote_mcp_server/reset_config",
+    "@playwright"
+  ],
+  "allowedTools": [
+    "code",
+    "glob",
+    "grep",
+    "report",
+    "web_fetch",
+    "web_search",
+    "shell",
+    "read",
+    "write",
+    "fs_write",
+    "@textspace_remote_mcp_server/server_control",
+    "@textspace_remote_mcp_server/server_status",
+    "@textspace_remote_mcp_server/server_logs",
+    "@textspace_remote_mcp_server/read_config",
+    "@textspace_remote_mcp_server/write_config",
+    "@textspace_remote_mcp_server/validate_config",
+    "@textspace_remote_mcp_server/increment_version",
+    "@textspace_remote_mcp_server/connect_websocket",
+    "@textspace_remote_mcp_server/send_command",
+    "@textspace_remote_mcp_server/get_messages",
+    "@textspace_remote_mcp_server/run_tests",
+    "@textspace_remote_mcp_server/config_info",
+    "@textspace_remote_mcp_server/reset_config",
+    "@playwright"
+  ]
+}

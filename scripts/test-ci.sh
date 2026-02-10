@@ -29,5 +29,6 @@ $KG schema agent | jq . >/dev/null
 $KG schema manifest | jq -e '.description | contains("manifest TOML files")' >/dev/null
 $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/null
 
+$KG bootstrap --install
 cargo install cargo-deb
 cargo deb
