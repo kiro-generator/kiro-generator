@@ -1,4 +1,4 @@
-import { Arch, createRustWorkflow } from '@kiro-generator/ci';
+import { Arch, createRustWorkflow } from '@dougefresh/ci';
 
 export default function () {
   return createRustWorkflow()
@@ -12,6 +12,9 @@ export default function () {
     })
     .semver(false)
     .disableSanitizers()
-    .extra('cli-test', 'bash -x ./scripts/test-ci.sh')
+    .extra('cli-test', 'bash -x ./scripts/test-ci.sh', {
+      cargoTools: ['cargo-deb'],
+    })
+
     .build();
 }

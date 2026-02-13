@@ -150,7 +150,12 @@ impl Generator {
     }
 
     /// Compute diff between existing agent file and generated agent
-    fn compute_diff(&self, agent_name: &str, generated: &KiroAgent) -> Result<AgentDiff> {
+    fn compute_diff(
+        &self,
+        agent_name: &str,
+        generated: &KiroAgent,
+        args: &crate::commands::DiffArgs,
+    ) -> Result<AgentDiff> {
         let destination = self
             .destination_dir(agent_name)
             .join(format!("{}.json", agent_name));
@@ -174,12 +179,27 @@ impl Generator {
         if diff.is_equal() {
             Ok(AgentDiff::Same)
         } else {
-            Ok(AgentDiff::Changed(rediff::format_diff_default(&diff)))
+            // Choose formatting based on args
+            let formatted = if args.plain && args.compact {
+                rediff::format_diff_compact_plain(&diff)
+            } else if args.compact {
+                rediff::format_diff_compact(&diff)
+            } else {
+                // Use format_diff with DiffFormat config
+                let config = rediff::DiffFormat {
+                    colors: !args.plain,
+                    max_inline_changes: 10,
+                    prefer_compact: args.compact,
+                };
+                rediff::format_diff(&diff, &config)
+            };
+
+            Ok(AgentDiff::Changed(formatted))
         }
     }
 
     #[tracing::instrument(level = "info")]
-    pub fn diff(&self) -> Result<()> {
+    pub fn diff(&self, args: &crate::commands::DiffArgs) -> Result<()> {
         let agents: Vec<Manifest> = self.merge()?.into_iter().filter(|a| !a.template).collect();
         let all_agents = !self.resolved.has_local;
         let mut changed = 0;
@@ -192,7 +212,7 @@ impl Generator {
                     .join(format!("{}.json", a.name));
                 let generated_agent = KiroAgent::try_from(&a)?;
 
-                match self.compute_diff(&a.name, &generated_agent)? {
+                match self.compute_diff(&a.name, &generated_agent, args)? {
                     AgentDiff::New => {
                         println!("{}: (new agent)", destination.display());
                         println!();
@@ -285,7 +305,11 @@ impl Generator {
                 return Ok(result);
             }
 
-            let diff = self.compute_diff(&result.agent.name, &result.kiro_agent)?;
+            let diff = self.compute_diff(
+                &result.agent.name,
+                &result.kiro_agent,
+                &crate::commands::DiffArgs::default(),
+            )?;
             tracing::debug!("{diff}");
             match diff {
                 AgentDiff::New => {

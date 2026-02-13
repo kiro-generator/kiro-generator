@@ -94,11 +94,17 @@ pub struct GenerateArgs {
     pub notify: bool,
 }
 
-#[derive(clap::Args, Clone, Default)]
+#[derive(clap::Args, Clone, Default, Debug)]
 pub struct DiffArgs {
     /// Use only global configuration (ignore local .kiro/generators/)
     #[arg(short = 'g', long)]
     pub global: bool,
+    /// Use compact output (collapse unchanged items)
+    #[arg(long)]
+    pub compact: bool,
+    /// Disable colored output
+    #[arg(long)]
+    pub plain: bool,
 }
 
 #[derive(clap::Args, Clone)]

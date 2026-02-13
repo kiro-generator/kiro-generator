@@ -4,7 +4,7 @@ description: Help set up and manage kg (kiro-generator) TOML agent configuration
 license: MIT
 compatibility: Requires access to user's kg configuration files in ~/.kiro/generators/ and .kiro/generators/
 metadata:
-  version: 0.2.0
+  version: 0.1.0
   author: agents
 ---
 
@@ -14,7 +14,7 @@ metadata:
 
 - **Composable**: Build agents from reusable templates
 - **Hierarchical**: Global configs merge with local project configs
-- **DRY**: Inherit and extend instead of duplicating
+- **Deterministic**: Inherit and extend -- no gaps, no drift
 
 ## Step 1: Discovery
 
@@ -55,13 +55,75 @@ Example JSON output:
 
 ## Step 2: Validate and Generate
 
-```bash
-# Validate merged config (shows final state of all agents)
-kg validate
+**Scope detection:** kg automatically determines whether to operate on global or local agents based on your current directory:
 
-# Generate .kiro/agents/*.json files from TOML configs
+- **In a project with `.kiro/generators/`**: Commands default to local scope
+- **Outside a project**: Commands default to global scope
+- **Force global scope**: Use `--global` flag when you're in a project but need to work with global agents
+
+This matters when you edit global agent files while in a project directory. Without `--global`, your changes won't be validated or generated.
+
+```bash
+# When in a project directory and editing GLOBAL agents:
+kg validate --global
+kg generate --global
+
+# When in a project directory and editing LOCAL agents:
+kg validate
+kg generate
+
+# When outside any project (global scope is automatic):
+kg validate
 kg generate
 ```
+
+**Rule of thumb:** If `kg tree <agent>` shows `"type": "global-file"` or `"type": "global-manifest"` in sources, and you're in a project directory, use `--global`.
+
+## Step 2.5: Preview Changes with Diff
+
+Before running `kg generate`, use `kg diff` to preview what will change:
+
+```bash
+# Preview changes (same scope rules as validate/generate)
+kg diff --global        # When editing global agents in a project
+kg diff                 # When editing local agents
+
+# Compact output (RECOMMENDED - shows only changed paths)
+kg diff --global --compact
+
+# Plain output (no colors, for CI/scripts)
+kg diff --global --plain
+
+# Both flags together
+kg diff --global --compact --plain
+```
+
+**Output formats:**
+- **Default**: Full structural diff with colors (verbose, shows entire structure)
+- **Compact** (recommended): Path-based output showing only what changed
+  ```
+  shell.denied_commands.0: + "pkill .*"
+  description: "old text" → "new text"
+  ```
+- **Plain**: Disables colors (useful for scripts/CI)
+
+**When to use diff:**
+- After editing TOML files and before running `kg generate`
+- To verify inheritance is working as expected
+- To catch unintended changes from template modifications
+- When debugging why an agent isn't getting expected config
+
+**Pro tip:** Always use `--compact` when reviewing changes as an agent. The full structural output is verbose and harder to parse. Compact mode shows exactly what paths changed, making it trivial to verify the edit was correct.
+
+**CAUTION:** `kg diff` is not 100% reliable and may produce empty output even when changes exist. This is a known limitation. If diff shows no changes but you expect some, do not dwell on debugging it. Instead:
+
+1. Proceed with `kg validate` and `kg generate` commands as normal
+2. Verify the generated agent files directly:
+   - Global agents: `~/.kiro/agents/<agent-name>.json`
+   - Local agents: `.kiro/agents/<agent-name>.json`
+3. Read the generated JSON to confirm your TOML changes were applied
+
+The diff command is a convenience tool for quick previews, not a source of truth. The actual generated JSON files are authoritative.
 
 ## Step 3: Editing Agent Configs
 
@@ -70,12 +132,13 @@ To modify an agent's configuration:
 1. Run `kg tree <agent-name>` to find which TOML files define it
 2. Read the `sources` array -- it tells you exactly which files to edit
 3. Edit the TOML file(s) directly
-4. Run `kg validate` to verify the change
-5. Run `kg generate` to apply
+4. Run `kg validate` to verify the change (add `--global` if sources are global and you're in a project directory)
+5. Run `kg diff --compact` to preview what will change (add `--global` if needed)
+6. Run `kg generate` to apply (add `--global` if sources are global and you're in a project directory)
 
-## Core Concepts
+## How kg Organizes Configuration
 
-### Two-Layer System
+kg uses a two-layer system:
 
 ```
 manifests/          # WHO exists and HOW they relate
@@ -99,52 +162,638 @@ description = "Rust development agent"
 allowedTools = ["@rustdocs", "@cargo"]
 ```
 
-### Hierarchical Locations
+Both layers exist at two locations:
+- `~/.kiro/generators/` — Global (all projects)
+- `.kiro/generators/` — Local (this project)
 
-```
-~/.kiro/generators/     # Global (all projects)
-.kiro/generators/       # Local (this project)
-```
+Local configs **merge with** global configs (not replace). This is what makes kg useful for real projects -- global tooling + local project context in one generated agent.
 
-Local configs **merge with** global configs (not replace).
-
-### Inheritance
-
-Configuration flows from parent to child:
-
-```toml
-[agents]
-base = { inherits = [] }
-rust = { inherits = ["base"] }
-```
-
-**Merge rules:**
+**Merge rules** when configs combine via inheritance or global+local:
 - **Arrays** (allowedTools, resources): Combined
 - **Objects** (toolsSettings, mcpServers): Deep merged
-- **Scalars** (description, timeout): Child replaces parent
+- **Scalars** (description, model): Child replaces parent
 
-### Templates
+## Templates
 
-Templates don't generate JSON files -- they exist only for inheritance:
+Templates are the core of what makes kg worth using. They're not about saving keystrokes -- they're about making your agent fleet **deterministic**.
+
+When every agent inherits from shared templates, you get a guarantee: change the git deny list in one place, every agent changes. Add a hook to the Rust template, every Rust agent gets it. No gaps, no drift, no "I forgot to update that one agent."
+
+### The Problem Without Templates
+
+Here's a real project (opensearch-feature-explorer) with 15 agents. Here are four of them:
+
+```json
+// create-issues.json
+{
+  "name": "create-issues",
+  "description": "Create individual investigation Issues from a tracking Issue",
+  "tools": ["@builtin", "@github"],
+  "allowedTools": ["@builtin", "@github"],
+  "resources": [
+    "file://README.md",
+    "file://.kiro/steering/**/*.md",
+    "file://.kiro/agents/prompts/create-issues.md"
+  ],
+  "mcpServers": {
+    "github": {
+      "command": "bash",
+      "args": ["-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) npx -y @modelcontextprotocol/server-github"]
+    }
+  },
+  "model": "claude-opus-4.6"
+}
+```
+
+```json
+// investigate.json
+{
+  "name": "investigate",
+  "description": "Investigate a single feature and create/update feature reports",
+  "tools": ["@builtin", "@github"],
+  "allowedTools": ["@builtin", "@github"],
+  "resources": [
+    "file://DEVELOPMENT.md",
+    "file://README.md",
+    "file://.kiro/steering/**/*.md",
+    "file://.kiro/agents/prompts/investigate.md",
+    "skill://.kiro/skills/opensearch-docs-search/SKILL.md"
+  ],
+  "mcpServers": {
+    "github": {
+      "command": "bash",
+      "args": ["-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) npx -y @modelcontextprotocol/server-github"]
+    }
+  },
+  "model": "claude-opus-4.6"
+}
+```
+
+```json
+// planner.json
+{
+  "name": "planner",
+  "description": "Analyze release notes and create GitHub Issues for investigation tasks",
+  "tools": ["@builtin", "@github"],
+  "allowedTools": ["@builtin", "@github"],
+  "resources": [
+    "file://README.md",
+    "file://.kiro/steering/**/*.md",
+    "file://.kiro/agents/prompts/planner.md",
+    "skill://.kiro/skills/opensearch-docs-search/SKILL.md"
+  ],
+  "mcpServers": {
+    "github": {
+      "command": "bash",
+      "args": ["-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) npx -y @modelcontextprotocol/server-github"]
+    }
+  },
+  "model": "claude-opus-4.6"
+}
+```
+
+```json
+// translate.json
+{
+  "name": "translate",
+  "description": "Translate existing reports to other languages",
+  "tools": ["@builtin"],
+  "allowedTools": ["@builtin"],
+  "resources": [
+    "file://DEVELOPMENT.md",
+    "file://README.md",
+    "file://.kiro/steering/**/*.md",
+    "file://.kiro/agents/prompts/translate.md"
+  ],
+  "model": "claude-opus-4.6"
+}
+```
+
+The pattern is obvious: every agent has the same `model`, the same `mcpServers.github` block (a 4-line JSON blob), the same base `resources`, and the same `tools`/`allowedTools`. The only real differences are `name`, `description`, `prompt`, and sometimes one extra resource or skill.
+
+This is copy-pasted across all 15 agents. The problems:
+- Change the MCP server config? Edit 15 files and hope you got them all.
+- Pin a new model? 15 edits.
+- One typo in one file? That agent silently behaves differently. No one notices until something breaks.
+- No way to audit "do all my agents have the same base config?" without diffing 15 files by hand.
+
+### How Templates Work
+
+A template is an agent with `template = true`. It doesn't generate a JSON file -- it exists only to be inherited:
 
 ```toml
-[agents.git-readonly]
+[agents.git]
 template = true
 
-[agents.git-readonly.toolsSettings.shell]
-allowedCommands = ["git status", "git fetch"]
+[agents.default]
+inherits = ["git"]
 ```
 
-### Force Properties
+`git` provides configuration. `default` inherits it and generates a real agent JSON file. That's the entire mechanism.
 
-Override restrictions in child agents:
+Templates can inherit from other templates, forming chains:
 
 ```toml
-[agents.git-pusher.toolsSettings.shell]
-forceAllowedCommands = ["git commit .*", "git push .*"]
+[agents.git]
+template = true
+
+[agents.git-write]
+template = true
+inherits = ["git"]
+
+[agents.dependabot]
+inherits = ["git-write"]
 ```
 
-Children cannot deny forced commands/paths.
+`dependabot` gets everything from `git` (via `git-write`) plus whatever `git-write` adds. Configuration flows from root to leaf, merging at each step.
+
+### Template Categories
+
+Templates naturally fall into four categories. Most real setups use at least two.
+
+#### 1. Permission Templates — "every agent gets the same shell boundaries"
+
+Shell commands are the most dangerous capability an agent has. Unlike tool calls that go through Kiro's permission system, shell commands execute directly on the host. A careless `allow = [".*"]` is basically unrestricted shell access for an LLM. Permission templates define these boundaries once, and every agent that inherits them gets the same guarantees.
+
+Here's a real git permission template:
+
+```toml
+# agents/templates/git.toml
+[nativeTools.shell]
+allow = [
+  "git status .*",
+  "git fetch .*",
+  "git grep .*",
+  "git diff .*",
+  "git pull .*",
+  "git branch .*",
+  "git log .*",
+  "git remote .*",
+  "git ls-remote .*",
+  "mygh pr diff .*",
+  "mygh pr create .*",
+  "mygh pr list .*",
+  "mygh pr view .*",
+  "mygh pr edit .*",
+  "mygh pr comment .*",
+  "mygh pr review .*",
+  "mygh workflow .*",
+  "mygh run watch .*",
+  "mygh run list .*",
+  "mygh run view .*",
+  "mygh run cancel .*",
+  "mygh run download .*",
+  "gh pr diff .*",
+  "gh pr create .*",
+  "gh pr list .*",
+  "gh pr view .*",
+  "gh pr edit .*",
+  "gh pr comment .*",
+  "gh pr review .*",
+  "gh run watch .*",
+  "gh run list .*",
+  "gh run view .*",
+  "gh run cancel .*",
+  "gh workflow .*",
+  "gh run download .*"
+]
+deny = ["git commit .*", "git push .*", "git tag .*"]
+
+[hooks.agentSpawn.gitstatus]
+command = "hook-git-status"
+```
+
+And a CLI safety template:
+
+```toml
+# agents/templates/cli.toml
+[nativeTools.shell]
+allow = [
+  "^kg .*",
+  "^jq .*",
+  "^yq .*",
+  "^cd.*",
+  "tail .*",
+  "head .*",
+  "grep .*",
+  "^man .*",
+  "^wc .*",
+  "pdf2 .*",
+  "^ps .*",
+  "pgrep .*",
+  "dig .+",
+  "find .*",
+  "^ls .*",
+  "rg .*",
+  "readlink.*",
+  "notify-send.*",
+  "logger.*"
+]
+deny = [
+  ".*yarn install.*",
+  ".*npx.*",
+  ".*uvx.*",
+  ".*bun install.*",
+  ".*npm install.*",
+  ".*delete.*",
+  ".pulumi up.*",
+  "\\srm .*",
+  ".*srm.*",
+  ".*destroy.*",
+  ".*rollout.*",
+  "\\A.*\\bkill\\b.*\\z",
+  ".*patch.*"
+]
+```
+
+Every agent that inherits `git` gets the same git boundaries -- read-only git operations allowed, commits/pushes/tags denied, plus a hook that runs `git status` on spawn. Every agent that inherits `cli` gets the same safe CLI tools with destructive operations denied. You audit two files, not twenty.
+
+**Force properties** let templates guarantee permissions that children can't accidentally restrict:
+
+```toml
+[agents.git-write]
+template = true
+inherits = ["git"]
+
+[agents.git-write.nativeTools.shell]
+forceAllow = ["git add .*", "git commit .*", "git push .*"]
+```
+
+A `dependabot` agent inheriting `git-write` gets commit and push even if something else in its inheritance chain tries to deny them. The `force` prefix is an operational guarantee -- it means "this permission cannot be overridden by any child or sibling in the inheritance tree."
+
+Force properties work for paths too:
+
+```toml
+[agents.cargo-editor]
+template = true
+
+[agents.cargo-editor.nativeTools.write]
+forceAllow = [".*Cargo.toml.*"]
+
+[agents.cargo-editor.nativeTools.read]
+forceAllow = [".*Cargo.toml.*", ".*Cargo.lock.*"]
+```
+
+A child agent that tries to deny write access to `Cargo.toml` will be overridden. The forced paths are added to the allow list and removed from any deny list in the inheritance chain.
+
+#### 2. Capability Templates — "every agent gets the same MCP servers and tool access"
+
+MCP server blocks are verbose and identical across agents. Templates eliminate the duplication.
+
+Here's the opensearch project rewritten with one template:
+
+```toml
+# manifests/kg.toml
+
+# The base template -- everything shared across all 15 agents
+[agents.opensearch-base]
+template = true
+model = "claude-opus-4.6"
+tools = ["@builtin", "@github"]
+allowedTools = ["@builtin", "@github"]
+resources = ["file://README.md", "file://.kiro/steering/**/*.md"]
+
+[agents.opensearch-base.mcpServers.github]
+command = "bash"
+args = ["-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) npx -y @modelcontextprotocol/server-github"]
+
+# Each agent: 2-4 lines instead of 20
+# Only what's unique to this agent -- everything else comes from opensearch-base
+
+[agents.create-issues]
+inherits = ["opensearch-base"]
+description = "Create investigation Issues from a tracking Issue"
+resources = ["file://.kiro/agents/prompts/create-issues.md"]
+
+[agents.investigate]
+inherits = ["opensearch-base"]
+description = "Investigate a single feature and create/update feature reports"
+resources = [
+  "file://DEVELOPMENT.md",
+  "file://.kiro/agents/prompts/investigate.md",
+  "skill://.kiro/skills/opensearch-docs-search/SKILL.md"
+]
+
+[agents.planner]
+inherits = ["opensearch-base"]
+description = "Analyze release notes and create GitHub Issues for investigation tasks"
+resources = [
+  "file://.kiro/agents/prompts/planner.md",
+  "skill://.kiro/skills/opensearch-docs-search/SKILL.md"
+]
+
+[agents.summarize]
+inherits = ["opensearch-base"]
+description = "Create release summary from feature reports"
+resources = [
+  "file://DEVELOPMENT.md",
+  "file://.kiro/agents/prompts/summarize.md",
+  "skill://.kiro/skills/opensearch-docs-search/SKILL.md"
+]
+
+[agents.translate]
+inherits = ["opensearch-base"]
+description = "Translate existing reports to other languages"
+tools = ["@builtin"]
+allowedTools = ["@builtin"]
+resources = [
+  "file://DEVELOPMENT.md",
+  "file://.kiro/agents/prompts/translate.md"
+]
+
+[agents.create-release-groups]
+inherits = ["opensearch-base"]
+description = "Group raw release items into feature groups"
+tools = ["@builtin"]
+allowedTools = ["@builtin"]
+resources = ["file://.kiro/agents/prompts/create-release-groups.md"]
+
+[agents.refactor]
+inherits = ["opensearch-base"]
+description = "Batch structural changes to existing reports"
+resources = [
+  "file://DEVELOPMENT.md",
+  "file://.kiro/agents/prompts/refactor.md"
+]
+
+# ... and so on for all 15 agents
+```
+
+Change the MCP server config once, all 15 agents update. Pin a new model once, all 15 agents update. Add a new shared resource once, all 15 agents get it. The `translate` and `create-release-groups` agents override `tools`/`allowedTools` to drop `@github` since they don't need it -- scalars replace, so the child's value wins.
+
+Other real capability templates:
+
+```toml
+# agents/cloud/k8s.toml — Kubernetes access
+[nativeTools.shell]
+allow = ["kubectl .*", "kubectx .*", "helm .*"]
+deny = [
+  "kubectl annotate .*",
+  "kubectl label .*",
+  "kubectl scale .*",
+  "kubectl patch .*",
+  "kubectl cordon .*",
+  "kubectl drain .*",
+  "kubectl taint .*",
+  "kubectl autoscale .*",
+  "kubectl delete .*",
+  "kubectl create .*",
+  "kubectl rollout .*"
+]
+```
+
+```toml
+# agents/node.toml — Node/Yarn tooling
+[mcpServers.bun]
+disabled = true
+url = "https://bun.com/docs/mcp"
+
+[nativeTools.shell]
+allow = [
+  "yarn test .*",
+  "yarn run test .*",
+  "yarn run test",
+  "yarn run build",
+  "yarn run lint"
+]
+```
+
+```toml
+# agents/cloud/pulumi.toml — Infrastructure as Code
+[nativeTools.shell]
+allow = ["pulumi preview .*", "pulumi stack .*", "pulumi config .*"]
+deny = ["pulumi up .*", "pulumi destroy .*"]
+
+[mcpServers.pulumi]
+command = "pulumi-mcp"
+timeout = 120000
+```
+
+#### 3. Context Templates — "every agent sees the same project docs and knowledge bases"
+
+Context templates ensure every agent has access to the same documentation, steering files, skills, and knowledge bases. Without them, you'd copy-paste resource lists across every agent and inevitably miss one.
+
+Here's a real context template:
+
+```toml
+# manifests/base.toml
+[agents.resources]
+template = true
+resources = [
+  "file://AGENTS.md",
+  "file://README.md",
+  "file://~/.config/agents/resources/me.md",
+  "file://.kiro/steering/**/*.md",
+  "skill://~/.config/agents/skills/**/SKILL.md"
+]
+```
+
+Every agent that inherits `resources` gets the project README, the AGENTS.md conventions file, personal preferences, all steering docs, and all skills. Add a new steering doc? Every agent sees it automatically.
+
+For team projects, context templates let everyone share project knowledge while keeping personal agent configs separate:
+
+```toml
+# .kiro/generators/manifests/kg.toml (checked into git)
+[agents.project-docs]
+template = true
+resources = [
+  "file://docs/**/*.md",
+  "file://AGENTS.md",
+  "file://README.md",
+  "file://.kiro/steering/**/*.md"
+]
+
+[agents.project-docs.knowledge.api-docs]
+source = "file://./api-docs"
+description = "API reference documentation"
+autoUpdate = true
+indexType = "best"
+
+[agents.project-docs.knowledge.architecture]
+source = "file://./docs/architecture"
+description = "System architecture and design decisions"
+autoUpdate = true
+indexType = "best"
+```
+
+Each developer creates their own manifest inheriting from `project-docs`:
+
+```toml
+# .kiro/generators/manifests/my-agents.toml (gitignored, personal)
+[agents.rust]
+inherits = ["project-docs"]
+
+[agents.frontend]
+inherits = ["project-docs"]
+```
+
+Same project context, different personal tooling. The gitignore setup:
+
+```gitignore
+# Ignore personal agent manifests
+.kiro/generators/manifests/*.toml
+# Keep shared project resources
+!.kiro/generators/manifests/kg.toml
+
+# Ignore generated agent files
+.kiro/agents/
+```
+
+This pattern also works for augmenting global agents with local project knowledge. Global provides tooling, local adds project-specific context:
+
+```toml
+# Global: ~/.kiro/generators/agents/rust.toml
+description = "General Rust agent"
+resources = ["file://~/.config/agents/resources/rust.md"]
+
+[nativeTools.shell]
+allow = ["cargo .*"]
+deny = ["cargo publish .*"]
+```
+
+```toml
+# Local: .kiro/generators/agents/rust.toml
+[knowledge.facet]
+source = "file://./facet-docs"
+description = "Information about the Rust crates facet-json, facet-toml, facet-diff and other facet libraries"
+autoUpdate = true
+indexType = "best"
+```
+
+The generated `rust.json` gets both -- global cargo tooling plus local facet knowledge. No duplication, no override.
+
+#### 4. Lifecycle Templates — "every agent runs the same checks at the same time"
+
+Hooks define actions that run at specific points in an agent's lifecycle. Language templates are the natural home for these -- you want every Rust agent to run `cargo check` on spawn, every TypeScript agent to run the type checker, every Go agent to run `go vet`. Define it once in the language template, never think about it again.
+
+```toml
+# agents/templates/rust-lang.toml
+[hooks.agentSpawn.cargocheck]
+command = "cargo check --quiet"
+
+[hooks.agentSpawn.clippycheck]
+command = "cargo clippy --quiet -- -D warnings"
+
+[nativeTools.shell]
+allow = [
+  "cargo .*",
+  "rustup .*"
+]
+deny = ["cargo publish .*"]
+```
+
+```toml
+# agents/templates/typescript-lang.toml
+[hooks.agentSpawn.typecheck]
+command = "yarn run tsc --noEmit"
+
+[hooks.agentSpawn.lintcheck]
+command = "yarn run lint --quiet"
+
+[nativeTools.shell]
+allow = [
+  "yarn test .*",
+  "yarn run build",
+  "yarn run lint",
+  "yarn run tsc .*"
+]
+```
+
+```toml
+# agents/templates/go-lang.toml
+[hooks.agentSpawn.govet]
+command = "go vet ./..."
+
+[nativeTools.shell]
+allow = [
+  "go build .*",
+  "go test .*",
+  "go vet .*",
+  "go mod .*"
+]
+deny = ["go install .*"]
+```
+
+Every Rust agent runs `cargo check` and `clippy` on spawn. Every TypeScript agent runs the type checker and linter. Every Go agent runs `go vet`. The agent starts with awareness of the project's current state -- compile errors, lint warnings, type issues -- without the user having to ask.
+
+Notice that lifecycle templates naturally combine with capability templates. The `rust-lang` template provides both hooks (lifecycle) and shell permissions (capability). A single template can span multiple categories.
+
+### Composing Templates
+
+The real power is composition. Here's a real manifest that combines all four categories:
+
+```toml
+# manifests/base.toml
+[agents]
+git = { template = true }          # permission: git boundaries
+cli = { template = true }          # permission: safe CLI tools
+resources = { template = true }    # context: shared docs + skills
+k8s = { template = true }          # capability: kubernetes access
+node = { template = true }         # capability + lifecycle: node tooling
+
+default = { inherits = ["git", "resources", "cli"] }
+rust = { inherits = ["default"] }
+corsa = { inherits = ["default", "k8s", "node"] }
+```
+
+`default` inherits from three templates: `git` (shell boundaries for git/gh commands), `resources` (shared docs and skills), and `cli` (safe CLI tools with destructive ops denied). Every agent that inherits `default` gets all three.
+
+`corsa` inherits from `default` (which brings git + resources + cli), plus `k8s` (kubernetes access with destructive kubectl ops denied) and `node` (yarn tooling + bun MCP server). The final generated agent has:
+- Git commands allowed (read-only), commits/pushes denied — from `git`
+- Safe CLI tools (jq, grep, find, etc.), npm/yarn install denied — from `cli`
+- Project docs, personal preferences, all skills — from `resources`
+- kubectl/helm allowed, kubectl delete/scale/drain denied — from `k8s`
+- yarn test/build/lint allowed, bun MCP server configured — from `node`
+- Plus whatever `corsa` itself adds (its own resources, MCP servers, etc.)
+
+Change the git deny list in `git.toml` and every agent in the fleet updates — `default`, `rust`, `corsa`, and any future agents that inherit from them.
+
+### Subagent Templates
+
+Subagents deserve their own base template -- typically with a cheaper model and tighter restrictions than primary agents:
+
+```toml
+# manifests/subagents.toml
+[agents.subagent-default]
+template = true
+model = "claude-haiku-4.5"
+inherits = ["git", "cli"]
+tools = ["*"]
+
+[agents.gh-workflow]
+description = "GitHub Workflow monitor"
+inherits = ["subagent-default"]
+resources = ["file://~/.config/agents/resources/gh-workflow.md"]
+
+[agents.jina]
+description = "HTML to markdown converter"
+inherits = ["subagent-default"]
+```
+
+```toml
+# agents/subagent-default.toml
+resources = [
+  "file://~/.config/agents/resources/me.md",
+  "file://~/.config/agents/resources/subagents.md",
+  "skill://~/.config/agents/skills/**/SKILL.md"
+]
+allowedTools = [
+  "read", "shell", "write", "knowledge",
+  "introspect", "todo_list", "web_fetch", "web_search"
+]
+
+[nativeTools.write]
+allow = ["~/.config/agents/scratchpad/**"]
+
+[nativeTools.shell]
+deny = [
+  ".*delete.*", "pulumi up.*",
+  ".*destroy.*", ".*rollout.*",
+  ".*kill.*", ".*patch.*"
+]
+```
+
+All subagents get the same security baseline: cheaper model, restricted write paths, shared deny list. The `gh-workflow` subagent adds its own resources, `jina` adds its own MCP server. Neither needs to duplicate the base config.
 
 ## Configuration Resolution Order
 
@@ -162,140 +811,6 @@ All found configs merge together. Use `kg tree rust` to see which sources apply.
 - **No agents found**: `kg tree` returns empty JSON object `{}` (exit 0). Consumers should check for an empty object.
 - **Named agent not found**: `kg tree nonexistent` returns empty JSON object `{}` (exit 0). The requested agent key will be absent from the response.
 - **Invalid TOML**: `kg validate` reports parse errors with file path and line number
-
-## Security Patterns
-
-### Global Deny List with Per-Agent Overrides
-
-Define safe defaults globally, override for specific agents:
-
-```toml
-# Global: ~/.kiro/generators/agents/default.toml
-[toolsSettings.shell]
-deniedCommands = ["rm -rf .*", "git push .*", "git commit .*", "cargo publish .*"]
-autoAllowReadonly = true
-
-# Local: .kiro/generators/agents/dependabot.toml
-inherits = ["default"]
-[toolsSettings.shell]
-forceAllowedCommands = ["git commit .*", "git push .*"]
-```
-
-**Result**: All agents inherit the deny list, but `dependabot` can commit and push. The `force` prefix prevents child agents from accidentally denying these commands.
-
-### Permission Template Hierarchies
-
-Build permission tiers that compose safely:
-
-```toml
-# manifests/kg.toml
-[agents.git-readonly]
-template = true
-
-[agents.git-readonly.toolsSettings.shell]
-allowedCommands = ["git status", "git fetch", "git diff .*", "git log .*"]
-
-[agents.git-write]
-template = true
-inherits = ["git-readonly"]
-
-[agents.git-write.toolsSettings.shell]
-forceAllowedCommands = ["git add .*", "git commit .*", "git push .*"]
-
-# Real agents
-[agents.reviewer]
-inherits = ["git-readonly"]
-
-[agents.dependabot]
-inherits = ["git-write"]
-```
-
-**Result**: `reviewer` gets read-only git, `dependabot` gets read + write. The hierarchy is explicit and auditable.
-
-### Subagent Default Template
-
-Create a base template for all subagents with restricted permissions:
-
-```toml
-# manifests/subagents.toml
-[agents.subagent-default]
-template = true
-model = "claude-haiku-4.5"
-inherits = ["git-readonly", "cli-safe"]
-tools = ["*"]
-
-[agents.subagent-default.toolsSettings.shell]
-deniedCommands = ["rm -rf .*", "git push .*", "cargo publish .*", "npm publish .*"]
-
-# Specific subagents
-[agents.gh-workflow]
-inherits = ["subagent-default"]
-description = "GitHub Workflow monitor"
-resources = ["file://~/.config/agents/resources/gh-workflow.md"]
-
-[agents.jina]
-inherits = ["subagent-default"]
-description = "HTML to markdown converter"
-```
-
-**Result**: All subagents get the same security baseline. Add specific tools/resources per subagent without duplicating the deny list.
-
-### Auditing Permissions
-
-Use `kg tree` and `kg validate` to audit the final permission set:
-
-```bash
-# See where permissions come from
-kg tree dependabot
-
-# Output shows inheritance chain and sources:
-{
-  "dependabot": {
-    "inherits": ["default", "git-write"],
-    "sources": [
-      {"type": "global-manifest", "path": "~/.kiro/generators/manifests/kg.toml"},
-      {"type": "local-file", "path": ".kiro/generators/agents/dependabot.toml"}
-    ]
-  }
-}
-
-# See final merged permissions
-kg validate --format json | jq '.agents.dependabot.toolsSettings.shell'
-
-# Output shows final allowedCommands and deniedCommands after merge
-```
-
-**Result**: Full visibility into where each permission comes from and what the final state is.
-
-## Common Patterns
-
-### Augment Global with Local
-
-Global provides tooling, local adds project knowledge:
-
-```toml
-# Global: ~/.kiro/generators/agents/rust.toml
-allowedTools = ["@rustdocs", "@cargo"]
-
-# Local: .kiro/generators/agents/rust.toml
-[knowledge.facet]
-source = "file://./facet-docs"
-```
-
-### Shared Project Resources
-
-Team shares resources, individuals customize agents:
-
-```toml
-# .kiro/generators/manifests/kg.toml (in git)
-[agents.project-resources]
-template = true
-resources = ["file://docs/**/*.md"]
-
-# .kiro/generators/manifests/my-agent.toml (gitignored)
-[agents.rust]
-inherits = ["project-resources"]
-```
 
 ## Bootstrap: Migrating from JSON Agents
 
@@ -489,36 +1004,25 @@ autoAllowReadonly = true
     rust.toml
     frontend.toml
     templates/
-      git-readonly.toml
-      git-write.toml
-      aws-base.toml
+      git.toml
+      cli.toml
+      resources.toml
 ```
 
 Place template agent files in `agents/templates/` to keep them visually separate from real agents.
 
 ```toml
 # manifests/kg.toml
-[agents.git-readonly]
-template = true
+[agents]
+git = { template = true }
+cli = { template = true }
+resources = { template = true }
+k8s = { template = true }
 
-[agents.git-write]
-template = true
-inherits = ["git-readonly"]
-
-[agents.aws-base]
-template = true
-
-[agents.default]
-inherits = ["git-readonly"]
-
-[agents.rust]
-inherits = ["default"]
-
-[agents.frontend]
-inherits = ["default"]
-
-[agents.devops]
-inherits = ["default", "git-write", "aws-base"]
+default = { inherits = ["git", "resources", "cli"] }
+rust = { inherits = ["default"] }
+frontend = { inherits = ["default"] }
+devops = { inherits = ["default", "k8s"] }
 ```
 
 ### Generating the TOML Files

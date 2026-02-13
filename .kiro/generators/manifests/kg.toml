@@ -1,14 +1,11 @@
 [agents.kg-resources]
 template = true
 resources = [
-  "file://docs/src/**/*.md",
-  "file://AGENTS.md",
-  "file://README.md",
   "file://resources/SKILL.md",
 ]
 
 [agents.kg-resources.knowledge.kiro]
 source = "file://./docs/kiro"
 description = "Kiro CLI configuration reference for JSON agents"
-autoUpdate = true
+autoUpdate = false
 indexType = "best"
