@@ -240,8 +240,8 @@ impl Generator {
         Ok(())
     }
 
-    #[tracing::instrument(skip(dry_run, force), level = "info")]
-    pub async fn write_all(&self, dry_run: bool, force: bool) -> Result<Vec<AgentResult>> {
+    #[tracing::instrument(skip(dry_run, skip_unchanged), level = "info")]
+    pub async fn write_all(&self, dry_run: bool, skip_unchanged: bool) -> Result<Vec<AgentResult>> {
         let agents = self.merge()?;
         let mut results = Vec::with_capacity(agents.len());
         // If no local agents defined, write all (global) agents
@@ -251,18 +251,18 @@ impl Generator {
             let span = tracing::debug_span!("agent", name = ?agent.name, local = self.is_local(&agent.name));
             let _enter = span.enter();
             if write_all_agents || self.is_local(&agent.name) {
-                results.push(self.write(agent, dry_run, force).await?);
+                results.push(self.write(agent, dry_run, skip_unchanged).await?);
             }
         }
         Ok(results)
     }
 
-    #[tracing::instrument(skip(dry_run,force), level = "info", fields(out = tracing::field::Empty))]
+    #[tracing::instrument(skip(dry_run,skip_unchanged), level = "info", fields(out = tracing::field::Empty))]
     pub(crate) async fn write(
         &self,
         agent: Manifest,
         dry_run: bool,
-        force: bool,
+        skip_unchanged: bool,
     ) -> Result<AgentResult> {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
@@ -297,7 +297,8 @@ impl Generator {
 
             tracing::Span::current().record("out", tracing::field::display(&out.display()));
 
-            if force {
+            if !skip_unchanged {
+                // Default: always write
                 self.fs
                     .write(&out, facet_json::to_string_pretty(&result.kiro_agent)?)
                     .await
@@ -305,6 +306,7 @@ impl Generator {
                 return Ok(result);
             }
 
+            // --skip-unchanged: compute diff and skip if unchanged
             let diff = self.compute_diff(
                 &result.agent.name,
                 &result.kiro_agent,

@@ -38,7 +38,9 @@ impl Cli {
             generator.diff(&super::DiffArgs::default())?;
         }
 
-        let result = generator.write_all(self.dry_run(), args.force).await;
+        let result = generator
+            .write_all(self.dry_run(), args.skip_unchanged)
+            .await;
 
         #[cfg(target_os = "linux")]
         if args.notify {

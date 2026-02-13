@@ -79,9 +79,10 @@ pub struct GenerateArgs {
     /// Show template agents in output
     #[arg(long, default_value = "false")]
     pub show_templates: bool,
-    /// Always write agent config even if nothing has changed
-    #[arg(long, default_value = "false", env = "KG_FORCE")]
-    pub force: bool,
+    /// Skip writing agent files that appear unchanged (may miss updates due to
+    /// diff limitations)
+    #[arg(long, default_value = "false", env = "KG_SKIP_UNCHANGED")]
+    pub skip_unchanged: bool,
     /// Show diff of changes before writing
     #[arg(long, default_value = "false", env = "KG_DIFF")]
     pub diff: bool,
