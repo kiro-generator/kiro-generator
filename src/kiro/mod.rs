@@ -2,7 +2,6 @@ mod custom_tool;
 pub mod diff;
 pub mod hook;
 pub mod tools;
-pub const DEFAULT_AGENT_RESOURCES: &[&str] = &["file://README.md", "file://AGENTS.md"];
 pub const DEFAULT_APPROVE: [&str; 0] = [];
 use {
     crate::{Manifest, Result, kiro::hook::AgentHook},
@@ -207,13 +206,7 @@ impl Default for KiroAgent {
                 set.extend(default_approve);
                 set
             },
-            resources: {
-                let mut resources = Vec::new();
-                for r in DEFAULT_AGENT_RESOURCES {
-                    resources.push(facet_value::Value::from(*r));
-                }
-                resources
-            },
+            resources: Default::default(),
             hooks: Default::default(),
             tools_settings: Default::default(),
             include_mcp_json: true,

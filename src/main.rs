@@ -5,7 +5,6 @@ mod kiro;
 mod os;
 pub mod output;
 mod schema;
-mod schema_optional;
 mod source;
 mod tracing_init;
 mod util;
