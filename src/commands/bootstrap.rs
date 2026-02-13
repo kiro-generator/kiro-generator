@@ -13,6 +13,12 @@ use {
 };
 
 const SKILL_MD: &str = include_str!("../../resources/kg-helper/SKILL.md");
+const BOOTSTRAP_MD: &str = include_str!("../../resources/kg-helper/references/bootstrap.md");
+const SCHEMAS_MD: &str = include_str!("../../resources/kg-helper/references/schemas.md");
+const TEMPLATES_MD: &str = include_str!("../../resources/kg-helper/references/templates.md");
+const KIRO_AGENT_SCHEMA: &str = include_str!("../../schemas/kiro-agent.json");
+const KG_MANIFEST_SCHEMA: &str = include_str!("../../schemas/manifest.json");
+const KG_AGENT_SCHEMA: &str = include_str!("../../schemas/agent.json");
 const SKILL_NAME: &str = "kg-helper";
 
 /// Scan a directory for .json files and return (name, path) tuples
@@ -204,6 +210,39 @@ async fn install_skill(fs: &Fs, home_dir: &Path) -> crate::Result<()> {
         .await
         .wrap_err_with(|| format!("Failed to write {}", skill_path.display()))?;
     println!("✓ Installed {}", skill_path.display());
+
+    // Install reference files
+    let bootstrap_path = ref_dir.join("bootstrap.md");
+    fs.write(&bootstrap_path, BOOTSTRAP_MD)
+        .await
+        .wrap_err_with(|| format!("Failed to write {}", bootstrap_path.display()))?;
+
+    let schemas_path = ref_dir.join("schemas.md");
+    fs.write(&schemas_path, SCHEMAS_MD)
+        .await
+        .wrap_err_with(|| format!("Failed to write {}", schemas_path.display()))?;
+
+    let templates_path = ref_dir.join("templates.md");
+    fs.write(&templates_path, TEMPLATES_MD)
+        .await
+        .wrap_err_with(|| format!("Failed to write {}", templates_path.display()))?;
+
+    // Install schema files
+    let kiro_agent_schema_path = assets_dir.join("kiro-agent.json");
+    fs.write(&kiro_agent_schema_path, KIRO_AGENT_SCHEMA)
+        .await
+        .wrap_err_with(|| format!("Failed to write {}", kiro_agent_schema_path.display()))?;
+
+    let kg_manifest_schema_path = assets_dir.join("kg-manifest.json");
+    fs.write(&kg_manifest_schema_path, KG_MANIFEST_SCHEMA)
+        .await
+        .wrap_err_with(|| format!("Failed to write {}", kg_manifest_schema_path.display()))?;
+
+    let kg_agent_schema_path = assets_dir.join("kg-agent.json");
+    fs.write(&kg_agent_schema_path, KG_AGENT_SCHEMA)
+        .await
+        .wrap_err_with(|| format!("Failed to write {}", kg_agent_schema_path.display()))?;
+
     println!();
     println!("Done! Start kiro-cli and ask:");
     println!("  \"Help me set up kg for my project\"");
@@ -362,12 +401,25 @@ mod tests {
 
         execute(&fs, &home).await?;
 
-        let analysis_path = home
-            .join(".kiro")
-            .join("skills")
-            .join(SKILL_NAME)
-            .join("references")
-            .join("analysis.json");
+        let skill_dir = home.join(".kiro").join("skills").join(SKILL_NAME);
+        let ref_dir = skill_dir.join("references");
+
+        // Verify SKILL.md
+        let skill_path = skill_dir.join("SKILL.md");
+        assert!(fs.exists(&skill_path), "SKILL.md not created");
+
+        // Verify reference files
+        let bootstrap_path = ref_dir.join("bootstrap.md");
+        assert!(fs.exists(&bootstrap_path), "bootstrap.md not created");
+
+        let schemas_path = ref_dir.join("schemas.md");
+        assert!(fs.exists(&schemas_path), "schemas.md not created");
+
+        let templates_path = ref_dir.join("templates.md");
+        assert!(fs.exists(&templates_path), "templates.md not created");
+
+        // Verify analysis.json
+        let analysis_path = ref_dir.join("analysis.json");
         assert!(fs.exists(&analysis_path), "analysis.json not created");
 
         let content = fs.read_to_string(&analysis_path).await?;
@@ -375,6 +427,20 @@ mod tests {
         assert_eq!(value["summary"]["total_agents"], 2);
         assert!(value["agents"]["default"].is_object());
         assert!(value["agents"]["rust"].is_object());
+
+        // Verify schema files
+        let assets_dir = skill_dir.join("assets");
+        let kiro_agent_schema = assets_dir.join("kiro-agent.json");
+        assert!(fs.exists(&kiro_agent_schema), "kiro-agent.json not created");
+
+        let kg_manifest_schema = assets_dir.join("kg-manifest.json");
+        assert!(
+            fs.exists(&kg_manifest_schema),
+            "kg-manifest.json not created"
+        );
+
+        let kg_agent_schema = assets_dir.join("kg-agent.json");
+        assert!(fs.exists(&kg_agent_schema), "kg-agent.json not created");
 
         Ok(())
     }

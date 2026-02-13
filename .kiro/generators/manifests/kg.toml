@@ -1,7 +1,8 @@
 [agents.kg-resources]
 template = true
 resources = [
-  "file://resources/SKILL.md",
+  "file://docs/src/SUMMARY.md",
+  "file://docs/src/config/*.md",
 ]
 
 [agents.kg-resources.knowledge.kiro]

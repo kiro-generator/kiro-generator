@@ -1,64 +1,238 @@
 # Schemas
 
-kg embeds JSON schemas for validating manifest and agent TOML files. Use these to verify field names, check available options, or validate configuration before running `kg validate`.
+kg provides JSON schemas for validating configuration and inspecting available fields. Schemas are installed locally during bootstrap and can be updated on demand.
 
 ## Available Schemas
 
-| Schema | Validates | Command |
-|--------|-----------|---------|
-| manifest | `manifests/*.toml` files (agent declarations, inheritance) | `kg schema manifest` |
-| agent | `agents/*.toml` files (agent configuration) | `kg schema agent` |
-| kiro-agent | `~/.kiro/agents/*.json` files (output or result of the TOML configuration) | `kg schema kiro-agent` |
+| Schema | Describes | Local Path |
+|--------|-----------|------------|
+| `kiro-agent` | Final Kiro agent JSON format (what kg generates) | `~/.kiro/skills/kg-helper/assets/kiro-agent.json` |
+| `kg-manifest` | kg manifest TOML files (`manifests/*.toml`) | `~/.kiro/skills/kg-helper/assets/kg-manifest.json` |
+| `kg-agent` | kg agent TOML files (`agents/*.toml`) | `~/.kiro/skills/kg-helper/assets/kg-agent.json` |
 
-`kiro-agent`, which describes the **output** format — the generated Kiro agent JSON files (e.g., `~/.kiro/agents/rust.json`).
-This schema is embedded in the kg binary and used automatically during `kg generate` to validate output before writing.
-You don't normally need it, but it's useful for troubleshooting (see below).
+**Note:** Local schemas may be outdated if kg has been updated since bootstrap. See "Updating Schemas" below.
 
-## Getting the Schema
+## TOML to JSON Field Mappings
 
-**Primary source** -- always matches your installed kg version:
+kg's TOML format uses different field names than Kiro's JSON format. Key mappings:
+
+| TOML Field (kg) | JSON Field (Kiro) | Notes |
+|-----------------|-------------------|-------|
+| `nativeTools.*` | `toolsSettings.*` | Native tool permissions (shell, read, write, glob, grep, web-fetch, aws) |
+| `nativeTools.*.allow` | `toolsSettings.*.allowedCommands` or `allowedPaths` | Depends on tool type |
+| `nativeTools.*.deny` | `toolsSettings.*.deniedCommands` or `deniedPaths` | Depends on tool type |
+| `nativeTools.*.forceAllow` | `toolsSettings.*.forceAllowedCommands` or `forceAllowedPaths` | Depends on tool type |
+| `knowledge` | `resources` | Knowledge bases are merged into resources array as objects |
+| `toolSettings` | `toolsSettings` | Additional tool settings (merged with nativeTools) |
+| `subagents.allow` | `toolsSettings.subagent.allowedAgents` | Subagent permissions |
+
+### nativeTools → toolsSettings
+
+**TOML:**
+```toml
+[nativeTools.shell]
+allow = ["git .*", "cargo .*"]
+deny = ["rm -rf .*"]
+denyByDefault = true
+
+[nativeTools.write]
+allow = ["./src/**"]
+deny = ["Cargo.lock"]
+```
+
+**JSON:**
+```json
+{
+  "toolsSettings": {
+    "shell": {
+      "allowedCommands": ["git .*", "cargo .*"],
+      "deniedCommands": ["rm -rf .*"],
+      "denyByDefault": true
+    },
+    "write": {
+      "allowedPaths": ["./src/**"],
+      "deniedPaths": ["Cargo.lock"]
+    }
+  }
+}
+```
+
+### knowledge → resources
+
+**TOML:**
+```toml
+resources = ["file://README.md"]
+
+[knowledge.project-docs]
+source = "file://docs/"
+description = "Project documentation"
+```
+
+**JSON:**
+```json
+{
+  "resources": [
+    "file://README.md",
+    {
+      "name": "project-docs",
+      "type": "knowledgeBase",
+      "source": "file://docs/",
+      "description": "Project documentation"
+    }
+  ]
+}
+```
+
+Note: `resources` array contains both simple strings and knowledge base objects.
+
+### subagents → toolsSettings.subagent
+
+**TOML:**
+```toml
+[subagents]
+allow = ["pr-review", "code-gen"]
+deny = ["admin"]
+```
+
+**JSON:**
+```json
+{
+  "toolsSettings": {
+    "subagent": {
+      "allowedAgents": ["pr-review", "code-gen"]
+    }
+  }
+}
+```
+
+Note: `deny` is applied during conversion - only the final allowed list appears in JSON.
+
+### hooks
+
+**TOML:**
+```toml
+[hooks.agentSpawn.spawn]
+command = "git fetch"
+timeout_ms = 5000
+
+[hooks.preToolUse.pre]
+command = "echo before"
+matcher = "git.*"
+```
+
+**JSON:**
+```json
+{
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "git fetch",
+        "timeout_ms": 5000
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "echo before",
+        "matcher": "git.*"
+      }
+    ]
+  }
+}
+```
+
+Note: TOML uses nested maps (`hooks.TYPE.NAME`), JSON uses arrays (`hooks.TYPE[]`). The NAME key is discarded.
+
+## Inspecting Agent Configuration
+
+Use `kg validate --format json` with jq to query agent configuration:
 
 ```bash
-# Output manifest schema to stdout
-kg schema manifest
+# List all agents
+kg validate --format json | jq '[.[].name]'
 
-# Output agent schema to stdout
-kg schema agent
+# Show specific agent
+kg validate --format json | jq '.[] | select(.name == "rust")'
 
-# Save to a file for editor integration
-kg schema manifest > manifest.schema.json
-kg schema agent > agent.schema.json
+# Find agents with shell permissions
+kg validate --format json | jq '[.[] | select(.toolsSettings.shell) | .name]'
+
+# List all MCP servers across agents
+kg validate --format json | jq '[.[] | .mcpServers | keys] | flatten | unique'
+
+# Check if agent has specific tool
+kg validate --format json | jq '.[] | select(.name == "rust") | .allowedTools | contains(["@cargo"])'
+
+# Show shell commands for an agent
+kg validate --format json | jq '.[] | select(.name == "rust") | .toolsSettings.shell'
 ```
 
-**Fallback** -- if your kg binary is outdated and missing newer fields:
+## Discovering Available Fields
+
+Read local schemas to see what fields are valid:
+
+```bash
+# List all top-level fields for Kiro agents
+jq '.properties | keys' ~/.kiro/skills/kg-helper/assets/kiro-agent.json
+
+# Show nativeTools structure (TOML)
+jq '.properties.nativeTools' ~/.kiro/skills/kg-helper/assets/kg-agent.json
+
+# Show toolsSettings options (JSON output)
+jq '.properties.toolsSettings.properties | keys' ~/.kiro/skills/kg-helper/assets/kiro-agent.json
+```
+
+## Verifying Mappings
+
+To see how kg translates your TOML to JSON:
+
+```bash
+# Show TOML sources for an agent
+kg tree rust
+
+# Show resulting JSON
+kg validate --format json | jq '.[] | select(.name == "rust")'
+
+# Compare specific field transformation
+kg validate --format json | jq '.[] | select(.name == "rust") | .toolsSettings'
+```
+
+## Updating Schemas
+
+If local schemas are outdated (missing fields you know exist):
+
+```bash
+# Update specific schema
+kg schema kiro-agent > ~/.kiro/skills/kg-helper/assets/kiro-agent.json
+kg schema manifest > ~/.kiro/skills/kg-helper/assets/kg-manifest.json
+kg schema agent > ~/.kiro/skills/kg-helper/assets/kg-agent.json
+```
+
+**Fallback URLs** (if `kg schema` output still doesn't match Kiro docs):
 
 ```
-https://kiro-generator.io/manifest.json
-https://kiro-generator.io/agent.json
 https://kiro-generator.io/kiro-agent.json
+https://kiro-generator.io/kg-manifest.json
+https://kiro-generator.io/kg-agent.json
 ```
 
-## Usage Guidance
+## Workflow for Adding/Modifying Fields
 
 When helping a user add or modify a TOML field:
 
-1. Run `kg schema manifest` or `kg schema agent` to get the current schema
-2. Verify the field exists and check its type/constraints
-3. If the field isn't in the schema but Kiro docs reference it, fetch the latest from the URL
-4. If neither source has the field, tell the user their kg binary may need updating
+1. Check local schema first: `jq '.properties.FIELD_NAME' ~/.kiro/skills/kg-helper/assets/kg-agent.json`
+2. If field is missing, update schema: `kg schema agent > ~/.kiro/skills/kg-helper/assets/kg-agent.json`
+3. If still missing, fetch from URL: `curl -o ~/.kiro/skills/kg-helper/assets/kg-agent.json https://kiro-generator.io/kg-agent.json`
+4. If field doesn't exist in any source, tell the user their kg binary may need updating
 
-The schema is also useful for discovering available fields. If a user asks "what options can I set for nativeTools?", pipe the schema through jq:
+## Troubleshooting Generation Issues
 
-```bash
-kg schema agent | jq '.properties.nativeTools'
-```
+If `kg generate` succeeds but Kiro doesn't behave as expected:
 
-## Troubleshooting with the Output Schema
-
-`kg generate` validates all generated JSON against the embedded `kiro-agent.json` schema before writing files. If generation succeeds but Kiro still doesn't behave as expected:
-
-1. Read the generated agent JSON (e.g., `~/.kiro/agents/rust.json`)
-2. Fetch the latest Kiro agent schema from `https://kiro-generator.io/kiro-agent.json`
-3. Validate the generated JSON against the latest schema — a mismatch means kg's embedded schema is stale
-4. Compare the TOML input (from `kg tree` sources) against the generated JSON to identify where the translation diverged
-5. If the problem is a kg bug: help the user work around it by adjusting TOML to avoid the broken path, and open a GitHub issue at `https://github.com/kiro-generator/kiro-generator` with the TOML input, expected JSON output, and actual JSON output
+1. Read the generated agent JSON: `cat ~/.kiro/agents/rust.json`
+2. Update local kiro-agent schema: `kg schema kiro-agent > ~/.kiro/skills/kg-helper/assets/kiro-agent.json`
+3. Compare TOML input (from `kg tree rust`) against generated JSON
+4. Check field mappings above - ensure you're looking at the right JSON field
+5. If the problem is a kg bug, open an issue at `https://github.com/kiro-generator/kiro-generator` with:
+   - TOML input (from `kg tree rust`)
+   - Expected JSON output
+   - Actual JSON output
