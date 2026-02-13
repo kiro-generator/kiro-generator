@@ -1,5 +1,6 @@
 use std::io::{self, Write};
 
+#[allow(dead_code)]
 pub fn prompt_confirm(message: &str) -> bool {
     print!("{message} [Y/n] ");
     io::stdout().flush().ok();

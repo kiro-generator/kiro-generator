@@ -35,7 +35,7 @@ impl Cli {
 
     async fn execute_generate(&self, generator: &Generator, args: &GenerateArgs) -> Result<()> {
         if args.diff {
-            generator.diff(&super::DiffArgs::default())?;
+            generator.generate_diff()?;
         }
 
         let result = generator

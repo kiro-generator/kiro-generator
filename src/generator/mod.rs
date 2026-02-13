@@ -154,7 +154,7 @@ impl Generator {
         &self,
         agent_name: &str,
         generated: &KiroAgent,
-        args: &crate::commands::DiffArgs,
+        format: crate::output::DiffFormatArg,
     ) -> Result<AgentDiff> {
         let destination = self
             .destination_dir(agent_name)
@@ -180,18 +180,25 @@ impl Generator {
             Ok(AgentDiff::Same)
         } else {
             // Choose formatting based on args
-            let formatted = if args.plain && args.compact {
-                rediff::format_diff_compact_plain(&diff)
-            } else if args.compact {
-                rediff::format_diff_compact(&diff)
-            } else {
-                // Use format_diff with DiffFormat config
-                let config = rediff::DiffFormat {
-                    colors: !args.plain,
-                    max_inline_changes: 10,
-                    prefer_compact: args.compact,
-                };
-                rediff::format_diff(&diff, &config)
+            let formatted = match format {
+                crate::output::DiffFormatArg::Agent => rediff::format_diff_compact_plain(&diff),
+                crate::output::DiffFormatArg::Compact => rediff::format_diff_compact(&diff),
+                crate::output::DiffFormatArg::Plain => {
+                    let config = rediff::DiffFormat {
+                        colors: false,
+                        max_inline_changes: 10,
+                        prefer_compact: false,
+                    };
+                    rediff::format_diff(&diff, &config)
+                }
+                crate::output::DiffFormatArg::Full => {
+                    let config = rediff::DiffFormat {
+                        colors: true,
+                        max_inline_changes: 10,
+                        prefer_compact: false,
+                    };
+                    rediff::format_diff(&diff, &config)
+                }
             };
 
             Ok(AgentDiff::Changed(formatted))
@@ -200,6 +207,15 @@ impl Generator {
 
     #[tracing::instrument(level = "info")]
     pub fn diff(&self, args: &crate::commands::DiffArgs) -> Result<()> {
+        self.diff_agents(args.format, &[])
+    }
+
+    /// Diff for generate command — always compact, no filter
+    pub fn generate_diff(&self) -> Result<()> {
+        self.diff_agents(crate::output::DiffFormatArg::Compact, &[])
+    }
+
+    fn diff_agents(&self, format: crate::output::DiffFormatArg, _filter: &[String]) -> Result<()> {
         let agents: Vec<Manifest> = self.merge()?.into_iter().filter(|a| !a.template).collect();
         let all_agents = !self.resolved.has_local;
         let mut changed = 0;
@@ -212,7 +228,7 @@ impl Generator {
                     .join(format!("{}.json", a.name));
                 let generated_agent = KiroAgent::try_from(&a)?;
 
-                match self.compute_diff(&a.name, &generated_agent, args)? {
+                match self.compute_diff(&a.name, &generated_agent, format)? {
                     AgentDiff::New => {
                         println!("{}: (new agent)", destination.display());
                         println!();
@@ -310,7 +326,7 @@ impl Generator {
             let diff = self.compute_diff(
                 &result.agent.name,
                 &result.kiro_agent,
-                &crate::commands::DiffArgs::default(),
+                crate::output::DiffFormatArg::Compact,
             )?;
             tracing::debug!("{diff}");
             match diff {

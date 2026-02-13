@@ -50,6 +50,9 @@ pub struct BootstrapArgs {
     /// Install SKILL.md from a reviewed file
     #[arg(long, value_name = "PATH")]
     pub install: Option<PathBuf>,
+    /// Skip prompts and overwrite existing skill directory
+    #[arg(long, hide = true)]
+    pub force: bool,
 }
 
 #[derive(clap::Args, Clone, Default)]
@@ -100,12 +103,10 @@ pub struct DiffArgs {
     /// Use only global configuration (ignore local .kiro/generators/)
     #[arg(short = 'g', long)]
     pub global: bool,
-    /// Use compact output (collapse unchanged items)
-    #[arg(long)]
-    pub compact: bool,
-    /// Disable colored output
-    #[arg(long)]
-    pub plain: bool,
+
+    /// Output format
+    #[arg(short = 'f', long, default_value_t, env = "KG_DIFF_FORMAT")]
+    pub format: crate::output::DiffFormatArg,
 }
 
 #[derive(clap::Args, Clone)]
@@ -170,6 +171,8 @@ pub enum SchemaCommand {
     Manifest,
     /// Output JSON schema for agent definition files
     Agent,
+    /// Output JSON schema for kiro-cli agent definition files (the end result)
+    KiroAgent,
 }
 
 impl Display for SchemaCommand {
@@ -177,6 +180,7 @@ impl Display for SchemaCommand {
         write!(f, "{}", match self {
             Self::Manifest => "manifest",
             Self::Agent => "agent",
+            Self::KiroAgent => "kiro-agent",
         })
     }
 }

@@ -9,19 +9,24 @@ use {
     color_eyre::eyre::Context,
 };
 
-pub(crate) const SCHEMA: &str = include_str!("../schemas/kiro-agent.json");
+pub(crate) const KIRO_OUTPUT_SCHEMA: &str = include_str!("../schemas/kiro-agent.json");
 
 fn get_schema_description(cmd: &SchemaCommand) -> &'static str {
     match cmd {
         SchemaCommand::Manifest => "Schema for kiro-generator (kg) manifest TOML files",
         SchemaCommand::Agent => "Schema for kiro-generator (kg) agent TOML files",
+        SchemaCommand::KiroAgent => "Schema for kiro-cli agent output JSON files",
     }
 }
 
-fn build_schema(cmd: &SchemaCommand) -> Result<String> {
+pub(crate) fn build_schema(cmd: &SchemaCommand) -> Result<String> {
+    if matches!(*cmd, SchemaCommand::KiroAgent) {
+        return Ok(KIRO_OUTPUT_SCHEMA.to_string());
+    }
     let schema = match cmd {
         SchemaCommand::Manifest => facet_json_schema::schema_for::<GeneratorConfig>(),
         SchemaCommand::Agent => facet_json_schema::schema_for::<KgAgentFileDoc>(),
+        SchemaCommand::KiroAgent => unreachable!(),
     };
     let mut output: JsonSchemaOptional = schema.into();
     output.description = Some(get_schema_description(cmd).into());

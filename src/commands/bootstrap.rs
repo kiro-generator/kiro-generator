@@ -2,7 +2,6 @@ use {
     crate::{
         kiro::{KiroAgent, diff::NormalizedAgent},
         os::Fs,
-        util::prompt_confirm,
     },
     color_eyre::eyre::WrapErr,
     facet::Facet,
@@ -13,7 +12,7 @@ use {
     },
 };
 
-const SKILL_MD: &str = include_str!("../../resources/SKILL.md");
+const SKILL_MD: &str = include_str!("../../resources/kg-helper/SKILL.md");
 const SKILL_NAME: &str = "kg-helper";
 
 /// Scan a directory for .json files and return (name, path) tuples
@@ -163,6 +162,7 @@ fn build_analysis(agents: BTreeMap<String, AnalysisAgent>) -> Analysis {
     }
 }
 
+#[allow(dead_code)]
 fn open_in_editor(path: &Path) -> crate::Result<()> {
     let editor = std::env::var("EDITOR")
         .or_else(|_| std::env::var("VISUAL"))
@@ -180,36 +180,30 @@ fn open_in_editor(path: &Path) -> crate::Result<()> {
     Ok(())
 }
 
-async fn install_skill(fs: &Fs, skill_path: &Path, home_dir: &Path) -> crate::Result<()> {
-    if !fs.exists(skill_path) {
-        return Err(crate::format_err!(
-            "SKILL.md not found at {}",
-            skill_path.display()
-        ));
-    }
-
-    println!("Opening {} for review...", skill_path.display());
-    open_in_editor(skill_path)?;
-
-    println!();
-    if !prompt_confirm("Install this skill to ~/.kiro/skills/kg-helper/SKILL.md?") {
-        println!("Installation cancelled.");
-        return Ok(());
-    }
-
+async fn install_skill(fs: &Fs, home_dir: &Path) -> crate::Result<()> {
     let skill_dir = home_dir.join(".kiro").join("skills").join(SKILL_NAME);
-    let skill_md_path = skill_dir.join("SKILL.md");
+    let ref_dir = home_dir
+        .join(".kiro")
+        .join("skills")
+        .join(SKILL_NAME)
+        .join("references");
+    let assets_dir = home_dir
+        .join(".kiro")
+        .join("skills")
+        .join(SKILL_NAME)
+        .join("assets");
 
-    fs.create_dir_all(&skill_dir)
+    for p in [&skill_dir, &ref_dir, &assets_dir] {
+        fs.create_dir_all(p)
+            .await
+            .wrap_err_with(|| format!("Failed to create {}", p.display()))?;
+    }
+
+    let skill_path = skill_dir.join("SKILL.md");
+    fs.write(&skill_path, SKILL_MD)
         .await
-        .wrap_err_with(|| format!("Failed to create {}", skill_dir.display()))?;
-
-    let content = fs.read_to_string(skill_path).await?;
-    fs.write(&skill_md_path, &content)
-        .await
-        .wrap_err_with(|| format!("Failed to write {}", skill_md_path.display()))?;
-
-    println!("✓ Installed {}", skill_md_path.display());
+        .wrap_err_with(|| format!("Failed to write {}", skill_path.display()))?;
+    println!("✓ Installed {}", skill_path.display());
     println!();
     println!("Done! Start kiro-cli and ask:");
     println!("  \"Help me set up kg for my project\"");
@@ -217,76 +211,37 @@ async fn install_skill(fs: &Fs, skill_path: &Path, home_dir: &Path) -> crate::Re
     Ok(())
 }
 
-pub async fn execute(fs: &Fs, home_dir: &Path, install_path: Option<PathBuf>) -> crate::Result<()> {
-    if let Some(path) = install_path {
-        return install_skill(fs, &path, home_dir).await;
-    }
-    let global_agents_dir = home_dir.join(".kiro").join("agents");
-    let global_files = find_agent_jsons(fs, &global_agents_dir).await?;
-    let total = global_files.len();
-
-    if total > 0 {
-        println!("Found {total} agent JSON file(s):");
-        for (name, path) in &global_files {
-            println!("  [global] {} ({})", name, path.display());
-        }
-    } else {
-        println!("No existing ~/.kiro/agents/*.json files found.");
-        println!("That's fine -- the skill will help you start from scratch.");
-    }
-
-    let mut agents = BTreeMap::new();
-    for (name, path) in &global_files {
-        let content = fs
-            .read_to_string(path)
-            .await
-            .wrap_err_with(|| format!("Failed to read {}", path.display()))?;
-        let agent = parse_agent(&content, path, "global")?;
-        agents.insert(name.clone(), agent);
-    }
-
+pub async fn execute(fs: &Fs, home_dir: &Path) -> crate::Result<()> {
     let skill_dir = home_dir.join(".kiro").join("skills").join(SKILL_NAME);
     let refs_dir = skill_dir.join("references");
-    let analysis_path = refs_dir.join("analysis.json");
-    let temp_skill_path = std::env::temp_dir().join("kg-helper-SKILL.md");
 
-    println!();
-    println!("This will create:");
-    if !agents.is_empty() {
-        println!("  {}", analysis_path.display());
-    }
-    println!("  {} (for review)", temp_skill_path.display());
-
-    if !prompt_confirm("\nProceed?") {
-        println!("Aborted.");
-        return Ok(());
-    }
-
-    if !agents.is_empty() {
-        fs.create_dir_all(&refs_dir)
+    // Nuke and recreate
+    if fs.exists(&skill_dir) {
+        fs.remove_dir_all(&skill_dir)
             .await
-            .wrap_err_with(|| format!("Failed to create {}", refs_dir.display()))?;
+            .wrap_err_with(|| format!("Failed to remove {}", skill_dir.display()))?;
+    }
+    install_skill(fs, home_dir).await?;
+
+    // Scan agents
+    let global_agents_dir = home_dir.join(".kiro").join("agents");
+    let global_files = find_agent_jsons(fs, &global_agents_dir).await?;
+
+    if !global_files.is_empty() {
+        println!("Found {} agent JSON file(s)", global_files.len());
+        let mut agents = BTreeMap::new();
+        for (name, path) in &global_files {
+            let content = fs.read_to_string(path).await?;
+            let agent = parse_agent(&content, path, "global")?;
+            agents.insert(name.clone(), agent);
+        }
 
         let analysis = build_analysis(agents);
-        let json = facet_json::to_string(&analysis).wrap_err("Failed to serialize analysis")?;
-        fs.write(&analysis_path, &json)
-            .await
-            .wrap_err_with(|| format!("Failed to write {}", analysis_path.display()))?;
-        println!("✓ Created {}", analysis_path.display());
+        let json = facet_json::to_string(&analysis)?;
+        let analysis_path = refs_dir.join("analysis.json");
+        fs.write(&analysis_path, &json).await?;
+        println!("✓ {}", analysis_path.display());
     }
-
-    fs.write(&temp_skill_path, SKILL_MD)
-        .await
-        .wrap_err_with(|| format!("Failed to write {}", temp_skill_path.display()))?;
-    println!("✓ Created {}", temp_skill_path.display());
-
-    println!();
-    println!("Next steps:");
-    println!("  1. Review the SKILL.md file (ask another agent to check it if you want)");
-    println!(
-        "  2. Run: kg bootstrap --install {}",
-        temp_skill_path.display()
-    );
 
     Ok(())
 }
@@ -296,11 +251,13 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_find_agent_jsons_empty() -> crate::Result<()> {
+    async fn test_find_agent_jsons() -> crate::Result<()> {
         let fs = Fs::new();
-        let home = PathBuf::from("/home/testuser");
+        let home = PathBuf::from(crate::os::ACTIVE_USER_HOME);
         let files = find_agent_jsons(&fs, &home.join(".kiro").join("agents")).await?;
-        assert!(files.is_empty());
+        assert_eq!(files.len(), 2);
+        assert_eq!(files[0].0, "default");
+        assert_eq!(files[1].0, "rust");
         Ok(())
     }
 
@@ -393,7 +350,32 @@ mod tests {
     #[tokio::test]
     async fn test_skill_md_embedded() -> crate::Result<()> {
         assert!(SKILL_MD.contains("kg-helper"));
-        assert!(SKILL_MD.contains("Bootstrap"));
+        assert!(SKILL_MD.contains("bootstrap"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_bootstrap_force_e2e() -> crate::Result<()> {
+        let fs = Fs::new();
+        let home = PathBuf::from(crate::os::ACTIVE_USER_HOME);
+
+        execute(&fs, &home).await?;
+
+        let analysis_path = home
+            .join(".kiro")
+            .join("skills")
+            .join(SKILL_NAME)
+            .join("references")
+            .join("analysis.json");
+        assert!(fs.exists(&analysis_path), "analysis.json not created");
+
+        let content = fs.read_to_string(&analysis_path).await?;
+        let value: serde_json::Value = serde_json::from_str(&content)?;
+        assert_eq!(value["summary"]["total_agents"], 2);
+        assert!(value["agents"]["default"].is_object());
+        assert!(value["agents"]["rust"].is_object());
+
         Ok(())
     }
 }

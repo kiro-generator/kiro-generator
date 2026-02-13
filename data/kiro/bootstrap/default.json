@@ -1,0 +1,204 @@
+{
+  "name": "default",
+  "description": "my default agent",
+  "mcpServers": {
+    "context7": {
+      "command": "context7",
+      "disabled": true
+    }
+  },
+  "tools": ["*"],
+  "allowedTools": [
+    "@bun",
+    "knowledge",
+    "@context7",
+    "web_fetch",
+    "subagent",
+    "read",
+    "todo_list",
+    "introspect",
+    "web_search"
+  ],
+  "resources": [
+    "file://.kiro/steering/**/*.md",
+    "file://README.md",
+    "skill://~/.config/agents/skills/**/SKILL.md",
+    {
+      "name": "biome",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/biome",
+      "description": "biome javascript typescript formatter and linter",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "ghostty",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/ghostty",
+      "description": "terminal",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "helix",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/helix",
+      "description": "helix terminal editor IDE",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "niri",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/niri",
+      "description": "wayland composer",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "zola",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/zola",
+      "description": "zola HTML static generator",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "atuin",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/atuin",
+      "description": "atuin command line history",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "noctalia",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/noctalia",
+      "description": "noctalia wayland shell",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "aws-mcp",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/aws-mcp",
+      "description": "aws mcp server",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "starship",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/external/starship",
+      "description": "starship terminal prompt",
+      "indexType": "best",
+      "autoUpdate": false
+    },
+    {
+      "name": "systemd",
+      "type": "knowledgeBase",
+      "source": "file:///home/user/.config/agents/knowledge/systemd",
+      "description": "Systemd man pages to markdown",
+      "indexType": "best",
+      "autoUpdate": false
+    }
+  ],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "hook-git-status"
+      }
+    ]
+  },
+  "toolsSettings": {
+    "shell": {
+      "allowedCommands": [
+        "gh run watch .*",
+        "^man .*",
+        "gh pr comment .*",
+        "^jq .*",
+        "gh run download .*",
+        "git status .*",
+        "pgrep .*",
+        "gh pr list .*",
+        "git log .*",
+        "gh workflow .*",
+        "rg .*",
+        "mygh pr create .*",
+        "mygh pr edit .*",
+        "gh pr edit .*",
+        "gh pr diff .*",
+        "git grep .*",
+        "mygh pr comment .*",
+        "gh run view .*",
+        "mygh pr review .*",
+        "mygh run cancel .*",
+        "git branch .*",
+        "^ls .*",
+        "mygh run list .*",
+        "mygh pr list .*",
+        "git remote .*",
+        "gh run cancel .*",
+        "readlink.*",
+        "^wc .*",
+        "mygh workflow .*",
+        "gh pr review .*",
+        "grep .*",
+        "mygh run view .*",
+        "git fetch .*",
+        "git diff .*",
+        "mygh run download .*",
+        "mygh run watch .*",
+        "gh run list .*",
+        "head .*",
+        "find .*",
+        "notify-send.*",
+        "logger.*",
+        "tail .*",
+        "git ls-remote .*",
+        "^yq .*",
+        "dig .+",
+        "mygh pr diff .*",
+        "gh pr view .*",
+        "git pull .*",
+        "mygh pr view .*",
+        "gh pr create .*",
+        "pdf2 .*",
+        "^cd.*",
+        "^kg .*",
+        "^ps .*"
+      ],
+      "deniedCommands": [
+        "\\srm .*",
+        ".*npm install.*",
+        "git tag .*",
+        ".*patch.*",
+        ".*bun install.*",
+        ".*srm.*",
+        "\\A.*\\bpkill\\b.*\\z",
+        "\\A.*\\bkill\\b.*\\z",
+        "git push .*",
+        ".*rollout.*",
+        ".*yarn install.*",
+        ".*uvx.*",
+        ".*delete.*",
+        ".*destroy.*",
+        "git commit .*",
+        ".*npx.*",
+        ".pulumi up.*"
+      ],
+      "denyByDefault": false
+    },
+    "write": {
+      "allowedPaths": [
+        "~/.config/agents/scratchpad/**",
+        "~/.config/agents/generators/**"
+      ]
+    },
+    "subagent": {
+      "allowedAgents": ["jina", "gh-workflow"]
+    }
+  },
+  "useLegacyMcpJson": false
+}

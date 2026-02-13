@@ -74,6 +74,9 @@ src/
 - `docs/` -- mdbook documentation (source in `docs/src/`, built to `docs/book/`)
 - `docs/kiro/` -- Scraped Kiro reference docs (agent config spec, tools, hooks, etc.)
 - `schemas/` -- JSON schema files for manifest and agent validation
-- `resources/` -- SKILL.md, systemd unit files, config examples
+- `resources/` -- Systemd unit files, config examples, and the kg-helper skill
+  - `resources/kg-helper/` -- Agent skill package (installed by `kg bootstrap`)
+    - `SKILL.md` -- Operational guide for agents helping users with kg
+    - `references/` -- Detailed docs loaded on demand (templates, bootstrap, schemas)
 - `scripts/` -- CI, formatting, coverage scripts
 - `.kiro/generators/` -- This project's own kg manifests (dogfooding)

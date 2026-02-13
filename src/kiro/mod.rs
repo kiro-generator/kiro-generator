@@ -69,7 +69,7 @@ impl Display for KiroAgent {
 
 impl KiroAgent {
     pub fn validate(&self) -> Result<()> {
-        let schema: serde_json::Value = serde_json::from_str(crate::schema::SCHEMA)?;
+        let schema: serde_json::Value = serde_json::from_str(crate::schema::KIRO_OUTPUT_SCHEMA)?;
         let validator = jsonschema::validator_for(&schema)?;
         let instance = serde_json::from_str(&facet_json::to_string(&self)?)?;
 

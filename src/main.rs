@@ -156,8 +156,8 @@ async fn main() -> Result<()> {
         return init(&fs, &home_dir).await;
     }
 
-    if let commands::Command::Bootstrap(args) = &cli.command {
-        return commands::bootstrap::execute(&fs, &home_dir, args.install.clone()).await;
+    if matches!(cli.command, commands::Command::Bootstrap(..)) {
+        return commands::bootstrap::execute(&fs, &home_dir).await;
     }
 
     if let commands::Command::Schema(schema_cmd) = &cli.command {
