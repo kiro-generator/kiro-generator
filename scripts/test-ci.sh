@@ -18,7 +18,7 @@ $KG init
 $KG validate
 $KG v
 $KG v --debug
-$KG v --trace aws-test --debug
+$KG v --trace --debug aws-test
 $KG v --local
 $KG v --global
 $KG generate
@@ -32,7 +32,7 @@ $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/nul
 $KG bootstrap
 ls -R ~/.kiro/skills
 
-for f in SKILLS.md assets/analysis.json; do
+for f in SKILL.md assets/analysis.json; do
   if [ ! -f ~/.kiro/skills/kg-helper/$f ]; then
     echo "::error::$f missing" >/dev/stderr
     exit 1
