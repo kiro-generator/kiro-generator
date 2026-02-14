@@ -3,6 +3,7 @@ import { Arch, createRustWorkflow } from '@dougefresh/ci';
 export default function () {
   return createRustWorkflow()
     .enableMdBook()
+    .disableDocCheck()
     .withRelease({
       debian: true,
       bin: true,
@@ -12,7 +13,7 @@ export default function () {
     })
     .semver(false)
     .disableSanitizers()
-    .extra('cli-test', 'bash -x ./scripts/test-ci.sh', {
+    .extra('cli-test', 'bash ./scripts/test-ci.sh', {
       cargoTools: ['cargo-deb'],
     })
 

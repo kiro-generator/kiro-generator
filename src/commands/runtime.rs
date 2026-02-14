@@ -63,7 +63,6 @@ mod tests {
         let home_dir = dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?;
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Auto,
             command: Command::Validate(ValidateArgs {
                 local: true,
@@ -80,7 +79,6 @@ mod tests {
         let home_dir = dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?;
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Auto,
             command: Command::Generate(GenerateArgs {
                 global: true,
@@ -97,7 +95,6 @@ mod tests {
         let home_dir = dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?;
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Auto,
             command: Command::Validate(ValidateArgs::default()),
         };
@@ -119,7 +116,6 @@ mod tests {
         );
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Auto,
             command: Command::Validate(ValidateArgs {
                 local: true,

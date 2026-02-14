@@ -96,7 +96,6 @@ mod tests {
         let fs = Fs::new();
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Never,
             command: Command::Validate(ValidateArgs {
                 local: true,
@@ -114,7 +113,6 @@ mod tests {
 
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Never,
             command: Command::Generate(GenerateArgs {
                 local: true,
@@ -125,7 +123,6 @@ mod tests {
         cli.execute(&generator).await?;
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Never,
             command: Command::Diff(DiffArgs::default()),
         };
@@ -144,6 +141,7 @@ mod tests {
             crate::output::OutputFormat::Json,
         )?;
         let args = super::super::TreeArgs {
+            trace: None,
             agents: vec!["nonexistent".to_string()],
         };
         let value = execute_tree(&generator, &args)?;
@@ -161,6 +159,7 @@ mod tests {
             crate::output::OutputFormat::Json,
         )?;
         let args = super::super::TreeArgs {
+            trace: None,
             agents: vec!["base".to_string(), "dependabot".to_string()],
         };
         let value = execute_tree(&generator, &args)?;

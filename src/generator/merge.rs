@@ -3,7 +3,7 @@ use {super::*, std::collections::HashSet};
 impl Generator {
     /// Resolve transitive inheritance chain for an agent
     /// Returns ordered list of parent names from base to most derived
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level = "info", skip(self))]
     fn resolve_transitive_inheritance(
         &self,
         agent: &Manifest,
@@ -41,7 +41,7 @@ impl Generator {
     }
 
     /// Merge all agents with transitive inheritance resolution
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level = "info", skip(self))]
     pub fn merge(&self) -> Result<Vec<Manifest>> {
         let mut resolved_agents: HashMap<String, Manifest> =
             HashMap::with_capacity(self.resolved.agents.len());
@@ -49,7 +49,7 @@ impl Generator {
         for (name, agent) in &self.resolved.agents {
             let mut visited = HashSet::new();
             let parents = self.resolve_transitive_inheritance(agent, &mut visited)?;
-            let span = tracing::debug_span!(
+            let span = tracing::info_span!(
                 "agent",
                 name = name.as_str(),
                 parents = parents.len(),

@@ -141,7 +141,17 @@ async fn main() -> Result<()> {
         println!("{}", clap::crate_version!());
         return Ok(());
     }
-    init_tracing(cli.debug, cli.trace.as_deref());
+
+    // Extract trace option from commands that support it
+    let trace = match &cli.command {
+        commands::Command::Validate(args) => args.trace.as_deref(),
+        commands::Command::Generate(args) => args.trace.as_deref(),
+        commands::Command::Diff(args) => args.trace.as_deref(),
+        commands::Command::Tree(args) => args.trace.as_deref(),
+        _ => None,
+    };
+
+    init_tracing(cli.debug, trace);
     let span = tracing::info_span!(
         "main",
         dry_run = tracing::field::Empty,

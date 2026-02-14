@@ -1,6 +1,6 @@
 # Schemas
 
-kg provides JSON schemas for validating configuration and inspecting available fields. Schemas are installed locally during bootstrap and can be updated on demand.
+kg provides JSON schemas for validating configuration and inspecting available fields. Schemas are installed locally by `kg bootstrap` — these paths won't exist until bootstrap has run. Schemas can be updated on demand.
 
 ## Available Schemas
 
@@ -221,8 +221,7 @@ When helping a user add or modify a TOML field:
 
 1. Check local schema first: `jq '.properties.FIELD_NAME' ~/.kiro/skills/kg-helper/assets/kg-agent.json`
 2. If field is missing, update schema: `kg schema agent > ~/.kiro/skills/kg-helper/assets/kg-agent.json`
-3. If still missing, fetch from URL: `curl -o ~/.kiro/skills/kg-helper/assets/kg-agent.json https://kiro-generator.io/kg-agent.json`
-4. If field doesn't exist in any source, tell the user their kg binary may need updating
+3. If field doesn't exist after updating, tell the user their kg binary may need updating
 
 ## Troubleshooting Generation Issues
 

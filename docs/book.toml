@@ -24,8 +24,8 @@ additional-js = []
 # Copy schema files to output
 [output.html.copy-files]
 files = [
-    "../schemas/agent.json",
-    "../schemas/manifest.json",
+  "../schemas/agent.json",
+  "../schemas/manifest.json",
 ]
 
 [output.html.print]

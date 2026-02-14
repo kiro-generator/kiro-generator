@@ -48,14 +48,14 @@ Both layers exist at two locations:
 
 Local configs **merge with** global configs (not replace). This is what makes kg useful for real projects -- global tooling + local project context in one generated agent.
 
-**Merge rules** when configs combine via inheritance or global+local:
+**Merge rules** (critical — understand these before editing configs):
 - **Arrays** (allowedTools, resources): Combined
 - **Objects** (toolsSettings, mcpServers): Deep merged
 - **Scalars** (description, model): Child replaces parent
 
 ## Step 1: Discovery
 
-Before reading or modifying any config files, run discovery to understand the current setup:
+Before reading or modifying any config files, run discovery. `kg tree` shows which TOML files contribute to each agent and how they inherit:
 
 ```bash
 # Show all agents
@@ -97,6 +97,8 @@ To modify an agent's configuration:
 1. Run `kg tree <agent-name>` to find which TOML files define it
 2. Read the `sources` array -- it tells you exactly which files to edit
 3. Edit the TOML file(s) directly
+
+For available TOML fields, see `references/schemas.md` or run `kg schema agent`.
 
 ## Step 3: Validate Changes
 
@@ -183,6 +185,8 @@ All found configs merge together. Use `kg tree rust` to see which sources apply.
 - **Named agent not found**: `kg tree nonexistent` returns empty JSON object `{}` (exit 0). The requested agent key will be absent from the response.
 - **Invalid TOML**: `kg validate` reports parse errors with file path and line number
 
+**Recovery:** If validation fails, fix the parse error shown in the output. If `kg generate` produces unexpected results, run `kg tree <agent>` to trace which source file contributes the unexpected value.
+
 ## Reference Documents
 
 For detailed guidance on specific topics, load these as needed:
@@ -193,10 +197,4 @@ For detailed guidance on specific topics, load these as needed:
 
 ## Keeping This Skill Updated
 
-This skill document may be updated as kg evolves. To get the latest version:
-
-```bash
-curl -o ~/.kiro/skills/kg-helper/SKILL.md https://kiro-generator.io/SKILL.md
-```
-
-Check for updates periodically or when kg releases a new version. The skill document version is tracked in the metadata header.
+This skill is embedded in the `kg` binary and installed by `kg bootstrap`. To update, install the latest `kg` version and re-run `kg bootstrap`.

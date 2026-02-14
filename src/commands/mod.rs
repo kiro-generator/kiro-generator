@@ -31,10 +31,6 @@ fn __cli_styles() -> Styles {
 pub struct Cli {
     #[arg(long, global = true, short = 'd' , short_aliases = ['v'], aliases = ["verbose", "debug"], default_value = "false", env = "KG_DEBUG")]
     pub debug: bool,
-    /// Enable trace level debug for an agent. Use keyword 'all' to debug all
-    /// agents. Note, this is very verbose
-    #[arg(long, short = 't', global = true, value_name = "AGENT_NAME")]
-    pub trace: Option<String>,
     /// When to show color.
     #[arg(long = "color", short = 'c',  global = true, default_value_t = ColorOverride::default(), value_name = "WHEN", env = "KG_COLOR")]
     pub color_override: ColorOverride,
@@ -57,6 +53,10 @@ pub struct BootstrapArgs {
 
 #[derive(clap::Args, Clone, Default)]
 pub struct ValidateArgs {
+    /// Enable trace level debug for an agent. Use keyword 'all' to debug all
+    /// agents. Note, this is very verbose
+    #[arg(long, short = 't', value_name = "AGENT_NAME")]
+    pub trace: Option<String>,
     /// Use only local configuration (ignore global ~/.kiro/generators/)
     #[arg(long, conflicts_with = "global")]
     pub local: bool,
@@ -73,6 +73,10 @@ pub struct ValidateArgs {
 
 #[derive(clap::Args, Clone, Default)]
 pub struct GenerateArgs {
+    /// Enable trace level debug for an agent. Use keyword 'all' to debug all
+    /// agents. Note, this is very verbose
+    #[arg(long, short = 't', value_name = "AGENT_NAME")]
+    pub trace: Option<String>,
     /// Use only local configuration (ignore global ~/.kiro/generators/)
     #[arg(long, conflicts_with = "global")]
     pub local: bool,
@@ -100,6 +104,10 @@ pub struct GenerateArgs {
 
 #[derive(clap::Args, Clone, Default, Debug)]
 pub struct DiffArgs {
+    /// Enable trace level debug for an agent. Use keyword 'all' to debug all
+    /// agents. Note, this is very verbose
+    #[arg(long, short = 't', value_name = "AGENT_NAME")]
+    pub trace: Option<String>,
     /// Use only global configuration (ignore local .kiro/generators/)
     #[arg(short = 'g', long)]
     pub global: bool,
@@ -124,6 +132,10 @@ pub struct WatchArgs {
 
 #[derive(clap::Args, Clone, Default)]
 pub struct TreeArgs {
+    /// Enable trace level debug for an agent. Use keyword 'all' to debug all
+    /// agents. Note, this is very verbose
+    #[arg(long, short = 't', value_name = "AGENT_NAME")]
+    pub trace: Option<String>,
     /// Show specific agents and their inheritance chains
     pub agents: Vec<String>,
 }
@@ -248,7 +260,6 @@ mod tests {
     fn test_dry_run() {
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Auto,
             command: Command::Validate(ValidateArgs::default()),
         };
@@ -265,7 +276,6 @@ mod tests {
     fn test_is_local() {
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Auto,
             command: Command::Validate(ValidateArgs {
                 local: true,
@@ -280,7 +290,6 @@ mod tests {
     fn test_is_global() {
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Auto,
             command: Command::Generate(GenerateArgs {
                 global: true,
@@ -295,7 +304,6 @@ mod tests {
     fn test_color_auto() {
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Auto,
             command: Command::default(),
         };
@@ -307,7 +315,6 @@ mod tests {
     fn test_color_always() {
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Always,
             command: Command::default(),
         };
@@ -318,7 +325,6 @@ mod tests {
     fn test_color_never() {
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Never,
             command: Command::default(),
         };
@@ -329,7 +335,6 @@ mod tests {
     fn test_format_color() {
         let cli = Cli {
             debug: false,
-            trace: None,
             color_override: ColorOverride::Always,
             command: Command::default(),
         };
