@@ -22,12 +22,15 @@ $KG v --debug --trace aws-test
 $KG v --local
 $KG v --global
 $KG generate
+$KG generate --global
 $KG g
 $KG diff
 $KG schema manifest | jq . >/dev/null
 $KG schema agent | jq . >/dev/null
 $KG schema manifest | jq -e '.description | contains("manifest TOML files")' >/dev/null
 $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/null
+
+rm -rf .kiro/generators
 
 $KG bootstrap
 ls -R ~/.kiro/skills
