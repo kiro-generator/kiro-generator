@@ -3,6 +3,7 @@ import { Arch, createRustWorkflow } from '@dougefresh/ci';
 export default function () {
   return createRustWorkflow()
     .enableMdBook()
+    .disableDocCheck()
     .withRelease({
       debian: true,
       bin: true,

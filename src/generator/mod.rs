@@ -264,7 +264,7 @@ impl Generator {
         // If local agents exist, only write those
         let write_all_agents = !self.resolved.has_local;
         for agent in agents {
-            let span = tracing::debug_span!("agent", name = ?agent.name, local = self.is_local(&agent.name));
+            let span = tracing::info_span!("agent", name = ?agent.name, local = self.is_local(&agent.name));
             let _enter = span.enter();
             if write_all_agents || self.is_local(&agent.name) {
                 results.push(self.write(agent, dry_run, skip_unchanged).await?);

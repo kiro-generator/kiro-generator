@@ -30,4 +30,23 @@ $KG schema manifest | jq -e '.description | contains("manifest TOML files")' >/d
 $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/null
 
 $KG bootstrap
+ls -R ~/.kiro/skills
+
+for f in SKILLS.md assets/analysis.json; do
+  if [ ! -f ~/.kiro/skills/kg-helper/$f ]; then
+    echo "::error::$f missing" >/dev/stderr
+    exit 1
+  fi
+done
+
+(
+  cd resources/kg-helper/references
+  for f in *.md; do
+    if [ ! -f ~/.kiro/skills/kg-helper/references/"$f" ]; then
+      echo "::error::$f reference missing" >/dev/stderr
+      exit 1
+    fi
+  done
+)
+
 cargo deb

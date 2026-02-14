@@ -7,6 +7,7 @@ use {
 
 /// Load all TOML files from a manifests directory and merge them.
 /// Returns the merged config and a mapping of agent name → manifest file path.
+#[tracing::instrument(level = "info", skip(fs), fields(dir = %dir.as_ref().display()))]
 fn load_manifests(
     fs: &Fs,
     dir: impl AsRef<Path>,
@@ -34,6 +35,7 @@ fn load_manifests(
     agent_files.sort();
 
     for path in agent_files {
+        let _span = tracing::info_span!("parse_manifest", path = %path.display()).entered();
         if let Some(config_result) = crate::toml_parse_path(fs, &path) {
             let config: GeneratorConfig = config_result?;
             let config = config.populate_names();
@@ -177,7 +179,7 @@ pub fn discover(
     let mut sources: KdlSources = KdlSources::from(&all_agents_names);
 
     for (name, agent_sources) in sources.iter_mut() {
-        let span = tracing::debug_span!("agent", name = ?name);
+        let span = tracing::info_span!("agent", name = ?name);
         let _enter = span.enter();
         tracing::trace!("matching location");
 
