@@ -18,7 +18,7 @@ $KG init
 $KG validate
 $KG v
 $KG v --debug
-$KG v --trace --debug aws-test
+$KG v --debug --trace aws-test
 $KG v --local
 $KG v --global
 $KG generate
