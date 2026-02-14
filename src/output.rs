@@ -35,6 +35,20 @@ impl Display for ColorOverride {
         write!(f, "{s}")
     }
 }
+
+#[derive(Copy, Clone, Default, Debug, clap::ValueEnum)]
+pub enum DiffFormatArg {
+    /// Structural diff with color, unchanged fields shown
+    Full,
+    /// Dot-notation paths, only changes, with color
+    #[default]
+    Compact,
+    /// Structural diff, no color
+    Plain,
+    /// Dot-notation paths, only changes, no color (best for agents/piping)
+    Agent,
+}
+
 #[derive(Copy, Clone, Default, Debug, clap::ValueEnum)]
 pub enum OutputFormatArg {
     #[default]
@@ -53,6 +67,17 @@ pub enum OutputFormat {
 impl Default for OutputFormat {
     fn default() -> Self {
         Self::Table(true)
+    }
+}
+
+impl Display for DiffFormatArg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Full => write!(f, "full"),
+            Self::Compact => write!(f, "compact"),
+            Self::Plain => write!(f, "plain"),
+            Self::Agent => write!(f, "agent"),
+        }
     }
 }
 

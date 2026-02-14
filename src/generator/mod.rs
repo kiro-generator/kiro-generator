@@ -150,7 +150,12 @@ impl Generator {
     }
 
     /// Compute diff between existing agent file and generated agent
-    fn compute_diff(&self, agent_name: &str, generated: &KiroAgent) -> Result<AgentDiff> {
+    fn compute_diff(
+        &self,
+        agent_name: &str,
+        generated: &KiroAgent,
+        format: crate::output::DiffFormatArg,
+    ) -> Result<AgentDiff> {
         let destination = self
             .destination_dir(agent_name)
             .join(format!("{}.json", agent_name));
@@ -174,12 +179,43 @@ impl Generator {
         if diff.is_equal() {
             Ok(AgentDiff::Same)
         } else {
-            Ok(AgentDiff::Changed(rediff::format_diff_default(&diff)))
+            // Choose formatting based on args
+            let formatted = match format {
+                crate::output::DiffFormatArg::Agent => rediff::format_diff_compact_plain(&diff),
+                crate::output::DiffFormatArg::Compact => rediff::format_diff_compact(&diff),
+                crate::output::DiffFormatArg::Plain => {
+                    let config = rediff::DiffFormat {
+                        colors: false,
+                        max_inline_changes: 10,
+                        prefer_compact: false,
+                    };
+                    rediff::format_diff(&diff, &config)
+                }
+                crate::output::DiffFormatArg::Full => {
+                    let config = rediff::DiffFormat {
+                        colors: true,
+                        max_inline_changes: 10,
+                        prefer_compact: false,
+                    };
+                    rediff::format_diff(&diff, &config)
+                }
+            };
+
+            Ok(AgentDiff::Changed(formatted))
         }
     }
 
     #[tracing::instrument(level = "info")]
-    pub fn diff(&self) -> Result<()> {
+    pub fn diff(&self, args: &crate::commands::DiffArgs) -> Result<()> {
+        self.diff_agents(args.format, &[])
+    }
+
+    /// Diff for generate command — always compact, no filter
+    pub fn generate_diff(&self) -> Result<()> {
+        self.diff_agents(crate::output::DiffFormatArg::Compact, &[])
+    }
+
+    fn diff_agents(&self, format: crate::output::DiffFormatArg, _filter: &[String]) -> Result<()> {
         let agents: Vec<Manifest> = self.merge()?.into_iter().filter(|a| !a.template).collect();
         let all_agents = !self.resolved.has_local;
         let mut changed = 0;
@@ -192,7 +228,7 @@ impl Generator {
                     .join(format!("{}.json", a.name));
                 let generated_agent = KiroAgent::try_from(&a)?;
 
-                match self.compute_diff(&a.name, &generated_agent)? {
+                match self.compute_diff(&a.name, &generated_agent, format)? {
                     AgentDiff::New => {
                         println!("{}: (new agent)", destination.display());
                         println!();
@@ -220,8 +256,8 @@ impl Generator {
         Ok(())
     }
 
-    #[tracing::instrument(skip(dry_run, force), level = "info")]
-    pub async fn write_all(&self, dry_run: bool, force: bool) -> Result<Vec<AgentResult>> {
+    #[tracing::instrument(skip(dry_run, skip_unchanged), level = "info")]
+    pub async fn write_all(&self, dry_run: bool, skip_unchanged: bool) -> Result<Vec<AgentResult>> {
         let agents = self.merge()?;
         let mut results = Vec::with_capacity(agents.len());
         // If no local agents defined, write all (global) agents
@@ -231,18 +267,18 @@ impl Generator {
             let span = tracing::debug_span!("agent", name = ?agent.name, local = self.is_local(&agent.name));
             let _enter = span.enter();
             if write_all_agents || self.is_local(&agent.name) {
-                results.push(self.write(agent, dry_run, force).await?);
+                results.push(self.write(agent, dry_run, skip_unchanged).await?);
             }
         }
         Ok(results)
     }
 
-    #[tracing::instrument(skip(dry_run,force), level = "info", fields(out = tracing::field::Empty))]
+    #[tracing::instrument(skip(dry_run,skip_unchanged), level = "info", fields(out = tracing::field::Empty))]
     pub(crate) async fn write(
         &self,
         agent: Manifest,
         dry_run: bool,
-        force: bool,
+        skip_unchanged: bool,
     ) -> Result<AgentResult> {
         let destination = self.destination_dir(&agent.name);
         let result = AgentResult {
@@ -277,7 +313,8 @@ impl Generator {
 
             tracing::Span::current().record("out", tracing::field::display(&out.display()));
 
-            if force {
+            if !skip_unchanged {
+                // Default: always write
                 self.fs
                     .write(&out, facet_json::to_string_pretty(&result.kiro_agent)?)
                     .await
@@ -285,7 +322,12 @@ impl Generator {
                 return Ok(result);
             }
 
-            let diff = self.compute_diff(&result.agent.name, &result.kiro_agent)?;
+            // --skip-unchanged: compute diff and skip if unchanged
+            let diff = self.compute_diff(
+                &result.agent.name,
+                &result.kiro_agent,
+                crate::output::DiffFormatArg::Compact,
+            )?;
             tracing::debug!("{diff}");
             match diff {
                 AgentDiff::New => {

@@ -5,9 +5,9 @@ mod kiro;
 mod os;
 pub mod output;
 mod schema;
-mod schema_optional;
 mod source;
 mod tracing_init;
+mod util;
 
 #[cfg(test)]
 pub use kg_config::toml_parse;
@@ -153,6 +153,10 @@ async fn main() -> Result<()> {
 
     if matches!(cli.command, commands::Command::Init(..)) {
         return init(&fs, &home_dir).await;
+    }
+
+    if matches!(cli.command, commands::Command::Bootstrap(..)) {
+        return commands::bootstrap::execute(&fs, &home_dir).await;
     }
 
     if let commands::Command::Schema(schema_cmd) = &cli.command {

@@ -1,0 +1,13 @@
+{
+  "name": "review-groups",
+  "description": "Review and refine groups.json - split over-aggregated groups, merge related ones",
+  "prompt": "You are a release groups reviewer. Review and refine groups.json.",
+  "tools": ["@builtin"],
+  "allowedTools": ["@builtin"],
+  "resources": [
+    "file://README.md",
+    "file://.kiro/steering/**/*.md",
+    "file://.kiro/agents/prompts/review-groups.md"
+  ],
+  "model": "claude-opus-4.6"
+}

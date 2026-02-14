@@ -16,7 +16,7 @@ impl Cli {
         match &self.command {
             Command::Validate(args) => self.execute_validate(generator, args).await,
             Command::Generate(args) => self.execute_generate(generator, args).await,
-            Command::Diff(_) => generator.diff(),
+            Command::Diff(args) => generator.diff(args),
             Command::Watch(args) => execute_watch(args).await,
             Command::Tree(args) => {
                 let value = execute_tree(generator, args)?;
@@ -35,10 +35,12 @@ impl Cli {
 
     async fn execute_generate(&self, generator: &Generator, args: &GenerateArgs) -> Result<()> {
         if args.diff {
-            generator.diff()?;
+            generator.generate_diff()?;
         }
 
-        let result = generator.write_all(self.dry_run(), args.force).await;
+        let result = generator
+            .write_all(self.dry_run(), args.skip_unchanged)
+            .await;
 
         #[cfg(target_os = "linux")]
         if args.notify {
@@ -125,7 +127,7 @@ mod tests {
             debug: false,
             trace: None,
             color_override: ColorOverride::Never,
-            command: Command::Diff(DiffArgs { global: false }),
+            command: Command::Diff(DiffArgs::default()),
         };
 
         cli.execute(&generator).await?;

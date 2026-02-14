@@ -131,6 +131,26 @@ impl Fs {
                         .ok();
                     chroot_fs.create_dir_all("./.kiro/agents").await.ok();
 
+                    // Copy bootstrap fixtures into $HOME/.kiro/agents/
+                    let bootstrap_src = std::path::Path::new("./data/kiro/bootstrap");
+                    let bootstrap_dst =
+                        PathBuf::from(ACTIVE_USER_HOME).join(".kiro").join("agents");
+                    chroot_fs.create_dir_all(&bootstrap_dst).await.ok();
+                    if let Ok(entries) = std::fs::read_dir(bootstrap_src) {
+                        for entry in entries.flatten() {
+                            if let Ok(file_type) = entry.file_type()
+                                && file_type.is_file()
+                                && let Ok(content) = std::fs::read_to_string(entry.path())
+                                && let Some(name) = entry.file_name().to_str()
+                            {
+                                chroot_fs
+                                    .write(bootstrap_dst.join(name), content)
+                                    .await
+                                    .ok();
+                            }
+                        }
+                    }
+
                     // Copy local manifests
                     if let Ok(entries) = std::fs::read_dir("./data/kiro/generators/manifests") {
                         for entry in entries.flatten() {

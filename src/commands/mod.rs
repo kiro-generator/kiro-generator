@@ -1,3 +1,4 @@
+pub(crate) mod bootstrap;
 mod execute;
 mod runtime;
 mod tree;
@@ -45,6 +46,16 @@ pub struct Cli {
 pub struct InitArgs {}
 
 #[derive(clap::Args, Clone, Default)]
+pub struct BootstrapArgs {
+    /// Install SKILL.md from a reviewed file
+    #[arg(long, value_name = "PATH")]
+    pub install: Option<PathBuf>,
+    /// Skip prompts and overwrite existing skill directory
+    #[arg(long, hide = true)]
+    pub force: bool,
+}
+
+#[derive(clap::Args, Clone, Default)]
 pub struct ValidateArgs {
     /// Use only local configuration (ignore global ~/.kiro/generators/)
     #[arg(long, conflicts_with = "global")]
@@ -71,9 +82,10 @@ pub struct GenerateArgs {
     /// Show template agents in output
     #[arg(long, default_value = "false")]
     pub show_templates: bool,
-    /// Always write agent config even if nothing has changed
-    #[arg(long, default_value = "false", env = "KG_FORCE")]
-    pub force: bool,
+    /// Skip writing agent files that appear unchanged (may miss updates due to
+    /// diff limitations)
+    #[arg(long, default_value = "false", env = "KG_SKIP_UNCHANGED")]
+    pub skip_unchanged: bool,
     /// Show diff of changes before writing
     #[arg(long, default_value = "false", env = "KG_DIFF")]
     pub diff: bool,
@@ -86,11 +98,15 @@ pub struct GenerateArgs {
     pub notify: bool,
 }
 
-#[derive(clap::Args, Clone, Default)]
+#[derive(clap::Args, Clone, Default, Debug)]
 pub struct DiffArgs {
     /// Use only global configuration (ignore local .kiro/generators/)
     #[arg(short = 'g', long)]
     pub global: bool,
+
+    /// Output format
+    #[arg(short = 'f', long, default_value_t, env = "KG_DIFF_FORMAT")]
+    pub format: crate::output::DiffFormatArg,
 }
 
 #[derive(clap::Args, Clone)]
@@ -140,6 +156,13 @@ pub enum Command {
     /// Display agent hierarchy and configuration sources as a tree
     #[command(alias = "t")]
     Tree(TreeArgs),
+    /// Scan existing .kiro/agents/*.json files and install the kg-helper skill
+    #[command(
+        alias = "b",
+        after_help = "After bootstrap, start kiro-cli and ask:\n  \"Help me set up kg for my \
+                      project\""
+    )]
+    Bootstrap(BootstrapArgs),
 }
 
 #[derive(Subcommand, Clone)]
@@ -148,6 +171,8 @@ pub enum SchemaCommand {
     Manifest,
     /// Output JSON schema for agent definition files
     Agent,
+    /// Output JSON schema for kiro-cli agent definition files (the end result)
+    KiroAgent,
 }
 
 impl Display for SchemaCommand {
@@ -155,6 +180,7 @@ impl Display for SchemaCommand {
         write!(f, "{}", match self {
             Self::Manifest => "manifest",
             Self::Agent => "agent",
+            Self::KiroAgent => "kiro-agent",
         })
     }
 }

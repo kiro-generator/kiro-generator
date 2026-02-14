@@ -1,32 +1,30 @@
 use {
-    crate::{
-        GeneratorConfig,
-        KgAgentFileDoc,
-        Result,
-        commands::SchemaCommand,
-        schema_optional::JsonSchemaOptional,
-    },
+    crate::{GeneratorConfig, KgAgentFileDoc, Result, commands::SchemaCommand},
     color_eyre::eyre::Context,
 };
 
-pub(crate) const SCHEMA: &str = include_str!("../schemas/kiro-agent.json");
+pub(crate) const KIRO_OUTPUT_SCHEMA: &str = include_str!("../schemas/kiro-agent.json");
 
 fn get_schema_description(cmd: &SchemaCommand) -> &'static str {
     match cmd {
         SchemaCommand::Manifest => "Schema for kiro-generator (kg) manifest TOML files",
         SchemaCommand::Agent => "Schema for kiro-generator (kg) agent TOML files",
+        SchemaCommand::KiroAgent => "Schema for kiro-cli agent output JSON files",
     }
 }
 
-fn build_schema(cmd: &SchemaCommand) -> Result<String> {
-    let schema = match cmd {
+pub(crate) fn build_schema(cmd: &SchemaCommand) -> Result<String> {
+    if matches!(*cmd, SchemaCommand::KiroAgent) {
+        return Ok(KIRO_OUTPUT_SCHEMA.to_string());
+    }
+    let mut schema = match cmd {
         SchemaCommand::Manifest => facet_json_schema::schema_for::<GeneratorConfig>(),
         SchemaCommand::Agent => facet_json_schema::schema_for::<KgAgentFileDoc>(),
+        SchemaCommand::KiroAgent => unreachable!(),
     };
-    let mut output: JsonSchemaOptional = schema.into();
-    output.description = Some(get_schema_description(cmd).into());
-    output.schema = Some("https://json-schema.org/draft/2020-12/schema".into());
-    facet_json::to_string_pretty(&output).wrap_err(format!("unable to generate schema for {cmd}"))
+    schema.description = Some(get_schema_description(cmd).into());
+    schema.schema = Some("https://json-schema.org/draft/2020-12/schema".into());
+    facet_json::to_string_pretty(&schema).wrap_err(format!("unable to generate schema for {cmd}"))
 }
 
 pub(crate) fn handle_schema_command(cmd: &SchemaCommand) -> Result<()> {
