@@ -15,10 +15,25 @@ categories = ["command-line-interface", "config"]
 maintainer = "dougefresh <dchimento@gmail.com>"
 section = "utility"
 priority = "optional"
+maintainer-scripts = "pkg/debian/"
 assets = [
     ["target/release/kg", "usr/bin/", "755"],
-    { source = "README.md", dest = "usr/share/doc/kiro-generator/README", mode = "644" },
+    { source = "README.md", dest = "usr/share/doc/kiro-generator/README.md", mode = "644" },
+    # Systemd units
+    { source = "resources/systemd/kiro-generator.service", dest = "usr/lib/systemd/user/", mode = "644" },
+    { source = "resources/systemd/kiro-generator-local@.service", dest = "usr/lib/systemd/user/", mode = "644" },
+    { source = "resources/systemd/kiro-generator.path", dest = "usr/lib/systemd/user/", mode = "644" },
+    { source = "resources/systemd/kiro-generator-local@.path", dest = "usr/lib/systemd/user/", mode = "644" },
+    # Default environment files
+    { source = "resources/systemd/global.env", dest = "etc/kg/", mode = "644" },
+    { source = "resources/systemd/home.env", dest = "etc/kg/", mode = "644" },
+    # kg-helper skill documentation
+    { source = "resources/kg-helper/SKILL.md", dest = "usr/share/doc/kiro-generator/kg-helper/SKILL.md", mode = "644" },
+    { source = "resources/kg-helper/references/bootstrap.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/bootstrap.md", mode = "644" },
+    { source = "resources/kg-helper/references/schemas.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/schemas.md", mode = "644" },
+    { source = "resources/kg-helper/references/templates.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/templates.md", mode = "644" },
 ]
+conf-files = ["/etc/kg/global.env", "/etc/kg/home.env"]
 
 [[bin]]
 name = "kg"

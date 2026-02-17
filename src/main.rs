@@ -100,34 +100,6 @@ async fn init(fs: &Fs, home_dir: impl AsRef<Path>) -> Result<()> {
     println!("✓ Created {}", git_toml.display());
     println!("✓ Created {}", default_toml.display());
 
-    // Create systemd environment files
-    let config_dir = std::env::var("XDG_CONFIG_HOME")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| home_dir.join(".config"));
-    let systemd_dir = config_dir.join("kg").join("systemd");
-    fs.create_dir_all(&systemd_dir)
-        .await
-        .wrap_err(format!("Failed to create {}", systemd_dir.display()))?;
-
-    let global_env = systemd_dir.join("global.env");
-    fs.write(
-        &global_env,
-        include_str!("../examples/basic/systemd/global.env"),
-    )
-    .await
-    .wrap_err(format!("Failed to write {}", global_env.display()))?;
-
-    let home_env = systemd_dir.join("home.env");
-    fs.write(
-        &home_env,
-        include_str!("../examples/basic/systemd/home.env"),
-    )
-    .await
-    .wrap_err(format!("Failed to write {}", home_env.display()))?;
-
-    println!("✓ Created {}", global_env.display());
-    println!("✓ Created {}", home_env.display());
-
     println!("\nInitialized kg configuration in {}", gen_dir.display());
 
     Ok(())

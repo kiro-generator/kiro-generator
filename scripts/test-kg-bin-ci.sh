@@ -6,8 +6,8 @@ if [ -z "$CI" ]; then
 fi
 
 set -e
-KG=./target/debug/kg
-cargo build
+KG=./target/release/kg
+cargo build --release
 
 mkdir -p .kiro
 cp -a ./data/kiro/generators .kiro
@@ -22,6 +22,7 @@ $KG v --debug --trace aws-test
 $KG v --local
 $KG v --global
 $KG generate
+$KG generate --global
 $KG g
 $KG diff
 $KG schema manifest | jq . >/dev/null
@@ -29,24 +30,13 @@ $KG schema agent | jq . >/dev/null
 $KG schema manifest | jq -e '.description | contains("manifest TOML files")' >/dev/null
 $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/null
 
-$KG bootstrap
-ls -R ~/.kiro/skills
-
-for f in SKILL.md assets/analysis.json; do
-  if [ ! -f ~/.kiro/skills/kg-helper/$f ]; then
-    echo "::error::$f missing" >/dev/stderr
-    exit 1
-  fi
-done
-
-(
-  cd resources/kg-helper/references
-  for f in *.md; do
-    if [ ! -f ~/.kiro/skills/kg-helper/references/"$f" ]; then
-      echo "::error::$f reference missing" >/dev/stderr
-      exit 1
-    fi
-  done
-)
-
-cargo deb
+rm -rf .kiro/generators .kiro/agents
+mkdir -p ~/.kiro/generators
+cp -a -v data/kiro/generators/* ~/.kiro/generators/
+$KG generate --global
+if uname | grep -q Linux; then
+  cargo deb
+  sudo dpkg -i ./target/debian/kiro-generator_*.deb
+  /usr/bin/kg --version
+  /usr/bin/kg validate --global
+fi

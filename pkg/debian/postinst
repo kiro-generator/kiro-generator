@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+# Reload systemd user daemon for all logged-in users
+# This makes the new units available without requiring logout/login
+if command -v systemctl >/dev/null 2>&1; then
+    # Get all user IDs with active systemd user sessions
+    for uid in $(loginctl list-users --no-legend | awk '{print $1}'); do
+        # Run systemctl as that user to reload their daemon
+        su - "#${uid}" -c "systemctl --user daemon-reload" 2>/dev/null || true
+    done
+fi
+
+exit 0
