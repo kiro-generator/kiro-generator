@@ -6,8 +6,8 @@ if [ -z "$CI" ]; then
 fi
 
 set -e
-KG=./target/debug/kg
-cargo build
+KG=./target/release/kg
+cargo build --release
 
 mkdir -p .kiro
 cp -a ./data/kiro/generators .kiro
@@ -30,13 +30,13 @@ $KG schema agent | jq . >/dev/null
 $KG schema manifest | jq -e '.description | contains("manifest TOML files")' >/dev/null
 $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/null
 
-rm -rf .kiro/generators .krio/agents ~/.kiro/agents/*.json ~/.kiro/generators
-mkdir -p ~/.kiro/agents
-cp -v data/kiro/bootstrap/*.json ~/.kiro/agents/
+rm -rf .kiro/generators .kiro/agents
+mkdir ~/.kiro/generators
+cp -v data/kiro/generators/* ~/.kiro/generators/
 $KG generate --global
 if uname | grep -q Linux; then
   cargo deb
   sudo dpkg -i ./target/debian/kiro-generator_*.deb
   /usr/bin/kg --version
-  /usr/bin/kg validate
+  /usr/bin/kg validate --global
 fi
