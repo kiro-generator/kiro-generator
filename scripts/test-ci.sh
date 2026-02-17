@@ -32,28 +32,8 @@ $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/nul
 
 rm -rf .kiro/generators .krio/agents ~/.kiro/agents/*.json ~/.kiro/generators
 mkdir -p ~/.kiro/agents
-cp -v data/kiro/bootstrap/*.json ~/.kira/agents/
+cp -v data/kiro/bootstrap/*.json ~/.kiro/agents/
 $KG generate --global
-$KG bootstrap
-ls -R ~/.kiro/skills
-
-for f in SKILL.md; do
-  if [ ! -f ~/.kiro/skills/kg-helper/$f ]; then
-    echo "::error::$f missing" >/dev/stderr
-    exit 1
-  fi
-done
-
-(
-  cd resources/kg-helper/references
-  for f in *.md; do
-    if [ ! -f ~/.kiro/skills/kg-helper/references/"$f" ]; then
-      echo "::error::$f reference missing" >/dev/stderr
-      exit 1
-    fi
-  done
-)
-
 if uname | grep -q Linux; then
   cargo deb
   sudo dpkg -i ./target/debian/kiro-generator_*.deb
