@@ -32,7 +32,7 @@ $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/nul
 
 rm -rf .kiro/generators .kiro/agents
 mkdir -p ~/.kiro/generators
-cp -v data/kiro/generators/* ~/.kiro/generators/
+cp -a -v data/kiro/generators/* ~/.kiro/generators/
 $KG generate --global
 if uname | grep -q Linux; then
   cargo deb

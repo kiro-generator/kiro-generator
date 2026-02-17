@@ -1,12 +1,10 @@
+#[cfg(target_os = "linux")]
+use {super::watch_linux::execute_watch, color_eyre::eyre::Context, tracing::debug};
 use {
     super::{Cli, Command, GenerateArgs, ValidateArgs, tree::execute_tree},
     crate::{Result, generator::Generator},
-    color_eyre::eyre::Context,
-    tracing::debug,
 };
 
-#[cfg(target_os = "linux")]
-use super::watch_linux::execute_watch;
 #[cfg(not(target_os = "linux"))]
 use super::watch_peasants::execute_watch;
 

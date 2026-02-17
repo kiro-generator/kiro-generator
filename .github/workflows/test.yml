@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       context:
-        description: "special rnu"
+        description: "context"
         required: false
         default: ""
 jobs:
