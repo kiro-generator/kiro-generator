@@ -8,11 +8,14 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      runner:
-        description: "Runner to use"
+      context:
+        description: "special rnu"
         required: false
+        default: ""
 jobs:
   verify:
     name: verify
     uses: kiro-generator/ci/.github/workflows/rust.yml@main
     secrets: inherit
+    with:
+      context: ${{ inputs.context }}

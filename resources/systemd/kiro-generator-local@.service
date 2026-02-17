@@ -10,7 +10,8 @@ TimeoutStartSec=1min
 StandardOutput=journal
 StandardError=journal
 
-# Environment
+# Environment (system defaults, then user overrides)
+EnvironmentFile=-/etc/kg/global.env
 EnvironmentFile=-%E/kg/systemd/global.env
 EnvironmentFile=-%E/kg/systemd/%i.env
 
