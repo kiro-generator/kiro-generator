@@ -28,9 +28,16 @@ export default function () {
     })
     .semver(false)
     .disableSanitizers()
-    .extra('cli-test', 'bash ./scripts/test-ci.sh', {
-      cargoTools: ['cargo-deb'],
+    .extraJob('kg-bin-test', {
+      run: 'bash ./scripts/test-kg-bin-ci.sh',
+      cache: {
+        cargoTools: ['cargo-deb'],
+      },
+      matrix: {
+        os: [Os.LINUX_AMD64],
+        toolchains: ['stable'],
+        features: ['default'],
+      },
     })
-
     .build();
 }

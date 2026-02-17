@@ -37,4 +37,6 @@ $KG generate --global
 if uname | grep -q Linux; then
   cargo deb
   sudo dpkg -i ./target/debian/kiro-generator_*.deb
+  /usr/bin/kg --version
+  /usr/bin/kg validate
 fi
