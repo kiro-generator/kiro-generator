@@ -31,7 +31,7 @@ $KG schema manifest | jq -e '.description | contains("manifest TOML files")' >/d
 $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/null
 
 rm -rf .kiro/generators .kiro/agents
-mkdir ~/.kiro/generators
+mkdir -p ~/.kiro/generators
 cp -v data/kiro/generators/* ~/.kiro/generators/
 $KG generate --global
 if uname | grep -q Linux; then
