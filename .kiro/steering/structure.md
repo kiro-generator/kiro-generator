@@ -65,9 +65,9 @@ src/
 
 ## Test Data
 
-- `data/` -- TOML fixtures for deserialization and merge tests
-- `data/kiro/generators/` -- Fixture config copied into test chroot as local config
-- `data/kiro/global/` -- Fixture config copied into test chroot as `~/.kiro/generators/`
+- `fixtures/` -- TOML fixtures for deserialization and merge tests
+- `fixtures/kiro/generators/` -- Fixture config copied into test chroot as local config
+- `fixtures/kiro/global/` -- Fixture config copied into test chroot as `~/.kiro/generators/`
 
 ## Other Directories
 

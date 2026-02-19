@@ -132,7 +132,7 @@ impl Fs {
                     chroot_fs.create_dir_all("./.kiro/agents").await.ok();
 
                     // Copy bootstrap fixtures into $HOME/.kiro/agents/
-                    let bootstrap_src = std::path::Path::new("./data/kiro/bootstrap");
+                    let bootstrap_src = std::path::Path::new("./fixtures/kiro/bootstrap");
                     let bootstrap_dst =
                         PathBuf::from(ACTIVE_USER_HOME).join(".kiro").join("agents");
                     chroot_fs.create_dir_all(&bootstrap_dst).await.ok();
@@ -152,7 +152,7 @@ impl Fs {
                     }
 
                     // Copy local manifests
-                    if let Ok(entries) = std::fs::read_dir("./data/kiro/generators/manifests") {
+                    if let Ok(entries) = std::fs::read_dir("./fixtures/kiro/generators/manifests") {
                         for entry in entries.flatten() {
                             if let Ok(file_type) = entry.file_type()
                                 && file_type.is_file()
@@ -193,7 +193,7 @@ impl Fs {
                         Ok(())
                     }
 
-                    let agents_src = std::path::Path::new("./data/kiro/generators/agents");
+                    let agents_src = std::path::Path::new("./fixtures/kiro/generators/agents");
                     let agents_dst = std::path::Path::new("./.kiro/generators/agents");
                     if let Err(e) = copy_agents_recursive(agents_src, agents_dst, &temp_path) {
                         tracing::debug!("failed to copy agents: {}", e);
@@ -215,7 +215,7 @@ impl Fs {
                     debug_list_dir(&temp_path.join("./.kiro/generators/agents"), 1);
 
                     // Copy global manifests
-                    if let Ok(entries) = std::fs::read_dir("./data/kiro/global/manifests") {
+                    if let Ok(entries) = std::fs::read_dir("./fixtures/kiro/global/manifests") {
                         chroot_fs
                             .create_dir_all(user_path.join("manifests"))
                             .await
@@ -235,7 +235,7 @@ impl Fs {
                     }
 
                     // Copy global agents
-                    if let Ok(entries) = std::fs::read_dir("./data/kiro/global/agents") {
+                    if let Ok(entries) = std::fs::read_dir("./fixtures/kiro/global/agents") {
                         chroot_fs
                             .create_dir_all(user_path.join("agents"))
                             .await

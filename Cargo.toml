@@ -32,6 +32,10 @@ assets = [
     { source = "resources/kg-helper/references/bootstrap.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/bootstrap.md", mode = "644" },
     { source = "resources/kg-helper/references/schemas.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/schemas.md", mode = "644" },
     { source = "resources/kg-helper/references/templates.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/templates.md", mode = "644" },
+    # JSON schemas
+    { source = "schemas/agent.json", dest = "usr/share/doc/kiro-generator/schemas/agent.json", mode = "644" },
+    { source = "schemas/manifest.json", dest = "usr/share/doc/kiro-generator/schemas/manifest.json", mode = "644" },
+    { source = "schemas/kiro-agent.json", dest = "usr/share/doc/kiro-generator/schemas/kiro-agent.json", mode = "644" },
 ]
 conf-files = ["/etc/kg/global.env", "/etc/kg/home.env"]
 
@@ -61,9 +65,7 @@ facet-value = { git = "https://github.com/facet-rs/facet", branch = "main", vers
 # facet-toml = { version = "0.43.2", features = ["std"] }
 # facet-value = { version = "0.43.2", features = ["std"] }
 futures = "0.3"
-jsonschema = { version = "0.40", default-features = false, features = [
-  "resolve-file"
-] }
+jsonschema = { version = "0.40", default-features = false, features = ["resolve-file"] }
 # facet-core = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 rediff = { git = "https://github.com/bearcove/rediff.git", branch = "main", version = "1.0.0" }
 serde_json = { version = "1" }
