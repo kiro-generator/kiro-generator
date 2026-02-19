@@ -38,6 +38,16 @@ export default function () {
       },
       publish: false,
       profile: 'release',
+      assets: [
+        {
+          glob: 'schemas/*.json',
+          archiveName: 'schemas.tar.gz',
+        },
+        {
+          glob: 'resources/kg-helper/**',
+          archiveName: 'skill.tar.gz',
+        },
+      ],
     })
     .semver(false)
     .disableSanitizers()

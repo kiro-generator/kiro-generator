@@ -39,4 +39,7 @@ if uname | grep -q Linux; then
   sudo dpkg -i ./target/debian/kiro-generator_*.deb
   /usr/bin/kg --version
   /usr/bin/kg validate --global
+  ls -lR /usr/share/doc/kiro-generator
+  ls -l /etc/kg
+  ls -l /usr/lib/systemd/user/kiro*
 fi
