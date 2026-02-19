@@ -1,4 +1,4 @@
-use {facet::Facet, std::collections::HashMap};
+use {crate::kg_config::KgCustomToolConfig, facet::Facet, std::collections::HashMap};
 
 #[derive(Facet, Default, Clone, Debug, Eq, PartialEq)]
 #[facet(default, skip_all_unless_truthy, deny_unknown_fields)]
@@ -24,6 +24,20 @@ pub struct CustomToolConfig {
     /// A boolean flag to denote whether or not to load this mcp server
     #[facet(default)]
     pub disabled: Option<bool>,
+}
+
+impl From<KgCustomToolConfig> for CustomToolConfig {
+    fn from(kg: KgCustomToolConfig) -> Self {
+        Self {
+            url: kg.url,
+            headers: kg.headers,
+            command: kg.command,
+            args: kg.args,
+            env: kg.env,
+            timeout: kg.timeout,
+            disabled: kg.state.map(|s| s.is_disabled()),
+        }
+    }
 }
 
 impl CustomToolConfig {

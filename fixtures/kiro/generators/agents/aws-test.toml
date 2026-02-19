@@ -19,13 +19,13 @@ autoAllowReadonly = false
 [mcpServers.awsbilling]
 command = "uvx"
 args = ["awslabs.billing-cost-management-mcp-server@latest"]
-disabled = false
+state = "enabled"
 env = { FASTMCP_LOG_LEVEL = "ERROR" }
 
 [mcpServers.awsdocs]
 command = "uvx"
 args = ["awslabs.aws-documentation-mcp-server@latest"]
-disabled = false
+state = "enabled"
 
 [mcpServers.awsdocs.env]
 FASTMCP_LOG_LEVEL = "ERROR"

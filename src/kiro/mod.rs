@@ -162,7 +162,12 @@ impl TryFrom<&Manifest> for KiroAgent {
             name: value.name.clone(),
             description: value.description.clone(),
             prompt: value.prompt.clone(),
-            mcp_servers: value.mcp_servers.clone(),
+            mcp_servers: value
+                .mcp_servers
+                .clone()
+                .into_iter()
+                .map(|(k, v)| (k, CustomToolConfig::from(v)))
+                .collect(),
             tools: if tools.is_empty() {
                 default_agent.tools
             } else {

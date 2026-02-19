@@ -43,10 +43,10 @@ autoAllowReadonly = true
 command = "rust-docs-mcp"
 args = []
 timeout = 1200
-disabled = false
+state = "enabled"
 
 [mcpServers.cargo]
 command = "cargo-mcp"
 args = []
 timeout = 120000
-disabled = false
+state = "enabled"
