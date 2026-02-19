@@ -1,3 +1,8 @@
+URL Source: https://kiro.dev/docs/cli/chat/configuration/
+Scraped: 2026-02-19T21:00:26Z
+
+---
+
 Title: Configuration - CLI - Docs - Kiro
 
 URL Source: https://kiro.dev/docs/cli/chat/configuration/
@@ -104,11 +109,17 @@ IDE CLI Autonomous
 
 [Model selection](https://kiro.dev/docs/cli/chat/model-selection/)
 
+[Session management](https://kiro.dev/docs/cli/chat/session-management/)
+
 [Subagents](https://kiro.dev/docs/cli/chat/subagents/)
 
 [Planning Agent](https://kiro.dev/docs/cli/chat/planning-agent/)
 
+[Help Agent](https://kiro.dev/docs/cli/chat/help-agent/)
+
 [Prompts](https://kiro.dev/docs/cli/chat/manage-prompts/)
+
+[File references](https://kiro.dev/docs/cli/chat/file-references/)
 
 [Context management](https://kiro.dev/docs/cli/chat/context/)
 
@@ -130,7 +141,7 @@ IDE CLI Autonomous
 
 [MCP](https://kiro.dev/docs/cli/mcp/)
 
-[Steering](https://kiro.dev/docs/cli/steering/)
+[Steering](https://kiro.dev/docs/cli/steering/)[Agent Skills](https://kiro.dev/docs/cli/skills/)[ACP](https://kiro.dev/docs/cli/acp/)
 
 [Experimental](https://kiro.dev/docs/cli/experimental/)
 

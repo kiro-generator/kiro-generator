@@ -127,11 +127,11 @@ mod tests {
         let aws_docs = mcp.get("awsdocs").unwrap();
         assert_eq!(aws_docs.command, "aws-docs");
         assert_eq!(aws_docs.args, vec!["--verbose", "--config=/path"]);
-        assert!(!aws_docs.disabled);
+        assert!(aws_docs.disabled.is_none());
         assert_eq!(aws_docs.headers.len(), 1);
         assert_eq!(aws_docs.env.len(), 2);
         assert_eq!(aws_docs.timeout, Some(5000));
-        assert_eq!(agent.alias.len(), 1);
+        assert_eq!(agent.tool_aliases.len(), 1);
 
         assert_eq!(1, agent.tool_settings.len());
         assert!(agent.tool_settings.contains_key("whoami"));

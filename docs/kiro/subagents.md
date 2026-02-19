@@ -1,3 +1,8 @@
+URL Source: https://kiro.dev/docs/cli/chat/subagents/
+Scraped: 2026-02-19T21:00:51Z
+
+---
+
 Title: Subagents - CLI - Docs - Kiro
 
 URL Source: https://kiro.dev/docs/cli/chat/subagents/
@@ -51,6 +56,7 @@ Subagents run in a separate runtime environment. Some tools available in normal 
 *   `read` - Read files and directories
 *   `write` - Create and edit files
 *   `shell` - Execute bash commands
+*   `code` - Code intelligence (search symbols, find references)
 *   MCP tools
 
 **Not available:**
@@ -64,10 +70,32 @@ Subagents run in a separate runtime environment. Some tools available in normal 
 *   `grep` - Search file contents
 *   `glob` - Find files by pattern
 
-Configuring trusted subagent execution[](https://kiro.dev/docs/cli/chat/subagents/#configuring-trusted-subagent-execution)
---------------------------------------------------------------------------------------------------------------------------
+Configuring subagent access[](https://kiro.dev/docs/cli/chat/subagents/#configuring-subagent-access)
+----------------------------------------------------------------------------------------------------
 
-You can configure specific agents to run without permission prompts by adding them to the `allowedAgents` list in your agent configuration's `toolsSettings`:
+You can control which agents are available as subagents and which can run without permission prompts.
+
+### Restricting available agents[](https://kiro.dev/docs/cli/chat/subagents/#restricting-available-agents)
+
+Use `availableAgents` to limit which agents can be spawned as subagents:
+
+json
+
+```
+{
+  "toolsSettings": {
+    "subagent": {
+      "availableAgents": ["reviewer", "tester", "docs-*"]
+    }
+  }
+}
+```
+
+With this configuration, only the `reviewer`, `tester`, and agents matching `docs-*` can be used as subagents. Glob patterns are supported.
+
+### Trusting specific agents[](https://kiro.dev/docs/cli/chat/subagents/#trusting-specific-agents)
+
+Use `trustedAgents` to allow specific agents to run without permission prompts:
 
 json
 
@@ -78,14 +106,32 @@ json
   "tools": ["fs_read", "subagent"],
   "toolsSettings": {
     "subagent": {
-      "allowedAgents": ["reviewer", "tester", "analyzer"]
+      "trustedAgents": ["reviewer", "tester", "analyzer"]
     }
-  },
-  ...
+  }
 }
 ```
 
-With this configuration, the orchestrator agent can spawn the `reviewer`, `tester`, and `analyzer` subagents without requiring user approval each time. This is useful for workflows where certain agents frequently delegate to trusted specialized agents.
+With this configuration, the orchestrator agent can spawn the `reviewer`, `tester`, and `analyzer` subagents without requiring user approval each time. Glob patterns like `test-*` are supported.
+
+### Combining both settings[](https://kiro.dev/docs/cli/chat/subagents/#combining-both-settings)
+
+You can use both settings together for fine-grained control:
+
+json
+
+```
+{
+  "toolsSettings": {
+    "subagent": {
+      "availableAgents": ["reviewer", "tester", "analyzer", "docs-*"],
+      "trustedAgents": ["reviewer", "tester"]
+    }
+  }
+}
+```
+
+This allows four agents to be spawned as subagents, but only `reviewer` and `tester` run without prompts.
 
 Best practices[](https://kiro.dev/docs/cli/chat/subagents/#best-practices)
 --------------------------------------------------------------------------
@@ -104,4 +150,4 @@ Troubleshooting[](https://kiro.dev/docs/cli/chat/subagents/#troubleshooting)
 | Missing tool access | Check if the required tool is available in subagent runtime (see table above) |
 | Incomplete results | Provide more specific instructions or break into smaller tasks |
 
-Page updated: January 16, 2026
+Page updated: February 16, 2026

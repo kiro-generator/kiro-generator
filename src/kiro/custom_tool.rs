@@ -1,29 +1,29 @@
 use {facet::Facet, std::collections::HashMap};
 
 #[derive(Facet, Default, Clone, Debug, Eq, PartialEq)]
-#[facet(default, deny_unknown_fields)]
+#[facet(default, skip_all_unless_truthy, deny_unknown_fields)]
 pub struct CustomToolConfig {
     /// The URL for HTTP-based MCP server communication
-    #[facet(default, skip_serializing_if = String::is_empty)]
+    #[facet(default)]
     pub url: String,
     /// HTTP headers to include when communicating with HTTP-based MCP servers
-    #[facet(default, skip_serializing_if = HashMap::is_empty)]
+    #[facet(default)]
     pub headers: HashMap<String, String>,
     /// The command string used to initialize the mcp server
     #[facet(default)]
     pub command: String,
     /// A list of arguments to be used to run the command with
-    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    #[facet(default)]
     pub args: Vec<String>,
     /// A list of environment variables to run the command with
-    #[facet(default, skip_serializing_if = HashMap::is_empty)]
+    #[facet(default)]
     pub env: HashMap<String, String>,
     /// Timeout for each mcp request in ms
-    #[facet(default, skip_serializing_if = Option::is_none)]
+    #[facet(default)]
     pub timeout: Option<u64>,
     /// A boolean flag to denote whether or not to load this mcp server
     #[facet(default)]
-    pub disabled: bool,
+    pub disabled: Option<bool>,
 }
 
 impl CustomToolConfig {
@@ -34,10 +34,12 @@ impl CustomToolConfig {
             self.timeout = other.timeout;
         }
 
-        if other.disabled {
+        if other.disabled.is_some_and(|d| d) {
             tracing::trace!("disabled: set from other");
+            self.disabled = Some(true);
+        } else if self.disabled.is_none() {
+            self.disabled = other.disabled;
         }
-        self.disabled = self.disabled || other.disabled;
 
         if self.url.is_empty() && !other.url.is_empty() {
             tracing::trace!("url: merged from other");
@@ -176,7 +178,7 @@ timeout  =1000
         assert!(doc.mcp_servers.contains_key("tool"));
         let mcp = doc.mcp_servers.get("tool").unwrap();
         assert_eq!(mcp.args, vec!["--verbose", "--output=json"]);
-        assert!(mcp.disabled);
+        assert_eq!(mcp.disabled, Some(true));
         Ok(())
     }
 

@@ -1,8 +1,11 @@
+URL Source: https://kiro.dev/docs/cli/mcp/configuration/
+Scraped: 2026-02-19T21:00:39Z
+
+---
+
 Title: Configuration - CLI - Docs - Kiro
 
 URL Source: https://kiro.dev/docs/cli/mcp/configuration/
-
-Published Time: Fri, 23 Jan 2026 02:44:27 GMT
 
 Markdown Content:
 This guide provides detailed information on configuring Model Context Protocol (MCP) servers with Kiro CLI, including configuration file structure, server setup, and management.

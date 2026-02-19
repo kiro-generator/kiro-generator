@@ -75,9 +75,9 @@ impl Manifest {
             self.allowed_tools.extend(other.allowed_tools);
         }
 
-        if !other.alias.is_empty() {
-            tracing::trace!(count = other.alias.len(), "alias: extended");
-            self.alias.extend(other.alias);
+        if !other.tool_aliases.is_empty() {
+            tracing::trace!(count = other.tool_aliases.len(), "alias: extended");
+            self.tool_aliases.extend(other.tool_aliases);
         }
 
         if !other.inherits.is_empty() {
@@ -201,7 +201,7 @@ mod tests {
         let h = hooks.get(&HookTrigger::UserPromptSubmit.to_string());
         assert!(h.is_some());
 
-        let alias = &merged.alias;
+        let alias = &merged.tool_aliases;
         assert_eq!(alias.len(), 2);
         assert!(alias.contains_key("fs_read"));
         assert!(alias.contains_key("execute_bash"));
