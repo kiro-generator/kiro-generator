@@ -3,10 +3,17 @@ template = true
 resources = [
   "file://docs/src/SUMMARY.md",
   "file://docs/src/config/*.md",
+  "file://docs/kiro/configuration-reference.md"
 ]
 
 [agents.kg-resources.knowledge.kiro]
 source = "file://./docs/kiro"
 description = "Kiro CLI configuration reference for JSON agents"
+autoUpdate = false
+indexType = "best"
+
+[agents.kg-resources.knowledge.facet]
+source = "file://./docs/facet"
+description = "facet is a serde replacement"
 autoUpdate = false
 indexType = "best"

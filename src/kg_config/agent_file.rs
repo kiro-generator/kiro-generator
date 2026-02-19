@@ -12,7 +12,7 @@ use {
 };
 
 #[derive(Facet, Clone, Default)]
-#[facet(deny_unknown_fields, default)]
+#[facet(deny_unknown_fields, skip_all_unless_truthy, default)]
 pub struct KgAgentFileDoc {
     #[facet(default, rename = "$schema")]
     pub schema: Option<String>,
@@ -34,7 +34,7 @@ pub struct KgAgentFileDoc {
     #[facet(default, rename = "mcpServers")]
     pub mcp_servers: HashMap<String, CustomToolConfig>,
     #[facet(default, rename = "toolAliases")]
-    pub alias: HashMap<String, String>,
+    pub tool_aliases: HashMap<String, String>,
     #[facet(default, rename = "nativeTools")]
     pub native_tools: NativeTools,
     #[facet(default, rename = "toolSettings")]
@@ -87,7 +87,7 @@ impl Manifest {
             allowed_tools: file_source.allowed_tools,
             hooks: file_source.hooks,
             model: file_source.model,
-            alias: file_source.alias,
+            tool_aliases: file_source.tool_aliases,
             native_tools: file_source.native_tools,
             tool_settings: file_source.tool_settings,
             mcp_servers: file_source.mcp_servers,

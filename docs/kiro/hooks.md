@@ -1,3 +1,8 @@
+URL Source: https://kiro.dev/docs/cli/hooks/
+Scraped: 2026-02-19T21:00:31Z
+
+---
+
 Title: Hooks - CLI - Docs - Kiro
 
 URL Source: https://kiro.dev/docs/cli/hooks/
@@ -40,14 +45,14 @@ Hook output[](https://kiro.dev/docs/cli/hooks/#hook-output)
 Tool matching[](https://kiro.dev/docs/cli/hooks/#tool-matching)
 ---------------------------------------------------------------
 
-Use the `matcher` field to specify which tools the hook applies to.
+Use the `matcher` field to specify which tools the hook applies to. You can use either canonical tool names or their aliases.
 
 ### Examples[](https://kiro.dev/docs/cli/hooks/#examples)
 
-*   `"fs_write"` - Exact match for write tool
-*   `"fs_read"` - Exact match for read tool
-*   `"execute_bash"` - Match shell command execution
-*   `"use_aws"` - Match AWS CLI tool
+*   `"fs_write"` or `"write"` - Match write tool
+*   `"fs_read"` or `"read"` - Match read tool
+*   `"execute_bash"` or `"shell"` - Match shell command execution
+*   `"use_aws"` or `"aws"` - Match AWS CLI tool
 *   `"@git"` - All tools from git MCP server
 *   `"@git/status"` - Specific tool from git MCP server
 *   `"*"` - All tools (built-in and MCP)
@@ -218,4 +223,4 @@ Successful hook results are cached based on `cache_ttl_seconds`:
 *   `> 0`: Cache successful results for specified seconds
 *   AgentSpawn hooks are never cached
 
-Page updated: January 16, 2026
+Page updated: February 4, 2026

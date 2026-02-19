@@ -44,7 +44,7 @@ pub struct Manifest {
     #[facet(default, rename = "mcpServers")]
     pub mcp_servers: HashMap<String, CustomToolConfig>,
     #[facet(default, rename = "toolAliases")]
-    pub alias: HashMap<String, String>,
+    pub tool_aliases: HashMap<String, String>,
     #[facet(default, rename = "nativeTools")]
     pub native_tools: NativeTools,
     #[facet(default, rename = "toolSettings")]

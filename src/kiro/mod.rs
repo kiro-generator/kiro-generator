@@ -168,7 +168,7 @@ impl TryFrom<&Manifest> for KiroAgent {
             } else {
                 tools
             },
-            tool_aliases: value.alias.clone(),
+            tool_aliases: value.tool_aliases.clone(),
             allowed_tools: if allowed_tools.is_empty() {
                 default_agent.allowed_tools
             } else {

@@ -171,7 +171,7 @@ impl OutputFormat {
         // MCP servers (only enabled ones)
         let mut servers = Vec::new();
         for (k, v) in &result.agent.mcp_servers {
-            if !v.disabled {
+            if !v.disabled.is_some_and(|d| d) {
                 servers.push(k.clone());
             }
         }

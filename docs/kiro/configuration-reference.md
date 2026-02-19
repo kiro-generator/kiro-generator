@@ -1,8 +1,11 @@
+URL Source: https://kiro.dev/docs/cli/custom-agents/configuration-reference/
+Scraped: 2026-02-19T21:00:17Z
+
+---
+
 Title: Agent configuration reference - CLI - Docs - Kiro
 
 URL Source: https://kiro.dev/docs/cli/custom-agents/configuration-reference/
-
-Published Time: Fri, 23 Jan 2026 02:44:27 GMT
 
 Markdown Content:
 Every agent configuration file can include the following sections:
@@ -77,11 +80,11 @@ json
 
 #### File URI path resolution[](https://kiro.dev/docs/cli/custom-agents/configuration-reference/#file-uri-path-resolution)
 
-*   **Relative paths**: Resolved relative to the agent configuration file's directory
+*   **Relative paths**: Resolved relative to the agent configuration file's directory 
     *   `"file://./prompt.md"` → `prompt.md` in the same directory as the agent config
     *   `"file://../shared/prompt.md"` → `prompt.md` in a parent directory
 
-*   **Absolute paths**: Used as-is
+*   **Absolute paths**: Used as-is 
     *   `"file:///home/user/prompts/agent.md"` → Absolute path to the file
 
 #### File URI examples[](https://kiro.dev/docs/cli/custom-agents/configuration-reference/#file-uri-examples)
@@ -745,11 +748,11 @@ json
 
 **Path Resolution:**
 
-*   Relative paths: Resolved relative to agent config file
+*   Relative paths: Resolved relative to agent config file 
     *   `"file://./prompt.md"` → Same directory as agent config
     *   `"file://../shared/prompt.md"` → Parent directory
 
-*   Absolute paths: Used as-is
+*   Absolute paths: Used as-is 
     *   `"file:///home/user/prompts/agent.md"`
 
 ### mcpServers[](https://kiro.dev/docs/cli/custom-agents/configuration-reference/#mcpservers)
@@ -1150,6 +1153,6 @@ Next steps[](https://kiro.dev/docs/cli/custom-agents/configuration-reference/#ne
 -----------------------------------------------------------------------------------------
 
 *   [Creating Custom Agents](https://kiro.dev/docs/cli/custom-agents/creating)
-*   [Built-in Tools Reference](https://kiro.dev/docs/cli/built-in-tools)
+*   [Built-in Tools Reference](https://kiro.dev/docs/cli/reference/built-in-tools/)
 *   [Hooks Documentation](https://kiro.dev/docs/cli/hooks)
 *   [Agent Examples](https://kiro.dev/docs/cli/custom-agents/examples)

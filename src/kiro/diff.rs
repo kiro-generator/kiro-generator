@@ -1,8 +1,71 @@
 use {
-    super::{KiroAgent, Knowledge, tools::*},
+    super::{CustomToolConfig, KiroAgent, Knowledge, tools::*},
     facet::Facet,
     std::collections::HashSet,
 };
+
+#[derive(Facet, Debug, Clone, Default)]
+pub struct NormalizedMcpServer {
+    pub name: String,
+    #[facet(default, skip_serializing_if = String::is_empty)]
+    pub command: String,
+    #[facet(default, skip_serializing_if = String::is_empty)]
+    pub url: String,
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub args: Vec<String>,
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub env: Vec<String>,
+    #[facet(default, skip_serializing_if = Vec::is_empty)]
+    pub headers: Vec<String>,
+    #[facet(default, skip_serializing_if = Option::is_none)]
+    pub timeout: Option<u64>,
+    #[facet(default, skip_serializing_if = Option::is_none)]
+    pub disabled: Option<bool>,
+}
+
+impl NormalizedMcpServer {
+    fn from_entry(name: String, config: CustomToolConfig) -> Self {
+        let mut env: Vec<_> = config
+            .env
+            .into_iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect();
+        env.sort();
+        let mut headers: Vec<_> = config
+            .headers
+            .into_iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect();
+        headers.sort();
+        Self {
+            name,
+            command: config.command,
+            url: config.url,
+            args: config.args,
+            env,
+            headers,
+            timeout: config.timeout,
+            disabled: config.disabled,
+        }
+    }
+}
+
+#[derive(Facet, Debug, Clone, Default)]
+pub struct NormalizedToolAlias {
+    pub original: String,
+    pub alias: String,
+}
+
+#[derive(Facet, Debug, Clone, Default)]
+#[facet(default, skip_all_unless_truthy)]
+pub struct NormalizedHook {
+    pub trigger: String,
+    pub command: String,
+    pub matcher: Option<String>,
+    pub timeout_ms: Option<u64>,
+    pub max_output_size: Option<u32>,
+    pub cache_ttl_seconds: Option<u64>,
+}
 
 /// A normalized representation of an Agent optimized for stable, deterministic
 /// diffing.
@@ -25,32 +88,26 @@ use {
 ///   additions/removals)
 /// - This is acceptable as custom tools are rare (~1% use case)
 #[derive(Facet, Debug, Clone, Default)]
+#[facet(default, skip_all_unless_truthy)]
 pub struct NormalizedAgent {
     pub name: String,
-    #[facet(default, skip_serializing_if = Option::is_none)]
     pub description: Option<String>,
-    #[facet(default, skip_serializing_if = Option::is_none)]
     pub prompt: Option<String>,
-    #[facet(default, skip_serializing_if = Vec::is_empty)]
     pub tools: Vec<String>,
-    #[facet(default, skip_serializing_if = Vec::is_empty)]
     pub allowed_tools: Vec<String>,
-    #[facet(default, skip_serializing_if = Vec::is_empty)]
     pub resources: Vec<String>,
-    #[facet(default, skip_serializing_if = Vec::is_empty)]
     pub knowledge: Vec<Knowledge>,
-    #[facet(default, skip_serializing_if = Option::is_none)]
     pub shell: Option<NormalizedExecuteShellTool>,
-    #[facet(default, skip_serializing_if = Option::is_none)]
     pub aws: Option<NormalizedAwsTool>,
-    #[facet(default, skip_serializing_if = Option::is_none)]
     pub read: Option<NormalizedReadTool>,
-    #[facet(default, skip_serializing_if = Option::is_none)]
     pub write: Option<NormalizedWriteTool>,
-    #[facet(default, skip_serializing_if = Option::is_none)]
     pub subagent: Option<NormalizedSubagentTool>,
-    #[facet(default, skip_serializing_if = Vec::is_empty)]
     pub other_tools: Vec<String>,
+    pub model: Option<String>,
+    pub mcp_servers: Vec<NormalizedMcpServer>,
+    pub tool_aliases: Vec<NormalizedToolAlias>,
+    pub hooks: Vec<NormalizedHook>,
+    pub include_mcp_json: bool,
 }
 
 impl KiroAgent {
@@ -126,6 +183,36 @@ impl KiroAgent {
 
         knowledge.sort_by(|a, b| a.name.cmp(&b.name));
 
+        let mut mcp_servers: Vec<_> = self
+            .mcp_servers
+            .into_iter()
+            .map(|(name, config)| NormalizedMcpServer::from_entry(name, config))
+            .collect();
+        mcp_servers.sort_by(|a, b| a.name.cmp(&b.name));
+
+        let mut tool_aliases: Vec<_> = self
+            .tool_aliases
+            .into_iter()
+            .map(|(original, alias)| NormalizedToolAlias { original, alias })
+            .collect();
+        tool_aliases.sort_by(|a, b| a.original.cmp(&b.original));
+
+        let mut hooks: Vec<_> = self
+            .hooks
+            .into_iter()
+            .flat_map(|(trigger, entries)| {
+                entries.into_iter().map(move |h| NormalizedHook {
+                    trigger: trigger.clone(),
+                    command: h.command,
+                    matcher: h.matcher,
+                    timeout_ms: h.timeout_ms,
+                    max_output_size: h.max_output_size,
+                    cache_ttl_seconds: h.cache_ttl_seconds,
+                })
+            })
+            .collect();
+        hooks.sort_by(|a, b| a.trigger.cmp(&b.trigger).then(a.command.cmp(&b.command)));
+
         NormalizedAgent {
             name: self.name,
             description: self.description,
@@ -140,6 +227,11 @@ impl KiroAgent {
             write,
             subagent,
             other_tools,
+            model: self.model,
+            mcp_servers,
+            tool_aliases,
+            hooks,
+            include_mcp_json: self.include_mcp_json,
         }
     }
 }
@@ -329,6 +421,144 @@ mod tests {
 
         let diff = agent1.diff(&agent2);
         assert!(!diff.is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_model_changed() {
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            model: Some("claude-sonnet-4".to_string()),
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            model: Some("claude-opus-4".to_string()),
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_mcp_servers_changed() {
+        let make_server = |cmd: &str| NormalizedMcpServer {
+            name: "fetch".to_string(),
+            command: cmd.to_string(),
+            ..Default::default()
+        };
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            mcp_servers: vec![make_server("fetch-v1")],
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            mcp_servers: vec![make_server("fetch-v2")],
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_tool_aliases_changed() {
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            tool_aliases: vec![NormalizedToolAlias {
+                original: "@git/git_status".to_string(),
+                alias: "status".to_string(),
+            }],
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            tool_aliases: vec![NormalizedToolAlias {
+                original: "@git/git_status".to_string(),
+                alias: "git_status".to_string(),
+            }],
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_hooks_changed() {
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            hooks: vec![NormalizedHook {
+                trigger: "agentSpawn".to_string(),
+                command: "git status".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            hooks: vec![NormalizedHook {
+                trigger: "agentSpawn".to_string(),
+                command: "git fetch".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_include_mcp_json_changed() {
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            include_mcp_json: false,
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            include_mcp_json: true,
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalize_mcp_servers_sorted() {
+        use std::collections::HashMap;
+        let agent = KiroAgent {
+            name: "test".to_string(),
+            mcp_servers: HashMap::from([
+                ("z-server".to_string(), CustomToolConfig {
+                    command: "z-cmd".to_string(),
+                    ..Default::default()
+                }),
+                ("a-server".to_string(), CustomToolConfig {
+                    command: "a-cmd".to_string(),
+                    ..Default::default()
+                }),
+            ]),
+            ..Default::default()
+        };
+        let normalized = agent.normalize();
+        assert_eq!(normalized.mcp_servers[0].name, "a-server");
+        assert_eq!(normalized.mcp_servers[1].name, "z-server");
+    }
+
+    #[test]
+    fn test_normalize_hooks_sorted() {
+        use {crate::kiro::hook::AgentHook, std::collections::HashMap};
+        let agent = KiroAgent {
+            name: "test".to_string(),
+            hooks: HashMap::from([
+                ("stop".to_string(), vec![AgentHook {
+                    command: "echo stop".to_string(),
+                    ..Default::default()
+                }]),
+                ("agentSpawn".to_string(), vec![AgentHook {
+                    command: "git status".to_string(),
+                    ..Default::default()
+                }]),
+            ]),
+            ..Default::default()
+        };
+        let normalized = agent.normalize();
+        assert_eq!(normalized.hooks[0].trigger, "agentSpawn");
+        assert_eq!(normalized.hooks[1].trigger, "stop");
     }
 
     #[test]
