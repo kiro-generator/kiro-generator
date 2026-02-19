@@ -424,6 +424,144 @@ mod tests {
     }
 
     #[test]
+    fn test_normalized_agent_diff_model_changed() {
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            model: Some("claude-sonnet-4".to_string()),
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            model: Some("claude-opus-4".to_string()),
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_mcp_servers_changed() {
+        let make_server = |cmd: &str| NormalizedMcpServer {
+            name: "fetch".to_string(),
+            command: cmd.to_string(),
+            ..Default::default()
+        };
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            mcp_servers: vec![make_server("fetch-v1")],
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            mcp_servers: vec![make_server("fetch-v2")],
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_tool_aliases_changed() {
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            tool_aliases: vec![NormalizedToolAlias {
+                original: "@git/git_status".to_string(),
+                alias: "status".to_string(),
+            }],
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            tool_aliases: vec![NormalizedToolAlias {
+                original: "@git/git_status".to_string(),
+                alias: "git_status".to_string(),
+            }],
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_hooks_changed() {
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            hooks: vec![NormalizedHook {
+                trigger: "agentSpawn".to_string(),
+                command: "git status".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            hooks: vec![NormalizedHook {
+                trigger: "agentSpawn".to_string(),
+                command: "git fetch".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalized_agent_diff_include_mcp_json_changed() {
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            include_mcp_json: false,
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            include_mcp_json: true,
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
+
+    #[test]
+    fn test_normalize_mcp_servers_sorted() {
+        use std::collections::HashMap;
+        let agent = KiroAgent {
+            name: "test".to_string(),
+            mcp_servers: HashMap::from([
+                ("z-server".to_string(), CustomToolConfig {
+                    command: "z-cmd".to_string(),
+                    ..Default::default()
+                }),
+                ("a-server".to_string(), CustomToolConfig {
+                    command: "a-cmd".to_string(),
+                    ..Default::default()
+                }),
+            ]),
+            ..Default::default()
+        };
+        let normalized = agent.normalize();
+        assert_eq!(normalized.mcp_servers[0].name, "a-server");
+        assert_eq!(normalized.mcp_servers[1].name, "z-server");
+    }
+
+    #[test]
+    fn test_normalize_hooks_sorted() {
+        use {crate::kiro::hook::AgentHook, std::collections::HashMap};
+        let agent = KiroAgent {
+            name: "test".to_string(),
+            hooks: HashMap::from([
+                ("stop".to_string(), vec![AgentHook {
+                    command: "echo stop".to_string(),
+                    ..Default::default()
+                }]),
+                ("agentSpawn".to_string(), vec![AgentHook {
+                    command: "git status".to_string(),
+                    ..Default::default()
+                }]),
+            ]),
+            ..Default::default()
+        };
+        let normalized = agent.normalize();
+        assert_eq!(normalized.hooks[0].trigger, "agentSpawn");
+        assert_eq!(normalized.hooks[1].trigger, "stop");
+    }
+
+    #[test]
     fn test_normalize_malformed_knowledge() {
         use facet_value::Value;
 
