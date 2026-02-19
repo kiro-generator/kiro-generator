@@ -1,0 +1,17 @@
+[[schemas]]
+path = "https://github.com/kiro-generator/kiro-generator/raw/refs/heads/main/schemas/manifest.json"
+include = [
+  "**/generators/manifests/*.toml",
+  "./fixtures/manifest-test-/*.toml",
+  "./fixtures/kiro/generators/manifests/*.toml",
+  "./fixtures/kiro/global/manifests/*.toml"
+]
+
+[[schemas]]
+path = "https://github.com/kiro-generator/kiro-generator/raw/refs/heads/main/schemas/agent.json"
+include = [
+  "**/generators/agents/**/*.toml",
+  "./fixtures/agent-test/*.toml",
+  "./fixtures/kiro/generators/agents/*.toml",
+  "./fixtures/kiro/global/agents/*.toml"
+]

@@ -144,7 +144,7 @@ mod tests {
         crate::kiro::hook::{AgentHook, HookTrigger},
     };
 
-    const CONFIG: &str = include_str!("../../data/test-merge-agent.toml");
+    const CONFIG: &str = include_str!("../../fixtures/manifest-test/test-merge-agent.toml");
 
     #[test_log::test]
     fn test_agent_merge() -> Result<()> {

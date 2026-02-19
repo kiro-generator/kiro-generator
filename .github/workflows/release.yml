@@ -9,7 +9,7 @@ on:
         description: "version to release"
         required: true
         type: choice
-        default: patch
+        default: rc
         options:
           - patch
           - rc

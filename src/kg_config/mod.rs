@@ -76,7 +76,7 @@ mod tests {
 
     #[test_log::test]
     fn test_agent_decoding() -> Result<()> {
-        let toml_agents = include_str!("../../data/test-decoding.toml");
+        let toml_agents = include_str!("../../fixtures/manifest-test/test-decoding.toml");
 
         let config: GeneratorConfig = toml_parse(toml_agents)?;
         assert_eq!(config.agents.len(), 1);
@@ -186,7 +186,7 @@ mod tests {
 
     #[test_log::test]
     fn test_agent_file_source() -> Result<()> {
-        let agent_str = include_str!("../../data/test-file-source.toml");
+        let agent_str = include_str!("../../fixtures/agent-test/agent-test.toml");
         let agent: KgAgentFileDoc = toml_parse(agent_str)?;
         assert_eq!(
             agent.description.unwrap_or_default().to_string(),

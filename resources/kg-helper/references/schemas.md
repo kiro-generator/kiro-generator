@@ -1,16 +1,46 @@
 # Schemas
 
-kg provides JSON schemas for validating configuration and inspecting available fields. Schemas are installed locally by `kg bootstrap` — these paths won't exist until bootstrap has run. Schemas can be updated on demand.
+kg provides JSON schemas for validating configuration and inspecting available fields.
 
 ## Available Schemas
 
-| Schema | Describes | Local Path |
-|--------|-----------|------------|
-| `kiro-agent` | Final Kiro agent JSON format (what kg generates) | `~/.kiro/skills/kg-helper/assets/kiro-agent.json` |
-| `kg-manifest` | kg manifest TOML files (`manifests/*.toml`) | `~/.kiro/skills/kg-helper/assets/kg-manifest.json` |
-| `kg-agent` | kg agent TOML files (`agents/*.toml`) | `~/.kiro/skills/kg-helper/assets/kg-agent.json` |
+| Schema | Describes | Filename |
+|--------|-----------|----------|
+| `kiro-agent` | Final Kiro agent JSON format (what kg generates) | `kiro-agent.json` |
+| `kg-manifest` | kg manifest TOML files (`manifests/*.toml`) | `manifest.json` |
+| `kg-agent` | kg agent TOML files (`agents/*.toml`) | `agent.json` |
 
-**Note:** Local schemas may be outdated if kg has been updated since bootstrap. See "Updating Schemas" below.
+## Getting Schemas
+
+### kg schema (preferred)
+
+Generate schemas from the running binary -- always matches your installed version:
+
+```bash
+kg schema kiro-agent   # Kiro agent JSON format
+kg schema manifest     # kg manifest TOML format
+kg schema agent        # kg agent TOML format
+```
+
+### System packages
+
+If kg was installed via a package manager, schemas are on disk:
+
+| Platform | Path |
+|----------|------|
+| Debian/Ubuntu | `/usr/share/doc/kiro-generator/schemas/` |
+| Arch Linux | `/usr/share/doc/kiro-generator/schemas/` |
+| Homebrew (macOS) | `$(brew --prefix)/share/kiro-generator/schemas/` |
+
+### Fallback URLs
+
+If neither `kg` nor system packages are available:
+
+```
+https://kiro-generator.io/kiro-agent.json
+https://kiro-generator.io/manifest.json
+https://kiro-generator.io/agent.json
+```
 
 ## TOML to JSON Field Mappings
 
@@ -168,17 +198,17 @@ kg validate --format json | jq '.[] | select(.name == "rust") | .toolsSettings.s
 
 ## Discovering Available Fields
 
-Read local schemas to see what fields are valid:
+Query schemas to see what fields are valid:
 
 ```bash
 # List all top-level fields for Kiro agents
-jq '.properties | keys' ~/.kiro/skills/kg-helper/assets/kiro-agent.json
+kg schema kiro-agent | jq '.properties | keys'
 
 # Show nativeTools structure (TOML)
-jq '.properties.nativeTools' ~/.kiro/skills/kg-helper/assets/kg-agent.json
+kg schema agent | jq '.properties.nativeTools'
 
 # Show toolsSettings options (JSON output)
-jq '.properties.toolsSettings.properties | keys' ~/.kiro/skills/kg-helper/assets/kiro-agent.json
+kg schema kiro-agent | jq '.properties.toolsSettings.properties | keys'
 ```
 
 ## Verifying Mappings
@@ -198,37 +228,35 @@ kg validate --format json | jq '.[] | select(.name == "rust") | .toolsSettings'
 
 ## Updating Schemas
 
-If local schemas are outdated (missing fields you know exist):
+`kg schema` always reflects the installed binary. To update system-installed schemas, update the package:
 
 ```bash
-# Update specific schema
-kg schema kiro-agent > ~/.kiro/skills/kg-helper/assets/kiro-agent.json
-kg schema manifest > ~/.kiro/skills/kg-helper/assets/kg-manifest.json
-kg schema agent > ~/.kiro/skills/kg-helper/assets/kg-agent.json
-```
+# Arch
+paru -Syu kiro-generator-git
 
-**Fallback URLs** (if `kg schema` output still doesn't match Kiro docs):
+# Debian
+sudo apt upgrade kiro-generator
 
-```
-https://kiro-generator.io/kiro-agent.json
-https://kiro-generator.io/kg-manifest.json
-https://kiro-generator.io/kg-agent.json
+# Homebrew
+brew upgrade kiro-generator
+
+# cargo
+cargo install kiro-generator
 ```
 
 ## Workflow for Adding/Modifying Fields
 
 When helping a user add or modify a TOML field:
 
-1. Check local schema first: `jq '.properties.FIELD_NAME' ~/.kiro/skills/kg-helper/assets/kg-agent.json`
-2. If field is missing, update schema: `kg schema agent > ~/.kiro/skills/kg-helper/assets/kg-agent.json`
-3. If field doesn't exist after updating, tell the user their kg binary may need updating
+1. Check the schema: `kg schema agent | jq '.properties.FIELD_NAME'`
+2. If the field doesn't exist, the user's kg binary may need updating
 
 ## Troubleshooting Generation Issues
 
 If `kg generate` succeeds but Kiro doesn't behave as expected:
 
 1. Read the generated agent JSON: `cat ~/.kiro/agents/rust.json`
-2. Update local kiro-agent schema: `kg schema kiro-agent > ~/.kiro/skills/kg-helper/assets/kiro-agent.json`
+2. Compare against the schema: `kg schema kiro-agent | jq '.properties'`
 3. Compare TOML input (from `kg tree rust`) against generated JSON
 4. Check field mappings above - ensure you're looking at the right JSON field
 5. If the problem is a kg bug, open an issue at `https://github.com/kiro-generator/kiro-generator` with:

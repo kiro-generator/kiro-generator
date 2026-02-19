@@ -10,7 +10,7 @@ KG=./target/release/kg
 cargo build --release
 
 mkdir -p .kiro
-cp -a ./data/kiro/generators .kiro
+cp -a ./fixtures/kiro/generators .kiro
 
 $KG help
 $KG --help
@@ -32,11 +32,14 @@ $KG schema agent | jq -e '.description | contains("agent TOML files")' >/dev/nul
 
 rm -rf .kiro/generators .kiro/agents
 mkdir -p ~/.kiro/generators
-cp -a -v data/kiro/generators/* ~/.kiro/generators/
+cp -a -v fixtures/kiro/generators/* ~/.kiro/generators/
 $KG generate --global
 if uname | grep -q Linux; then
   cargo deb
   sudo dpkg -i ./target/debian/kiro-generator_*.deb
   /usr/bin/kg --version
   /usr/bin/kg validate --global
+  ls -lR /usr/share/doc/kiro-generator
+  ls -l /etc/kg
+  ls -l /usr/lib/systemd/user/kiro*
 fi

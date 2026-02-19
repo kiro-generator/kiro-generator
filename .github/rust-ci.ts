@@ -27,14 +27,27 @@ export default function () {
     .coverage(coverage)
     .withRelease({
       debian: true,
-      bin: true,
+      bin: {
+        name: 'kg',
+        linux: {
+          arm64: true,
+          amd64: true,
+        },
+        mac: true,
+        win: false,
+      },
       publish: false,
       profile: 'release',
-      os: [Os.LINUX_ARM64, Os.LINUX_AMD64, Os.MAC],
-      homebrew: {
-        if: true,
-        repo: 'homebrew-kiro-generator',
-      },
+      assets: [
+        {
+          glob: 'schemas/*.json',
+          archiveName: 'schemas.tar.gz',
+        },
+        {
+          glob: 'resources/kg-helper/**',
+          archiveName: 'skill.tar.gz',
+        },
+      ],
     })
     .semver(false)
     .disableSanitizers()
