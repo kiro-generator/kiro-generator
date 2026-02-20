@@ -1,5 +1,6 @@
 use {
     super::{CustomToolConfig, KiroAgent, Knowledge, tools::*},
+    crate::kg_config::McpServerState,
     facet::Facet,
     std::collections::HashSet,
 };
@@ -20,7 +21,7 @@ pub struct NormalizedMcpServer {
     #[facet(default, skip_serializing_if = Option::is_none)]
     pub timeout: Option<u64>,
     #[facet(default, skip_serializing_if = Option::is_none)]
-    pub disabled: Option<bool>,
+    pub state: Option<McpServerState>,
 }
 
 impl NormalizedMcpServer {
@@ -37,6 +38,11 @@ impl NormalizedMcpServer {
             .map(|(k, v)| format!("{k}={v}"))
             .collect();
         headers.sort();
+        let state = match config.disabled {
+            Some(true) => Some(McpServerState::Disabled),
+            Some(false) => Some(McpServerState::Enabled),
+            None => None,
+        };
         Self {
             name,
             command: config.command,
@@ -45,7 +51,7 @@ impl NormalizedMcpServer {
             env,
             headers,
             timeout: config.timeout,
-            disabled: config.disabled,
+            state,
         }
     }
 }

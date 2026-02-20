@@ -1,10 +1,11 @@
 use {
     super::{
+        KgCustomToolConfig,
         KgKnowledge,
         SubagentConfig,
         native::{AwsTool, ExecuteShellTool, NativeTools, ReadTool, WriteTool},
     },
-    crate::kiro::{CustomToolConfig, KgHook, hook::AgentHook},
+    crate::kiro::{KgHook, hook::AgentHook},
     color_eyre::eyre::WrapErr,
     facet::Facet,
     std::{
@@ -42,7 +43,7 @@ pub struct Manifest {
     #[facet(default)]
     pub hooks: HashMap<String, HashMap<String, KgHook>>,
     #[facet(default, rename = "mcpServers")]
-    pub mcp_servers: HashMap<String, CustomToolConfig>,
+    pub mcp_servers: HashMap<String, KgCustomToolConfig>,
     #[facet(default, rename = "toolAliases")]
     pub tool_aliases: HashMap<String, String>,
     #[facet(default, rename = "nativeTools")]

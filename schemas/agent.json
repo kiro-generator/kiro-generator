@@ -39,7 +39,8 @@
               "anyOf": [
                 {
                   "type": "integer",
-                  "minimum": 0
+                  "minimum": "0",
+                  "maximum": "18446744073709551615"
                 },
                 {
                   "type": "null"
@@ -63,7 +64,8 @@
               "anyOf": [
                 {
                   "type": "integer",
-                  "minimum": 0
+                  "minimum": "0",
+                  "maximum": "4294967295"
                 },
                 {
                   "type": "null"
@@ -74,7 +76,8 @@
               "anyOf": [
                 {
                   "type": "integer",
-                  "minimum": 0
+                  "minimum": "0",
+                  "maximum": "18446744073709551615"
                 },
                 {
                   "type": "null"
@@ -88,15 +91,6 @@
           "additionalProperties": false,
           "title": "KgHook"
         }
-      },
-      "propertyNames": {
-        "enum": [
-          "agentSpawn",
-          "userPromptSubmit",
-          "preToolUse",
-          "postToolUse",
-          "stop"
-        ]
       }
     },
     "keyboardShortcut": {
@@ -173,9 +167,6 @@
           "command": {
             "type": "string"
           },
-          "disabled": {
-            "type": "boolean"
-          },
           "env": {
             "type": "object",
             "additionalProperties": {
@@ -188,11 +179,28 @@
               "type": "string"
             }
           },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "enabled",
+                  "disabled"
+                ],
+                "description": "The operational state of an MCP server.",
+                "title": "McpServerState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "timeout": {
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 0
+                "minimum": "0",
+                "maximum": "18446744073709551615"
               },
               {
                 "type": "null"
@@ -203,8 +211,16 @@
             "type": "string"
           }
         },
+        "required": [
+          "url",
+          "headers",
+          "command",
+          "args",
+          "env"
+        ],
         "additionalProperties": false,
-        "title": "CustomToolConfig"
+        "description": "TOML-side MCP server config. Uses `Option<McpServerState>` instead of\n `Option<bool>` so merge can distinguish \"not specified\" from \"explicitly\n enabled\".",
+        "title": "KgCustomToolConfig"
       }
     },
     "model": {

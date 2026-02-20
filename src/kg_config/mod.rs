@@ -1,6 +1,7 @@
 mod agent_file;
 mod knowledge;
 mod manifest;
+mod mcp;
 mod merge;
 mod native;
 mod subagent;
@@ -15,6 +16,7 @@ pub use {
     agent_file::KgAgentFileDoc,
     knowledge::KgKnowledge,
     manifest::Manifest,
+    mcp::{KgCustomToolConfig, McpServerState},
     subagent::SubagentConfig,
 };
 
@@ -127,7 +129,7 @@ mod tests {
         let aws_docs = mcp.get("awsdocs").unwrap();
         assert_eq!(aws_docs.command, "aws-docs");
         assert_eq!(aws_docs.args, vec!["--verbose", "--config=/path"]);
-        assert!(aws_docs.disabled.is_none());
+        assert!(aws_docs.state.is_none());
         assert_eq!(aws_docs.headers.len(), 1);
         assert_eq!(aws_docs.env.len(), 2);
         assert_eq!(aws_docs.timeout, Some(5000));

@@ -1,9 +1,13 @@
 use {
-    super::{KgKnowledge, Result, SubagentConfig, manifest::*, native::NativeTools},
-    crate::{
-        Fs,
-        kiro::{CustomToolConfig, KgHook},
+    super::{
+        KgCustomToolConfig,
+        KgKnowledge,
+        Result,
+        SubagentConfig,
+        manifest::*,
+        native::NativeTools,
     },
+    crate::{Fs, kiro::KgHook},
     facet::Facet,
     std::{
         collections::{HashMap, HashSet},
@@ -32,7 +36,7 @@ pub struct KgAgentFileDoc {
     #[facet(default)]
     pub hooks: HashMap<String, HashMap<String, KgHook>>,
     #[facet(default, rename = "mcpServers")]
-    pub mcp_servers: HashMap<String, CustomToolConfig>,
+    pub mcp_servers: HashMap<String, KgCustomToolConfig>,
     #[facet(default, rename = "toolAliases")]
     pub tool_aliases: HashMap<String, String>,
     #[facet(default, rename = "nativeTools")]
