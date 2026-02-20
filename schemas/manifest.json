@@ -218,13 +218,6 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "url",
-                "headers",
-                "command",
-                "args",
-                "env"
-              ],
               "additionalProperties": false,
               "description": "MCP server configuration for agent definitions.",
               "title": "KgCustomToolConfig"

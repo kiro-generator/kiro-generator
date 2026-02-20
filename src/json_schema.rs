@@ -10,12 +10,10 @@
 
 #![allow(dead_code)]
 
-extern crate alloc;
-
 use {
-    alloc::{collections::BTreeMap, string::String, vec::Vec},
     facet::Facet,
     facet_core::{Def, Field, Shape, StructKind, Type, UserType},
+    std::{collections::BTreeMap, string::String, vec::Vec},
 };
 
 /// A JSON Schema definition.
