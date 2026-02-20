@@ -31,8 +31,8 @@ mod tests {
     #[test]
     fn test_manifest_schema_is_valid() -> Result<()> {
         let schema_str = build_schema(&SchemaCommand::Manifest)?;
-        let schema: serde_json::Value = serde_json::from_str(&schema_str)
-            .wrap_err("manifest schema is not valid JSON")?;
+        let schema: serde_json::Value =
+            serde_json::from_str(&schema_str).wrap_err("manifest schema is not valid JSON")?;
         jsonschema::meta::validate(&schema)
             .map_err(|e| eyre!("manifest schema failed meta-validation: {e}"))?;
         Ok(())
@@ -41,8 +41,8 @@ mod tests {
     #[test]
     fn test_agent_schema_is_valid() -> Result<()> {
         let schema_str = build_schema(&SchemaCommand::Agent)?;
-        let schema: serde_json::Value = serde_json::from_str(&schema_str)
-            .wrap_err("agent schema is not valid JSON")?;
+        let schema: serde_json::Value =
+            serde_json::from_str(&schema_str).wrap_err("agent schema is not valid JSON")?;
         jsonschema::meta::validate(&schema)
             .map_err(|e| eyre!("agent schema failed meta-validation: {e}"))?;
         Ok(())
