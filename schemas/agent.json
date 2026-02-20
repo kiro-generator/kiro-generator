@@ -44,10 +44,12 @@
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "How long the hook output is cached before it will be executed again\n (default: 0s)"
             },
             "command": {
-              "type": "string"
+              "type": "string",
+              "description": "The command to run when the hook is triggered"
             },
             "matcher": {
               "anyOf": [
@@ -57,7 +59,8 @@
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "Optional glob matcher for hook\n Currently used for matching tool name of PreToolUse and PostToolUse hook"
             },
             "max_output_size": {
               "anyOf": [
@@ -68,7 +71,8 @@
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "Max output size of the hook before it is truncated (default: 10240\n bytes)"
             },
             "timeout_ms": {
               "anyOf": [
@@ -79,7 +83,8 @@
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "Max time the hook can run before it throws a timeout error (default:\n 30000ms)"
             }
           },
           "required": [
@@ -98,7 +103,8 @@
         {
           "type": "null"
         }
-      ]
+      ],
+      "description": "Keyboard shortcut for swapping to this agent (e.g., \"ctrl+shift+a\",\n \"shift+tab\")"
     },
     "knowledge": {
       "type": "object",
@@ -159,22 +165,26 @@
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "A list of arguments to be used to run the command with"
           },
           "command": {
-            "type": "string"
+            "type": "string",
+            "description": "The command string used to initialize the MCP server"
           },
           "env": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
-            }
+            },
+            "description": "A list of environment variables to run the command with"
           },
           "headers": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
-            }
+            },
+            "description": "HTTP headers to include when communicating with HTTP-based MCP servers"
           },
           "state": {
             "anyOf": [
@@ -190,7 +200,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "MCP server operational state (\"enabled\" or \"disabled\", maps to disabled\n boolean in JSON)"
           },
           "timeout": {
             "anyOf": [
@@ -201,10 +212,12 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Timeout for each MCP request in milliseconds"
           },
           "url": {
-            "type": "string"
+            "type": "string",
+            "description": "The URL for HTTP-based MCP server communication"
           }
         },
         "additionalProperties": false,
@@ -615,10 +628,11 @@
         {
           "type": "null"
         }
-      ]
+      ],
+      "description": "Welcome message displayed when switching to this agent"
     }
   },
   "additionalProperties": false,
-  "description": "Definition for kg agents, .kiro/generators/agents,  excluding inheritance",
+  "description": "Definition for kg agents, .kiro/generators/agents, excluding inheritance",
   "title": "KgAgentFileDoc"
 }

@@ -384,7 +384,15 @@ impl SchemaContext {
                     }
 
                     let field_name = field.effective_name();
-                    let field_schema = self.schema_for_shape(field.shape.get());
+                    let mut field_schema = self.schema_for_shape(field.shape.get());
+
+                    // Use field-level doc comments instead of type-level
+                    let field_description = if field.doc.is_empty() {
+                        None
+                    } else {
+                        Some(field.doc.join("\n").trim().to_string())
+                    };
+                    field_schema.description = field_description;
 
                     // Check if field is required (not Option and no default)
                     let is_option = matches!(field.shape.get().def, Def::Option(_));

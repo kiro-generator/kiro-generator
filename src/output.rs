@@ -3,7 +3,7 @@ use {
         Result,
         generator::AgentResult,
         kiro::{KiroAgent, ToolTarget},
-        source::KdlSources,
+        source::KgSources,
     },
     color_eyre::eyre::Context,
     colored::Colorize,
@@ -106,7 +106,7 @@ fn serialize_yaml(label: &str, values: &[String]) -> Option<Cell> {
 }
 
 impl OutputFormat {
-    pub fn sources(&self, sources: &KdlSources) -> Result<()> {
+    pub fn sources(&self, sources: &KgSources) -> Result<()> {
         // Always trace per agent
         for (name, agent_sources) in sources.iter() {
             let span = tracing::trace_span!("agent", name = name.as_str());

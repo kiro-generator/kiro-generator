@@ -9,29 +9,29 @@ use {
 };
 
 #[derive(Clone)]
-pub enum KdlAgentSource {
+pub enum KgAgentSource {
     LocalFile(PathBuf),
     LocalManifest(PathBuf),
     GlobalFile(PathBuf),
     GlobalManifest(PathBuf),
 }
 
-impl Default for KdlAgentSource {
+impl Default for KgAgentSource {
     fn default() -> Self {
         Self::LocalManifest(PathBuf::new())
     }
 }
-impl Display for KdlAgentSource {
+impl Display for KgAgentSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KdlAgentSource::GlobalManifest(p) => write!(f, "global-manifest:{}", p.display()),
-            KdlAgentSource::GlobalFile(p) => write!(f, "global-file:{}", p.display()),
-            KdlAgentSource::LocalManifest(p) => write!(f, "local-manifest:{}", p.display()),
-            KdlAgentSource::LocalFile(p) => write!(f, "local-file:{}", p.display()),
+            KgAgentSource::GlobalManifest(p) => write!(f, "global-manifest:{}", p.display()),
+            KgAgentSource::GlobalFile(p) => write!(f, "global-file:{}", p.display()),
+            KgAgentSource::LocalManifest(p) => write!(f, "local-manifest:{}", p.display()),
+            KgAgentSource::LocalFile(p) => write!(f, "local-file:{}", p.display()),
         }
     }
 }
-impl KdlAgentSource {
+impl KgAgentSource {
     fn is_local(&self) -> bool {
         matches!(self, Self::LocalFile(_) | Self::LocalManifest(_))
     }
@@ -60,21 +60,21 @@ impl KdlAgentSource {
 }
 
 #[derive(Clone, Default)]
-pub struct KdlSources(pub HashMap<String, Vec<KdlAgentSource>>);
+pub struct KgSources(pub HashMap<String, Vec<KgAgentSource>>);
 
-impl Debug for KdlSources {
+impl Debug for KgSources {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "sources={}", self.0.len())
     }
 }
-impl From<&HashSet<String>> for KdlSources {
+impl From<&HashSet<String>> for KgSources {
     fn from(value: &HashSet<String>) -> Self {
         let mut sources = Self(HashMap::with_capacity(value.len()));
         value.iter().for_each(|n| sources.add(n));
         sources
     }
 }
-impl KdlSources {
+impl KgSources {
     pub fn is_local(&self, name: impl AsRef<str>) -> bool {
         if let Some(a) = self.get(name.as_ref()) {
             return a.iter().any(|p| p.is_local());
@@ -87,15 +87,15 @@ impl KdlSources {
     }
 }
 
-impl Deref for KdlSources {
-    type Target = HashMap<String, Vec<KdlAgentSource>>;
+impl Deref for KgSources {
+    type Target = HashMap<String, Vec<KgAgentSource>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for KdlSources {
+impl DerefMut for KgSources {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -106,47 +106,47 @@ mod tests {
     use super::*;
 
     #[test]
-    fn kdl_agent_source_display() {
+    fn kg_agent_source_display() {
         assert_eq!(
-            KdlAgentSource::GlobalManifest(PathBuf::from("kg.toml")).to_string(),
+            KgAgentSource::GlobalManifest(PathBuf::from("kg.toml")).to_string(),
             "global-manifest:kg.toml"
         );
         assert_eq!(
-            KdlAgentSource::LocalManifest(PathBuf::from("kg.toml")).to_string(),
+            KgAgentSource::LocalManifest(PathBuf::from("kg.toml")).to_string(),
             "local-manifest:kg.toml"
         );
         assert_eq!(
-            KdlAgentSource::GlobalFile(PathBuf::from("/foo")).to_string(),
+            KgAgentSource::GlobalFile(PathBuf::from("/foo")).to_string(),
             "global-file:/foo"
         );
         assert_eq!(
-            KdlAgentSource::LocalFile(PathBuf::from("bar")).to_string(),
+            KgAgentSource::LocalFile(PathBuf::from("bar")).to_string(),
             "local-file:bar"
         );
     }
 
     #[test]
-    fn kdl_agent_source_to_cell() {
+    fn kg_agent_source_to_cell() {
         assert_eq!(
-            KdlAgentSource::GlobalManifest(PathBuf::from("kg.toml"))
+            KgAgentSource::GlobalManifest(PathBuf::from("kg.toml"))
                 .to_cell()
                 .content(),
             "global-manifest:kg.toml"
         );
         assert_eq!(
-            KdlAgentSource::LocalManifest(PathBuf::from("kg.toml"))
+            KgAgentSource::LocalManifest(PathBuf::from("kg.toml"))
                 .to_cell()
                 .content(),
             "local-manifest:kg.toml"
         );
         assert_eq!(
-            KdlAgentSource::GlobalFile(PathBuf::from("/foo"))
+            KgAgentSource::GlobalFile(PathBuf::from("/foo"))
                 .to_cell()
                 .content(),
             "global-file:/foo"
         );
         assert_eq!(
-            KdlAgentSource::LocalFile(PathBuf::from("bar"))
+            KgAgentSource::LocalFile(PathBuf::from("bar"))
                 .to_cell()
                 .content(),
             "local-file:bar"
@@ -154,8 +154,8 @@ mod tests {
     }
 
     #[test]
-    fn kdl_sources_debug() {
-        let mut sources = KdlSources::default();
+    fn kg_sources_debug() {
+        let mut sources = KgSources::default();
         sources.add("agent1");
         sources.add("agent2");
         assert_eq!(format!("{:?}", sources), "sources=2");

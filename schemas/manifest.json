@@ -21,7 +21,8 @@
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Tools that don't require user permission prompts (maps to allowedTools\n in JSON)"
           },
           "description": {
             "anyOf": [
@@ -31,7 +32,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Human-readable description of the agent's purpose"
           },
           "hooks": {
             "type": "object",
@@ -49,10 +51,12 @@
                       {
                         "type": "null"
                       }
-                    ]
+                    ],
+                    "description": "How long the hook output is cached before it will be executed again\n (default: 0s)"
                   },
                   "command": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The command to run when the hook is triggered"
                   },
                   "matcher": {
                     "anyOf": [
@@ -62,7 +66,8 @@
                       {
                         "type": "null"
                       }
-                    ]
+                    ],
+                    "description": "Optional glob matcher for hook\n Currently used for matching tool name of PreToolUse and PostToolUse hook"
                   },
                   "max_output_size": {
                     "anyOf": [
@@ -73,7 +78,8 @@
                       {
                         "type": "null"
                       }
-                    ]
+                    ],
+                    "description": "Max output size of the hook before it is truncated (default: 10240\n bytes)"
                   },
                   "timeout_ms": {
                     "anyOf": [
@@ -84,7 +90,8 @@
                       {
                         "type": "null"
                       }
-                    ]
+                    ],
+                    "description": "Max time the hook can run before it throws a timeout error (default:\n 30000ms)"
                   }
                 },
                 "required": [
@@ -93,13 +100,15 @@
                 "additionalProperties": false,
                 "title": "KgHook"
               }
-            }
+            },
+            "description": "Lifecycle hooks (commands run at specific trigger points)"
           },
           "inherits": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "List of parent agents to inherit configuration from"
           },
           "keyboardShortcut": {
             "anyOf": [
@@ -109,7 +118,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Keyboard shortcut for swapping to this agent (e.g., \"ctrl+shift+a\",\n \"shift+tab\")"
           },
           "knowledge": {
             "type": "object",
@@ -159,7 +169,8 @@
               },
               "additionalProperties": false,
               "title": "KgKnowledge"
-            }
+            },
+            "description": "Knowledge bases for semantic search (converted to resources array in\n JSON)"
           },
           "mcpServers": {
             "type": "object",
@@ -170,22 +181,26 @@
                   "type": "array",
                   "items": {
                     "type": "string"
-                  }
+                  },
+                  "description": "A list of arguments to be used to run the command with"
                 },
                 "command": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "The command string used to initialize the MCP server"
                 },
                 "env": {
                   "type": "object",
                   "additionalProperties": {
                     "type": "string"
-                  }
+                  },
+                  "description": "A list of environment variables to run the command with"
                 },
                 "headers": {
                   "type": "object",
                   "additionalProperties": {
                     "type": "string"
-                  }
+                  },
+                  "description": "HTTP headers to include when communicating with HTTP-based MCP servers"
                 },
                 "state": {
                   "anyOf": [
@@ -201,7 +216,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "MCP server operational state (\"enabled\" or \"disabled\", maps to disabled\n boolean in JSON)"
                 },
                 "timeout": {
                   "anyOf": [
@@ -212,16 +228,19 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "Timeout for each MCP request in milliseconds"
                 },
                 "url": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "The URL for HTTP-based MCP server communication"
                 }
               },
               "additionalProperties": false,
               "description": "MCP server configuration for agent definitions.",
               "title": "KgCustomToolConfig"
-            }
+            },
+            "description": "MCP server configurations (maps to mcpServers in JSON)"
           },
           "model": {
             "anyOf": [
@@ -231,10 +250,12 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Model ID to use for this agent"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Agent name (derived from filename if not specified)"
           },
           "nativeTools": {
             "type": "object",
@@ -556,6 +577,7 @@
               }
             },
             "additionalProperties": false,
+            "description": "Native tool permissions (maps to toolsSettings in JSON)",
             "title": "NativeTools"
           },
           "prompt": {
@@ -566,13 +588,15 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "High-level context for the agent (system prompt)"
           },
           "resources": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Files and URLs to include as context (supports file:// and https:// schemes)"
           },
           "subagents": {
             "type": "object",
@@ -591,28 +615,33 @@
               }
             },
             "additionalProperties": false,
+            "description": "Subagent permissions (maps to toolsSettings.subagent in JSON)",
             "title": "SubagentConfig"
           },
           "template": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether this agent is a template. Templates are not written to disk\n and serve only as parent configurations for other agents to inherit\n from. Template status is NEVER inherited - it must be explicitly\n declared."
           },
           "toolAliases": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
-            }
+            },
+            "description": "Tool name remapping for handling naming collisions (maps to toolAliases\n in JSON)"
           },
           "toolSettings": {
             "type": "object",
             "additionalProperties": {
               "description": "A dynamic value that can hold null, bool, number, string, bytes, array, or object."
-            }
+            },
+            "description": "Additional tool settings merged with nativeTools (maps to toolsSettings\n in JSON)"
           },
           "tools": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Tools available to the agent (use [\"*\"] for all tools)"
           },
           "useLegacyMcpJson": {
             "anyOf": [
@@ -622,7 +651,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Whether to include MCP servers from mcp.json files (maps to\n includeMcpJson in JSON)"
           },
           "welcomeMessage": {
             "anyOf": [
@@ -632,7 +662,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Welcome message displayed when switching to this agent"
           }
         },
         "additionalProperties": false,

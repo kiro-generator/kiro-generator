@@ -73,7 +73,7 @@ fn process_local(
     location: &ConfigLocation,
     inline: Option<&Manifest>,
     manifest_path: Option<&PathBuf>,
-    sources: &mut Vec<KdlAgentSource>,
+    sources: &mut Vec<KgAgentSource>,
 ) -> crate::Result<Option<Manifest>> {
     let local_agent_path = location.local_agent(fs, &name)?;
     let template = inline.map(|i| i.template).unwrap_or(false);
@@ -82,7 +82,7 @@ fn process_local(
         None => {
             if let Some(i) = inline {
                 if let Some(p) = manifest_path {
-                    sources.push(KdlAgentSource::LocalManifest(p.clone()));
+                    sources.push(KgAgentSource::LocalManifest(p.clone()));
                 }
                 Ok(Some(i.clone()))
             } else {
@@ -95,10 +95,10 @@ fn process_local(
                 None => Ok(None),
                 Some(a) => {
                     let agent = a?;
-                    sources.push(KdlAgentSource::LocalFile(path.clone()));
+                    sources.push(KgAgentSource::LocalFile(path.clone()));
                     if let Some(i) = inline {
                         if let Some(p) = manifest_path {
-                            sources.push(KdlAgentSource::LocalManifest(p.clone()));
+                            sources.push(KgAgentSource::LocalManifest(p.clone()));
                         }
                         Ok(Some(agent.merge(i.clone())))
                     } else {
@@ -116,7 +116,7 @@ pub struct ResolvedAgents {
     #[facet(default)]
     pub agents: HashMap<String, Manifest>,
     #[facet(skip, default)]
-    pub sources: KdlSources,
+    pub sources: KgSources,
     #[facet(skip, default)]
     pub has_local: bool,
 }
@@ -176,7 +176,7 @@ pub fn discover(
 
     let mut resolved_agents: HashMap<String, Manifest> =
         HashMap::with_capacity(all_agents_names.len());
-    let mut sources: KdlSources = KdlSources::from(&all_agents_names);
+    let mut sources: KgSources = KgSources::from(&all_agents_names);
 
     for (name, agent_sources) in sources.iter_mut() {
         let span = tracing::info_span!("agent", name = ?name);
@@ -230,9 +230,9 @@ pub fn discover(
                     (Some(l), Some(g), Some(gf)) => {
                         tracing::trace!("found local file, inline global and global file source");
                         if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KdlAgentSource::GlobalManifest(p.clone()));
+                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
                         }
-                        agent_sources.push(KdlAgentSource::GlobalFile(global_path_buf.unwrap()));
+                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
                         resolved_agents.insert(name.to_string(), l.merge(gf.merge(g.clone())));
                     }
 
@@ -240,16 +240,16 @@ pub fn discover(
                     (None, Some(g), Some(gf)) => {
                         tracing::trace!("found inline global and global file source");
                         if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KdlAgentSource::GlobalManifest(p.clone()));
+                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
                         }
-                        agent_sources.push(KdlAgentSource::GlobalFile(global_path_buf.unwrap()));
+                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
                         resolved_agents.insert(name.to_string(), gf.merge(g.clone()));
                     }
 
                     // Global file only
                     (None, None, Some(gf)) => {
                         tracing::trace!("found global file source");
-                        agent_sources.push(KdlAgentSource::GlobalFile(global_path_buf.unwrap()));
+                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
                         resolved_agents.insert(name.to_string(), gf);
                     }
 
@@ -257,7 +257,7 @@ pub fn discover(
                     (Some(l), Some(g), None) => {
                         tracing::trace!("found local and inline global");
                         if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KdlAgentSource::GlobalManifest(p.clone()));
+                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
                         }
                         resolved_agents.insert(name.to_string(), l.merge(g.clone()));
                     }
@@ -265,7 +265,7 @@ pub fn discover(
                     // Local + global file
                     (Some(l), None, Some(gf)) => {
                         tracing::trace!("found local and global file");
-                        agent_sources.push(KdlAgentSource::GlobalFile(global_path_buf.unwrap()));
+                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
                         resolved_agents.insert(name.to_string(), l.merge(gf));
                     }
 
@@ -279,7 +279,7 @@ pub fn discover(
                     (None, Some(g), None) => {
                         tracing::trace!("found only global manifest file");
                         if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KdlAgentSource::GlobalManifest(p.clone()));
+                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
                         }
                         resolved_agents.insert(name.to_string(), g.clone());
                     }
@@ -289,19 +289,19 @@ pub fn discover(
                 match (global_agents.get(name), file_source) {
                     (Some(i), None) => {
                         if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KdlAgentSource::GlobalManifest(p.clone()));
+                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
                         }
                         resolved_agents.insert(name.to_string(), i.clone());
                     }
                     (None, Some(a)) => {
-                        agent_sources.push(KdlAgentSource::GlobalFile(global_path_buf.unwrap()));
+                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
                         resolved_agents.insert(name.to_string(), a);
                     }
                     (Some(i), Some(a)) => {
                         if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KdlAgentSource::GlobalManifest(p.clone()));
+                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
                         }
-                        agent_sources.push(KdlAgentSource::GlobalFile(global_path_buf.unwrap()));
+                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
                         resolved_agents.insert(name.to_string(), a.merge(i.clone()));
                     }
                     (None, None) => {
@@ -317,7 +317,7 @@ pub fn discover(
     let has_local = sources.values().flatten().any(|s| {
         matches!(
             s,
-            KdlAgentSource::LocalFile(_) | KdlAgentSource::LocalManifest(_)
+            KgAgentSource::LocalFile(_) | KgAgentSource::LocalManifest(_)
         )
     });
 
@@ -389,7 +389,7 @@ mod tests {
                 assert!(
                     matches!(
                         s,
-                        KdlAgentSource::GlobalManifest(_) | KdlAgentSource::GlobalFile(_)
+                        KgAgentSource::GlobalManifest(_) | KgAgentSource::GlobalFile(_)
                     ),
                     "agent is not global"
                 )
