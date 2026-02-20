@@ -4,25 +4,18 @@ use {crate::kg_config::KgCustomToolConfig, facet::Facet, std::collections::HashM
 #[facet(default, skip_all_unless_truthy, deny_unknown_fields)]
 pub struct CustomToolConfig {
     /// The URL for HTTP-based MCP server communication
-    #[facet(default)]
     pub url: String,
     /// HTTP headers to include when communicating with HTTP-based MCP servers
-    #[facet(default)]
     pub headers: HashMap<String, String>,
     /// The command string used to initialize the mcp server
-    #[facet(default)]
     pub command: String,
     /// A list of arguments to be used to run the command with
-    #[facet(default)]
     pub args: Vec<String>,
     /// A list of environment variables to run the command with
-    #[facet(default)]
     pub env: HashMap<String, String>,
     /// Timeout for each mcp request in ms
-    #[facet(default)]
     pub timeout: Option<u64>,
     /// A boolean flag to denote whether or not to load this mcp server
-    #[facet(default)]
     pub disabled: Option<bool>,
 }
 

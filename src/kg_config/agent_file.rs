@@ -15,10 +15,11 @@ use {
     },
 };
 
+/// Definition for kg agents, .kiro/generators/agents, excluding inheritance
 #[derive(Facet, Clone, Default)]
 #[facet(deny_unknown_fields, skip_all_unless_truthy, default)]
 pub struct KgAgentFileDoc {
-    #[facet(default, rename = "$schema")]
+    #[facet(rename = "$schema")]
     pub schema: Option<String>,
     pub description: Option<String>,
     pub prompt: Option<String>,
@@ -26,7 +27,7 @@ pub struct KgAgentFileDoc {
     pub resources: HashSet<String>,
     #[facet(default)]
     pub knowledge: HashMap<String, KgKnowledge>,
-    #[facet(default, rename = "useLegacyMcpJson")]
+    #[facet(rename = "useLegacyMcpJson")]
     pub include_mcp_json: Option<bool>,
     #[facet(default)]
     pub tools: HashSet<String>,
@@ -46,10 +47,10 @@ pub struct KgAgentFileDoc {
 
     /// Keyboard shortcut for swapping to this agent (e.g., "ctrl+shift+a",
     /// "shift+tab")
-    #[facet(default, rename = "keyboardShortcut")]
+    #[facet(rename = "keyboardShortcut")]
     pub keyboard_shortcut: Option<String>,
     /// Welcome message displayed when switching to this agent
-    #[facet(default, rename = "welcomeMessage")]
+    #[facet(rename = "welcomeMessage")]
     pub welcome_message: Option<String>,
     #[facet(default)]
     pub subagents: SubagentConfig,

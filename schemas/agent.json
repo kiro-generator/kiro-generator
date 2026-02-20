@@ -39,8 +39,7 @@
               "anyOf": [
                 {
                   "type": "integer",
-                  "minimum": "0",
-                  "maximum": "18446744073709551615"
+                  "minimum": 0
                 },
                 {
                   "type": "null"
@@ -64,8 +63,7 @@
               "anyOf": [
                 {
                   "type": "integer",
-                  "minimum": "0",
-                  "maximum": "4294967295"
+                  "minimum": 0
                 },
                 {
                   "type": "null"
@@ -76,8 +74,7 @@
               "anyOf": [
                 {
                   "type": "integer",
-                  "minimum": "0",
-                  "maximum": "18446744073709551615"
+                  "minimum": 0
                 },
                 {
                   "type": "null"
@@ -199,8 +196,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": "0",
-                "maximum": "18446744073709551615"
+                "minimum": 0
               },
               {
                 "type": "null"
@@ -211,15 +207,8 @@
             "type": "string"
           }
         },
-        "required": [
-          "url",
-          "headers",
-          "command",
-          "args",
-          "env"
-        ],
         "additionalProperties": false,
-        "description": "TOML-side MCP server config. Uses `Option<McpServerState>` instead of\n `Option<bool>` so merge can distinguish \"not specified\" from \"explicitly\n enabled\".",
+        "description": "MCP server configuration for agent definitions.",
         "title": "KgCustomToolConfig"
       }
     },
@@ -630,6 +619,6 @@
     }
   },
   "additionalProperties": false,
-  "description": "Schema for kiro-generator (kg) agent TOML files",
+  "description": "Definition for kg agents, .kiro/generators/agents,  excluding inheritance",
   "title": "KgAgentFileDoc"
 }

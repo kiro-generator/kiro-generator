@@ -1,5 +1,6 @@
 mod commands;
 mod generator;
+mod json_schema;
 mod kg_config;
 mod kiro;
 mod os;

@@ -52,8 +52,8 @@ emojis-rs = "0.1.3"
 enum-iterator = "2.3.0"
 # Core facet dependencies
 facet = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+facet-core = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 facet-json = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
-facet-json-schema = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 # facet-pretty = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 # facet-reflect = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 facet-toml = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }

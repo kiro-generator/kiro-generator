@@ -1,7 +1,9 @@
 import { type Clippy, type Coverage, createRustWorkflow, Os } from '@dougefresh/ci';
 
 export default function () {
+  const disabled: boolean = process.env._GIT_MSG?.includes('[ci:disable]') || false;
   const clippy: Partial<Clippy> = {
+    if: !disabled,
     matrix: {
       os: [Os.LINUX_ARM64],
       toolchains: ['stable'],
@@ -10,6 +12,7 @@ export default function () {
   };
 
   const coverage: Partial<Coverage> = {
+    if: !disabled,
     matrix: {
       os: [Os.LINUX_ARM64],
       toolchains: ['stable'],
@@ -20,7 +23,7 @@ export default function () {
     clippy.matrix?.os.push(Os.LINUX_AMD64, Os.MAC);
     coverage.matrix?.os.push(Os.LINUX_AMD64, Os.MAC);
   }
-  return createRustWorkflow()
+  let pipeline = createRustWorkflow()
     .enableMdBook()
     .disableDocCheck()
     .clippy(clippy)
@@ -52,6 +55,7 @@ export default function () {
     .semver(false)
     .disableSanitizers()
     .extraJob('kg-bin-test', {
+      if: !disabled,
       run: 'bash ./scripts/test-kg-bin-ci.sh',
       cache: {
         cargoTools: ['cargo-deb'],
@@ -61,6 +65,17 @@ export default function () {
         toolchains: ['stable'],
         features: ['default'],
       },
-    })
-    .build();
+    });
+
+  if (disabled) {
+    return pipeline
+      .disableAi()
+      .disableCargoSort()
+      .disableDocCheck()
+      .disableHack()
+      .disableDependencies()
+      .disableFmt()
+      .build();
+  }
+  return pipeline.build();
 }

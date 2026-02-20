@@ -44,6 +44,7 @@ where
     Ok(toml::from_str::<T>(content)?)
 }
 
+/// Agent manifests which control inheritance
 #[derive(Default, Facet)]
 #[facet(deny_unknown_fields)]
 pub struct GeneratorConfig {
