@@ -55,6 +55,7 @@ kg's TOML format uses different field names than Kiro's JSON format. Key mapping
 | `knowledge` | `resources` | Knowledge bases are merged into resources array as objects |
 | `toolSettings` | `toolsSettings` | Additional tool settings (merged with nativeTools) |
 | `subagents.allow` | `toolsSettings.subagent.allowedAgents` | Subagent permissions |
+| `mcpServers.*.state` | `mcpServers.*.disabled` | "enabled"/"disabled" string becomes boolean (true if disabled) |
 
 ### nativeTools → toolsSettings
 

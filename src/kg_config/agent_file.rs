@@ -15,43 +15,39 @@ use {
     },
 };
 
+/// Definition for kg agents, .kiro/generators/agents,  excluding inheritance
 #[derive(Facet, Clone, Default)]
 #[facet(deny_unknown_fields, skip_all_unless_truthy, default)]
 pub struct KgAgentFileDoc {
-    #[facet(default, rename = "$schema")]
+    #[facet(rename = "$schema")]
     pub schema: Option<String>,
     pub description: Option<String>,
     pub prompt: Option<String>,
-    #[facet(default)]
     pub resources: HashSet<String>,
-    #[facet(default)]
     pub knowledge: HashMap<String, KgKnowledge>,
-    #[facet(default, rename = "useLegacyMcpJson")]
+    #[facet(rename = "useLegacyMcpJson")]
     pub include_mcp_json: Option<bool>,
-    #[facet(default)]
     pub tools: HashSet<String>,
-    #[facet(default, rename = "allowedTools")]
+    #[facet(rename = "allowedTools")]
     pub allowed_tools: HashSet<String>,
     pub model: Option<String>,
-    #[facet(default)]
     pub hooks: HashMap<String, HashMap<String, KgHook>>,
-    #[facet(default, rename = "mcpServers")]
+    #[facet(rename = "mcpServers")]
     pub mcp_servers: HashMap<String, KgCustomToolConfig>,
-    #[facet(default, rename = "toolAliases")]
+    #[facet(rename = "toolAliases")]
     pub tool_aliases: HashMap<String, String>,
-    #[facet(default, rename = "nativeTools")]
+    #[facet(rename = "nativeTools")]
     pub native_tools: NativeTools,
-    #[facet(default, rename = "toolSettings")]
+    #[facet(rename = "toolSettings")]
     pub tool_settings: HashMap<String, facet_value::Value>,
 
     /// Keyboard shortcut for swapping to this agent (e.g., "ctrl+shift+a",
     /// "shift+tab")
-    #[facet(default, rename = "keyboardShortcut")]
+    #[facet(rename = "keyboardShortcut")]
     pub keyboard_shortcut: Option<String>,
     /// Welcome message displayed when switching to this agent
-    #[facet(default, rename = "welcomeMessage")]
+    #[facet(rename = "welcomeMessage")]
     pub welcome_message: Option<String>,
-    #[facet(default)]
     pub subagents: SubagentConfig,
 }
 

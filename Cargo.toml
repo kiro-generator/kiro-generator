@@ -52,8 +52,8 @@ emojis-rs = "0.1.3"
 enum-iterator = "2.3.0"
 # Core facet dependencies
 facet = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
+facet-core = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 facet-json = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
-facet-json-schema = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 # facet-pretty = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 # facet-reflect = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 facet-toml = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
@@ -84,6 +84,10 @@ zbus = "5.13.2"
 [dev-dependencies]
 nix = { version = "0.30.1", features = ["user"] }
 test-log = { version = "0.2", default-features = false, features = ["trace"] }
+
+[lints.clippy]
+# Box::leak is always a bug in this codebase - it hides lifetime problems instead of solving them
+disallowed_methods = "deny"
 
 [profile.release]
 debug = 1  # Line numbers only (smaller than full debug=2)
