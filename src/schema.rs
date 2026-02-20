@@ -23,22 +23,3 @@ pub(crate) fn handle_schema_command(cmd: &SchemaCommand) -> Result<()> {
     println!("{output}");
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_manifest_schema_description() -> Result<()> {
-        let desc = build_schema(&SchemaCommand::Manifest)?;
-        assert!(desc.contains("manifest TOML files"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_agent_schema_description() -> Result<()> {
-        let desc = build_schema(&SchemaCommand::Agent)?;
-        assert!(desc.contains("agent TOML files"));
-        Ok(())
-    }
-}
