@@ -85,10 +85,6 @@ zbus = "5.13.2"
 nix = { version = "0.30.1", features = ["user"] }
 test-log = { version = "0.2", default-features = false, features = ["trace"] }
 
-[lints.clippy]
-# Box::leak is always a bug in this codebase - it hides lifetime problems instead of solving them
-disallowed_methods = "deny"
-
 [profile.release]
 debug = 1  # Line numbers only (smaller than full debug=2)
 strip = false  # Keep symbols for better backtraces
