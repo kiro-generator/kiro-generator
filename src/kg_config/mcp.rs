@@ -34,27 +34,58 @@ pub struct KgCustomToolConfig {
 impl KgCustomToolConfig {
     /// Merge child (self) with parent (other). Child wins for explicit values.
     pub fn merge(mut self, other: Self) -> Self {
-        if self.timeout.is_none() {
+        if self.timeout.is_none() && other.timeout.is_some() {
+            tracing::trace!("timeout: merged from other");
             self.timeout = other.timeout;
         }
         if self.state.is_none() {
+            if other.state.is_some() {
+                tracing::trace!("mcpState: setting to {:?}", other.state);
+            }
             self.state = other.state;
         }
+
         if self.url.is_empty() && !other.url.is_empty() {
+            tracing::trace!("url: merged from other");
             self.url = other.url;
         }
+
         if self.command.is_empty() && !other.command.is_empty() {
+            tracing::trace!("command: merged from other");
             self.command = other.command;
         }
+
         if !other.args.is_empty() {
+            tracing::trace!(count = other.args.len(), "args: extended");
             self.args.extend(other.args);
         }
-        let mut merged = other.env;
-        merged.extend(self.env);
+
+        let parent_env_count = other.env.len();
+        let child_env_count = self.env.len();
+        let mut merged = other.env; // Start with parent
+        merged.extend(self.env); // Child overwrites parent
+        if merged.len() != child_env_count {
+            tracing::trace!(
+                parent_count = parent_env_count,
+                child_count = child_env_count,
+                "env: merged"
+            );
+        }
         self.env = merged;
-        let mut merged = other.headers;
-        merged.extend(self.headers);
+
+        let parent_headers_count = other.headers.len();
+        let child_headers_count = self.headers.len();
+        let mut merged = other.headers; // Start with parent
+        merged.extend(self.headers); // Child overwrites parent
+        if merged.len() != child_headers_count {
+            tracing::trace!(
+                parent_count = parent_headers_count,
+                child_count = child_headers_count,
+                "headers: merged"
+            );
+        }
         self.headers = merged;
+
         self
     }
 }
