@@ -23,22 +23,26 @@ pub struct KgAgentFileDoc {
     pub schema: Option<String>,
     pub description: Option<String>,
     pub prompt: Option<String>,
+    #[facet(default)]
     pub resources: HashSet<String>,
+    #[facet(default)]
     pub knowledge: HashMap<String, KgKnowledge>,
     #[facet(rename = "useLegacyMcpJson")]
     pub include_mcp_json: Option<bool>,
+    #[facet(default)]
     pub tools: HashSet<String>,
-    #[facet(rename = "allowedTools")]
+    #[facet(default, rename = "allowedTools")]
     pub allowed_tools: HashSet<String>,
     pub model: Option<String>,
+    #[facet(default)]
     pub hooks: HashMap<String, HashMap<String, KgHook>>,
-    #[facet(rename = "mcpServers")]
+    #[facet(default, rename = "mcpServers")]
     pub mcp_servers: HashMap<String, KgCustomToolConfig>,
-    #[facet(rename = "toolAliases")]
+    #[facet(default, rename = "toolAliases")]
     pub tool_aliases: HashMap<String, String>,
-    #[facet(rename = "nativeTools")]
+    #[facet(default, rename = "nativeTools")]
     pub native_tools: NativeTools,
-    #[facet(rename = "toolSettings")]
+    #[facet(default, rename = "toolSettings")]
     pub tool_settings: HashMap<String, facet_value::Value>,
 
     /// Keyboard shortcut for swapping to this agent (e.g., "ctrl+shift+a",
@@ -48,6 +52,7 @@ pub struct KgAgentFileDoc {
     /// Welcome message displayed when switching to this agent
     #[facet(rename = "welcomeMessage")]
     pub welcome_message: Option<String>,
+    #[facet(default)]
     pub subagents: SubagentConfig,
 }
 

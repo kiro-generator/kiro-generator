@@ -21,14 +21,19 @@ impl McpServerState {
 #[facet(default, deny_unknown_fields)]
 pub struct KgCustomToolConfig {
     /// The URL for HTTP-based MCP server communication
+    #[facet(default)]
     pub url: String,
     /// HTTP headers to include when communicating with HTTP-based MCP servers
+    #[facet(default)]
     pub headers: HashMap<String, String>,
     /// The command string used to initialize the MCP server
+    #[facet(default)]
     pub command: String,
     /// A list of arguments to be used to run the command with
+    #[facet(default)]
     pub args: Vec<String>,
     /// A list of environment variables to run the command with
+    #[facet(default)]
     pub env: HashMap<String, String>,
     /// Timeout for each MCP request in milliseconds
     pub timeout: Option<u64>,
