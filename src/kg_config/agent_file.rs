@@ -15,7 +15,7 @@ use {
     },
 };
 
-/// Definition for kg agents, .kiro/generators/agents,  excluding inheritance
+/// Definition for kg agents, .kiro/generators/agents, excluding inheritance
 #[derive(Facet, Clone, Default)]
 #[facet(deny_unknown_fields, skip_all_unless_truthy, default)]
 pub struct KgAgentFileDoc {
