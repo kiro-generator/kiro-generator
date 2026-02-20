@@ -207,13 +207,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "url",
-          "headers",
-          "command",
-          "args",
-          "env"
-        ],
         "additionalProperties": false,
         "description": "MCP server configuration for agent definitions.",
         "title": "KgCustomToolConfig"
@@ -625,18 +618,6 @@
       ]
     }
   },
-  "required": [
-    "resources",
-    "knowledge",
-    "tools",
-    "allowedTools",
-    "hooks",
-    "mcpServers",
-    "toolAliases",
-    "nativeTools",
-    "toolSettings",
-    "subagents"
-  ],
   "additionalProperties": false,
   "description": "Definition for kg agents, .kiro/generators/agents,  excluding inheritance",
   "title": "KgAgentFileDoc"

@@ -1,0 +1,3 @@
+coverage:
+  ignore:
+    - "src/json_schema.rs"
