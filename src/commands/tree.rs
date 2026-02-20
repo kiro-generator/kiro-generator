@@ -1,6 +1,6 @@
 use {
     super::TreeArgs,
-    crate::{Manifest, Result, generator::Generator, source::KdlSources},
+    crate::{Manifest, Result, generator::Generator, source::KgSources},
 };
 
 pub(super) fn execute_tree(generator: &Generator, args: &TreeArgs) -> Result<facet_value::Value> {
@@ -19,7 +19,7 @@ pub(super) fn execute_tree(generator: &Generator, args: &TreeArgs) -> Result<fac
     build_json(&agents, &resolved.sources)
 }
 
-fn build_json(agents: &[(&String, &Manifest)], sources: &KdlSources) -> Result<facet_value::Value> {
+fn build_json(agents: &[(&String, &Manifest)], sources: &KgSources) -> Result<facet_value::Value> {
     let mut obj = facet_value::VObject::new();
     for (name, manifest) in agents {
         let mut agent = facet_value::VObject::new();
