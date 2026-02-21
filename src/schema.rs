@@ -88,7 +88,7 @@ mod tests {
         let sch = schema_for::<KgAgentFileDoc>();
         let result = build_mappings(sch)?;
         let json_str = facet_json::to_string_pretty(&result)?;
-        eprintln!("{json_str}");
+        assert!(json_str.contains("kg_to_kiro"));
         Ok(())
     }
 

@@ -110,8 +110,6 @@ pub struct KgAgentFileDoc {
     #[facet(default, rename = "toolSettings")]
     pub tool_settings: HashMap<String, facet_value::Value>,
 
-    /// Keyboard shortcut for swapping to this agent (e.g., "ctrl+shift+a",
-    /// "shift+tab")
     #[kg_mapping(
         kiro_schema_path = "#/properties/keyboardShortcut",
         description = "Keyboard shortcut for swapping to this agent (e.g., \"ctrl+shift+a\", \
@@ -119,7 +117,6 @@ pub struct KgAgentFileDoc {
     )]
     #[facet(rename = "keyboardShortcut")]
     pub keyboard_shortcut: Option<String>,
-    /// Welcome message displayed when switching to this agent
     #[kg_mapping(
         kiro_schema_path = "#/properties/welcomeMessage",
         description = "Welcome message displayed when switching to this agent"
