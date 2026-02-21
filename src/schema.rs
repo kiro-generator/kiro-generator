@@ -89,6 +89,7 @@ mod tests {
         let result = build_mappings(sch)?;
         let json_str = facet_json::to_string_pretty(&result)?;
         assert!(json_str.contains("kg_to_kiro"));
+        handle_schema_mappings()?;
         Ok(())
     }
 
