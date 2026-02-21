@@ -177,12 +177,20 @@ pub enum Command {
     Bootstrap(BootstrapArgs),
 }
 
+#[derive(clap::Args, Clone, Default)]
+pub struct SchemaAgentArgs {
+    /// Generate KG TOML field mapping to kiro agent fields. Output is in JSON
+    /// format
+    #[arg(long, short = 'm')]
+    pub mappings: bool,
+}
+
 #[derive(Subcommand, Clone)]
 pub enum SchemaCommand {
     /// Output JSON schema for manifest files (kg.toml)
     Manifest,
     /// Output JSON schema for agent definition files
-    Agent,
+    Agent(SchemaAgentArgs),
     /// Output JSON schema for kiro-cli agent definition files (the end result)
     KiroAgent,
 }
@@ -191,7 +199,7 @@ impl Display for SchemaCommand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
             Self::Manifest => "manifest",
-            Self::Agent => "agent",
+            Self::Agent(_) => "agent",
             Self::KiroAgent => "kiro-agent",
         })
     }
