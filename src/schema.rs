@@ -101,6 +101,17 @@ fn build_manifest_schema() -> Result<JsonSchema> {
     };
 
     merged_props.extend(agent_props);
+    if let Some(agent_defs) = agent.defs {
+        let manifest_agents = manifest_props.get_mut("agents").unwrap();
+        if let Some(AdditionalProperties::Schema(schema)) =
+            manifest_agents.additional_properties.as_mut()
+        {
+            schema
+                .defs
+                .get_or_insert_with(Default::default)
+                .extend(agent_defs);
+        }
+    }
     manifest.properties = Some(manifest_props);
     Ok(manifest)
 }
