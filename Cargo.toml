@@ -39,6 +39,9 @@ assets = [
 ]
 conf-files = ["/etc/kg/global.env", "/etc/kg/home.env"]
 
+[workspace]
+members = ["kg-macro"]
+
 [[bin]]
 name = "kg"
 path = "src/main.rs"
@@ -66,6 +69,7 @@ facet-value = { git = "https://github.com/facet-rs/facet", branch = "main", vers
 # facet-value = { version = "0.43.2", features = ["std"] }
 futures = "0.3"
 jsonschema = { version = "0.40", default-features = false, features = ["resolve-file"] }
+kg-macro = { path = "kg-macro" }
 # facet-core = { git = "https://github.com/facet-rs/facet", branch = "main", version = "0.43" }
 rediff = { git = "https://github.com/bearcove/rediff.git", branch = "main", version = "1.0.0" }
 serde_json = { version = "1" }

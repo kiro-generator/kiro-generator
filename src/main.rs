@@ -143,6 +143,11 @@ async fn main() -> Result<()> {
     }
 
     if let commands::Command::Schema(schema_cmd) = &cli.command {
+        if let commands::SchemaCommand::Agent(args) = &schema_cmd
+            && args.mappings
+        {
+            return schema::handle_schema_mappings();
+        }
         return schema::handle_schema_command(schema_cmd);
     }
 

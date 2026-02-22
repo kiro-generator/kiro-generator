@@ -1401,6 +1401,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kg-macro"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "kiro-generator"
 version = "0.1.2-rc.4"
 dependencies = [
@@ -1417,6 +1425,7 @@ dependencies = [
  "facet-value",
  "futures",
  "jsonschema",
+ "kg-macro",
  "nix",
  "notify-rust",
  "rediff",
