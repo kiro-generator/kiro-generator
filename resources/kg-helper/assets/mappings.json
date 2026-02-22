@@ -1,56 +1,16 @@
 {
   "kg_to_kiro": {
-    "#/properties/welcomeMessage": {
-      "kiro_schema_path": "#/properties/welcomeMessage",
-      "description": "Welcome message displayed when switching to this agent"
-    },
-    "#/properties/hooks": {
-      "kiro_schema_path": "#/properties/hooks",
-      "description": "Commands to run when a chat session is created"
-    },
-    "#/properties/tools": {
-      "kiro_schema_path": "#/properties/tools",
-      "description": "List of tools the agent can see. Use \"@{MCP_SERVER_NAME}/tool_name\" to specify tools from mcp servers. To include all tools from a server, use \"@{MCP_SERVER_NAME}\""
-    },
-    "#/properties/$schema": {
-      "kiro_schema_path": "#/properties/$schema",
-      "description": "JSON schema URI for editor support."
-    },
-    "#/properties/mcpServers": {
-      "kiro_schema_path": "#/properties/mcpServers",
-      "description": "Configuration for Model Context Protocol (MCP) servers"
-    },
-    "#/properties/toolAliases": {
-      "kiro_schema_path": "#/properties/toolAliases",
-      "description": "Tool aliases for remapping tool names"
+    "#/properties/allowedTools": {
+      "kiro_schema_path": "#/properties/allowedTools",
+      "description": "List of tools the agent is explicitly allowed to use"
     },
     "#/properties/description": {
       "kiro_schema_path": "#/properties/description",
       "description": "This field is not model facing and is mostly here for users to discern between agents"
     },
-    "#/properties/prompt": {
-      "kiro_schema_path": "#/properties/prompt",
-      "description": "The intention for this field is to provide high level context to the agent. This should be seen as the same category of context as a system prompt."
-    },
-    "#/properties/resources": {
-      "kiro_schema_path": "#/properties/resources",
-      "description": "Files to include in the agent's context"
-    },
-    "#/properties/toolSettings": {
-      "kiro_schema_path": "#/properties/toolsSettings",
-      "description": "Additional toolsSettings entries merged into toolsSettings."
-    },
-    "#/properties/useLegacyMcpJson": {
-      "kiro_schema_path": "#/properties/useLegacyMcpJson",
-      "description": "Whether or not to include the legacy global MCP configuration in the agent. You can reference tools brought in by these servers just as you would with the servers you configure in the mcpServers field in this config."
-    },
-    "#/properties/subagents": {
-      "kiro_schema_path": "#/properties/toolsSettings",
-      "description": "Allow/deny lists for subagents, emitted into toolsSettings.subagent."
-    },
-    "#/properties/allowedTools": {
-      "kiro_schema_path": "#/properties/allowedTools",
-      "description": "List of tools the agent is explicitly allowed to use"
+    "#/properties/hooks": {
+      "kiro_schema_path": "#/properties/hooks",
+      "description": "Commands to run when a chat session is created"
     },
     "#/properties/keyboardShortcut": {
       "kiro_schema_path": "#/properties/keyboardShortcut",
@@ -60,13 +20,49 @@
       "kiro_schema_path": "#/properties/resources",
       "description": "Knowledge bases to include in the agent's context"
     },
-    "#/properties/nativeTools": {
-      "kiro_schema_path": "#/properties/toolsSettings",
-      "description": "Native tool settings (shell, read, write, etc.) merged into toolsSettings."
+    "#/properties/mcpServers": {
+      "kiro_schema_path": "#/properties/mcpServers",
+      "description": "Configuration for Model Context Protocol (MCP) servers"
     },
     "#/properties/model": {
       "kiro_schema_path": "#/properties/model",
       "description": "The model ID to use for this agent. If not specified, uses the default model."
+    },
+    "#/properties/nativeTools": {
+      "kiro_schema_path": "#/properties/toolsSettings",
+      "description": "Native tool settings (shell, read, write, etc.) merged into toolsSettings."
+    },
+    "#/properties/prompt": {
+      "kiro_schema_path": "#/properties/prompt",
+      "description": "The intention for this field is to provide high level context to the agent. This should be seen as the same category of context as a system prompt."
+    },
+    "#/properties/resources": {
+      "kiro_schema_path": "#/properties/resources",
+      "description": "Files to include in the agent's context"
+    },
+    "#/properties/subagents": {
+      "kiro_schema_path": "#/properties/toolsSettings",
+      "description": "Allow/deny lists for subagents, emitted into toolsSettings.subagent."
+    },
+    "#/properties/toolAliases": {
+      "kiro_schema_path": "#/properties/toolAliases",
+      "description": "Tool aliases for remapping tool names"
+    },
+    "#/properties/toolSettings": {
+      "kiro_schema_path": "#/properties/toolsSettings",
+      "description": "Additional toolsSettings entries merged into toolsSettings."
+    },
+    "#/properties/tools": {
+      "kiro_schema_path": "#/properties/tools",
+      "description": "List of tools the agent can see. Use \"@{MCP_SERVER_NAME}/tool_name\" to specify tools from mcp servers. To include all tools from a server, use \"@{MCP_SERVER_NAME}\""
+    },
+    "#/properties/useLegacyMcpJson": {
+      "kiro_schema_path": "#/properties/useLegacyMcpJson",
+      "description": "Whether or not to include the legacy global MCP configuration in the agent. You can reference tools brought in by these servers just as you would with the servers you configure in the mcpServers field in this config."
+    },
+    "#/properties/welcomeMessage": {
+      "kiro_schema_path": "#/properties/welcomeMessage",
+      "description": "Welcome message displayed when switching to this agent"
     }
   }
 }

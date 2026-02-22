@@ -10,8 +10,7 @@
         {
           "type": "null"
         }
-      ],
-      "description": "JSON schema URI for editor support. | kiro_schema_path = #/properties/$schema"
+      ]
     },
     "allowedTools": {
       "type": "array",

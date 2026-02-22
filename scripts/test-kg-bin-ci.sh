@@ -27,6 +27,7 @@ $KG g
 $KG diff
 $KG schema manifest | jq . >/dev/null
 $KG schema agent | jq . >/dev/null
+$KG schema agent -m | jq . >/dev/null
 
 rm -rf .kiro/generators .kiro/agents
 mkdir -p ~/.kiro/generators
