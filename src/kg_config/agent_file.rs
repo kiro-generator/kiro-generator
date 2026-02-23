@@ -19,10 +19,6 @@ use {
 /// Definition for kg agents, .kiro/generators/agents, excluding inheritance
 #[kg_schema]
 pub struct KgAgentFileDoc {
-    #[kg_mapping(
-        kiro_schema_path = "#/properties/$schema",
-        description = "JSON schema URI for editor support."
-    )]
     #[facet(rename = "$schema")]
     pub schema: Option<String>,
     #[kg_mapping(

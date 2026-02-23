@@ -14,6 +14,7 @@ use {
     },
 };
 
+/// See [`super::agent_file::KgAgentFileDoc`] for field documentation
 #[derive(Facet, Clone, Default)]
 #[facet(default, deny_unknown_fields)]
 pub struct Manifest {
@@ -26,59 +27,36 @@ pub struct Manifest {
     /// declared.
     #[facet(default)]
     pub template: bool,
-    /// Human-readable description of the agent's purpose
     pub description: Option<String>,
     /// List of parent agents to inherit configuration from
     #[facet(default)]
     pub inherits: HashSet<String>,
-    /// High-level context for the agent (system prompt)
     pub prompt: Option<String>,
-    /// Files and URLs to include as context (supports file:// and https:// schemes)
     #[facet(default)]
     pub resources: HashSet<String>,
-    /// Knowledge bases for semantic search (converted to resources array in
-    /// JSON)
     #[facet(default)]
     pub knowledge: HashMap<String, KgKnowledge>,
-    /// Whether to include MCP servers from mcp.json files (maps to
-    /// includeMcpJson in JSON)
     #[facet(default, rename = "useLegacyMcpJson")]
     pub include_mcp_json: Option<bool>,
-    /// Tools available to the agent (use ["*"] for all tools)
     #[facet(default)]
     pub tools: HashSet<String>,
-    /// Tools that don't require user permission prompts (maps to allowedTools
-    /// in JSON)
     #[facet(default, rename = "allowedTools")]
     pub allowed_tools: HashSet<String>,
-    /// Model ID to use for this agent
     pub model: Option<String>,
-    /// Lifecycle hooks (commands run at specific trigger points)
     #[facet(default)]
     pub hooks: HashMap<String, HashMap<String, KgHook>>,
-    /// MCP server configurations (maps to mcpServers in JSON)
     #[facet(default, rename = "mcpServers")]
     pub mcp_servers: HashMap<String, KgCustomToolConfig>,
-    /// Tool name remapping for handling naming collisions (maps to toolAliases
-    /// in JSON)
     #[facet(default, rename = "toolAliases")]
     pub tool_aliases: HashMap<String, String>,
-    /// Native tool permissions (maps to toolsSettings in JSON)
     #[facet(default, rename = "nativeTools")]
     pub native_tools: NativeTools,
-    /// Additional tool settings merged with nativeTools (maps to toolsSettings
-    /// in JSON)
     #[facet(default, rename = "toolSettings")]
     pub tool_settings: HashMap<String, facet_value::Value>,
-
-    /// Keyboard shortcut for swapping to this agent (e.g., "ctrl+shift+a",
-    /// "shift+tab")
     #[facet(default, rename = "keyboardShortcut")]
     pub keyboard_shortcut: Option<String>,
-    /// Welcome message displayed when switching to this agent
     #[facet(default, rename = "welcomeMessage")]
     pub welcome_message: Option<String>,
-    /// Subagent permissions (maps to toolsSettings.subagent in JSON)
     #[facet(default)]
     pub subagents: SubagentConfig,
 }

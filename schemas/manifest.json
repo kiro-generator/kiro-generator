@@ -17,12 +17,22 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
+          "$schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "allowedTools": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Tools that don't require user permission prompts (maps to allowedTools\n in JSON)"
+            "description": "List of tools the agent is explicitly allowed to use | kiro_schema_path = #/properties/allowedTools"
           },
           "description": {
             "anyOf": [
@@ -33,7 +43,7 @@
                 "type": "null"
               }
             ],
-            "description": "Human-readable description of the agent's purpose"
+            "description": "This field is not model facing and is mostly here for users to discern between agents | kiro_schema_path = #/properties/description"
           },
           "hooks": {
             "type": "object",
@@ -101,7 +111,7 @@
                 "title": "KgHook"
               }
             },
-            "description": "Lifecycle hooks (commands run at specific trigger points)"
+            "description": "Commands to run when a chat session is created | kiro_schema_path = #/properties/hooks"
           },
           "inherits": {
             "type": "array",
@@ -119,7 +129,7 @@
                 "type": "null"
               }
             ],
-            "description": "Keyboard shortcut for swapping to this agent (e.g., \"ctrl+shift+a\",\n \"shift+tab\")"
+            "description": "Keyboard shortcut for swapping to this agent (e.g., \"ctrl+shift+a\", \"shift+tab\") | kiro_schema_path = #/properties/keyboardShortcut"
           },
           "knowledge": {
             "type": "object",
@@ -170,7 +180,7 @@
               "additionalProperties": false,
               "title": "KgKnowledge"
             },
-            "description": "Knowledge bases for semantic search (converted to resources array in\n JSON)"
+            "description": "Knowledge bases to include in the agent's context | kiro_schema_path = #/properties/resources"
           },
           "mcpServers": {
             "type": "object",
@@ -240,7 +250,7 @@
               "description": "MCP server configuration for agent definitions.",
               "title": "KgCustomToolConfig"
             },
-            "description": "MCP server configurations (maps to mcpServers in JSON)"
+            "description": "Configuration for Model Context Protocol (MCP) servers | kiro_schema_path = #/properties/mcpServers"
           },
           "model": {
             "anyOf": [
@@ -251,7 +261,7 @@
                 "type": "null"
               }
             ],
-            "description": "Model ID to use for this agent"
+            "description": "The model ID to use for this agent. If not specified, uses the default model. | kiro_schema_path = #/properties/model"
           },
           "name": {
             "type": "string",
@@ -577,7 +587,7 @@
               }
             },
             "additionalProperties": false,
-            "description": "Native tool permissions (maps to toolsSettings in JSON)",
+            "description": "Native tool settings (shell, read, write, etc.) merged into toolsSettings. | kiro_schema_path = #/properties/toolsSettings",
             "title": "NativeTools"
           },
           "prompt": {
@@ -589,14 +599,14 @@
                 "type": "null"
               }
             ],
-            "description": "High-level context for the agent (system prompt)"
+            "description": "The intention for this field is to provide high level context to the agent. This should be seen as the same category of context as a system prompt. | kiro_schema_path = #/properties/prompt"
           },
           "resources": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Files and URLs to include as context (supports file:// and https:// schemes)"
+            "description": "Files to include in the agent's context | kiro_schema_path = #/properties/resources"
           },
           "subagents": {
             "type": "object",
@@ -615,7 +625,7 @@
               }
             },
             "additionalProperties": false,
-            "description": "Subagent permissions (maps to toolsSettings.subagent in JSON)",
+            "description": "Allow/deny lists for subagents, emitted into toolsSettings.subagent. | kiro_schema_path = #/properties/toolsSettings",
             "title": "SubagentConfig"
           },
           "template": {
@@ -627,21 +637,21 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Tool name remapping for handling naming collisions (maps to toolAliases\n in JSON)"
+            "description": "Tool aliases for remapping tool names | kiro_schema_path = #/properties/toolAliases"
           },
           "toolSettings": {
             "type": "object",
             "additionalProperties": {
               "description": "A dynamic value that can hold null, bool, number, string, bytes, array, or object."
             },
-            "description": "Additional tool settings merged with nativeTools (maps to toolsSettings\n in JSON)"
+            "description": "Additional toolsSettings entries merged into toolsSettings. | kiro_schema_path = #/properties/toolsSettings"
           },
           "tools": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Tools available to the agent (use [\"*\"] for all tools)"
+            "description": "List of tools the agent can see. Use \"@{MCP_SERVER_NAME}/tool_name\" to specify tools from mcp servers. To include all tools from a server, use \"@{MCP_SERVER_NAME}\" | kiro_schema_path = #/properties/tools"
           },
           "useLegacyMcpJson": {
             "anyOf": [
@@ -652,7 +662,7 @@
                 "type": "null"
               }
             ],
-            "description": "Whether to include MCP servers from mcp.json files (maps to\n includeMcpJson in JSON)"
+            "description": "Whether or not to include the legacy global MCP configuration in the agent. You can reference tools brought in by these servers just as you would with the servers you configure in the mcpServers field in this config. | kiro_schema_path = #/properties/useLegacyMcpJson"
           },
           "welcomeMessage": {
             "anyOf": [
@@ -663,7 +673,7 @@
                 "type": "null"
               }
             ],
-            "description": "Welcome message displayed when switching to this agent"
+            "description": "Welcome message displayed when switching to this agent | kiro_schema_path = #/properties/welcomeMessage"
           }
         },
         "additionalProperties": false,
@@ -673,5 +683,5 @@
   },
   "additionalProperties": false,
   "description": "Agent manifests which control inheritance",
-  "title": "GeneratorConfig"
+  "title": "Agent Manifest"
 }
