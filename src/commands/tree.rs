@@ -65,7 +65,7 @@ fn build_json(
                 .iter()
                 .map(|s| facet_value::Value::from(s.as_str()))
                 .collect();
-            agent.insert("resolvedChain", facet_value::Value::from(chain_arr));
+            agent.insert("resolved_chain", facet_value::Value::from(chain_arr));
         }
         obj.insert(name.as_str(), facet_value::Value::from(agent));
     }
