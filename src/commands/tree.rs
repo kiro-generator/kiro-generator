@@ -16,14 +16,25 @@ pub(super) fn execute_tree(generator: &Generator, args: &TreeArgs) -> Result<fac
         return Ok(facet_value::Value::from(facet_value::VObject::new()));
     }
 
-    build_json(&agents, &resolved.sources)
+    build_json(&agents, &resolved.sources, generator)
 }
 
-fn build_json(agents: &[(&String, &Manifest)], sources: &KgSources) -> Result<facet_value::Value> {
+fn build_json(
+    agents: &[(&String, &Manifest)],
+    sources: &KgSources,
+    generator: &Generator,
+) -> Result<facet_value::Value> {
     let mut obj = facet_value::VObject::new();
     for (name, manifest) in agents {
         let mut agent = facet_value::VObject::new();
         agent.insert("template", facet_value::Value::from(manifest.template));
+        if !manifest.template {
+            let output = generator.destination_dir(name).join(format!("{name}.json"));
+            agent.insert(
+                "output",
+                facet_value::Value::from(output.to_string_lossy().as_ref()),
+            );
+        }
         if let Some(ref desc) = manifest.description {
             agent.insert("description", facet_value::Value::from(desc.as_str()));
         }
@@ -49,6 +60,13 @@ fn build_json(agents: &[(&String, &Manifest)], sources: &KgSources) -> Result<fa
             .map(|s| facet_value::Value::from(s.as_str()))
             .collect();
         agent.insert("inherits", facet_value::Value::from(inherits));
+        if let Ok(chain) = generator.inheritance_chain(name) {
+            let chain_arr: facet_value::VArray = chain
+                .iter()
+                .map(|s| facet_value::Value::from(s.as_str()))
+                .collect();
+            agent.insert("resolvedChain", facet_value::Value::from(chain_arr));
+        }
         obj.insert(name.as_str(), facet_value::Value::from(agent));
     }
     Ok(facet_value::Value::from(obj))
