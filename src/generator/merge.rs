@@ -40,6 +40,16 @@ impl Generator {
         Ok(chain)
     }
 
+    /// Public accessor for the resolved inheritance chain of a named agent.
+    pub fn inheritance_chain(&self, name: &str) -> Result<Vec<String>> {
+        let agent = self
+            .resolved
+            .agents
+            .get(name)
+            .ok_or_else(|| crate::format_err!("Agent '{name}' not found"))?;
+        self.resolve_transitive_inheritance(agent, &mut HashSet::new())
+    }
+
     /// Merge all agents with transitive inheritance resolution
     #[tracing::instrument(level = "info", skip(self))]
     pub fn merge(&self) -> Result<Vec<Manifest>> {
