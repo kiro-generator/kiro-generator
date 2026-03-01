@@ -2,57 +2,72 @@ use {
     super::*,
     crate::{GeneratorConfig, Manifest},
     color_eyre::eyre::bail,
-    std::{fmt::Display, ops::Deref, path::Path},
+    std::path::Path,
+    tracing::Level,
 };
 
-/// Load all TOML files from a manifests directory and merge them.
+/// Load all TOML files from a manifests directory and combine them.
 /// Returns the merged config and a mapping of agent name → manifest file path.
 #[tracing::instrument(level = "info", skip(fs), fields(dir = %dir.as_ref().display()))]
 fn load_manifests(
     fs: &Fs,
+    is_local: bool,
     dir: impl AsRef<Path>,
-) -> crate::Result<(GeneratorConfig, HashMap<String, PathBuf>)> {
+) -> crate::Result<HashMap<String, SourceSlot>> {
     let dir_path = dir.as_ref();
 
     if !fs.exists(dir_path) {
-        return Ok((GeneratorConfig::default(), HashMap::new()));
+        tracing::debug!("dir does not exists");
+        return Ok(HashMap::default());
     }
 
     let entries = fs.read_dir_sync(dir_path)?;
-    let mut merged = GeneratorConfig::default();
-    let mut manifest_paths: HashMap<String, PathBuf> = HashMap::new();
-    let mut agent_files: Vec<PathBuf> = Vec::new();
-
+    let mut merged: HashMap<String, SourceSlot> = HashMap::new();
+    let mut manifest_files: Vec<PathBuf> = Vec::new();
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) == Some("toml") {
-            agent_files.push(path);
+            tracing::debug!("found file {}", path.display());
+            manifest_files.push(path);
         }
     }
-
     // Sort for deterministic order
-    agent_files.sort();
-
-    for path in agent_files {
+    manifest_files.sort();
+    for path in manifest_files {
         let _span = tracing::info_span!("parse_manifest", path = %path.display()).entered();
         if let Some(config_result) = crate::toml_parse_path(fs, &path) {
             let config: GeneratorConfig = config_result?;
             let config = config.populate_names();
-
             // Check for duplicate agent names
             for name in config.agents.keys() {
-                if merged.agents.contains_key(name) {
-                    bail!("Duplicate agent '{}' found in manifests directory", name);
+                if let Some(a) = merged.get(name) {
+                    bail!(
+                        "Duplicate agent '{name}' found in manifests file {} ({})",
+                        path.display(),
+                        a.path
+                            .as_ref()
+                            .map(|p| p.path().display().to_string())
+                            .unwrap_or_default()
+                    );
                 }
-                manifest_paths.insert(name.clone(), path.clone());
             }
-
-            merged.agents.extend(config.agents);
+            tracing::debug!("adding {} agents to manifest list", config.agents.len());
+            let sources: HashMap<String, SourceSlot> = config
+                .agents
+                .iter()
+                .map(|(k, v)| {
+                    (k.clone(), SourceSlot {
+                        path: Some(KgAgentSource::manifest(path.clone(), is_local)),
+                        manifest: v.clone(),
+                    })
+                })
+                .collect();
+            merged.extend(sources);
         }
     }
 
-    Ok((merged, manifest_paths))
+    Ok(merged)
 }
 
 #[cfg(test)]
@@ -67,78 +82,142 @@ pub fn load_inline(fs: &Fs, path: impl AsRef<Path>) -> crate::Result<GeneratorCo
     }
 }
 
-fn process_local(
-    fs: &Fs,
-    name: impl AsRef<str>,
+fn merge_manifests(
+    name: String,
+    global_manifest: &SourceSlot,
+    local_manifest: &SourceSlot,
+    global_agent_file: &SourceSlot,
+    local_agent_file: &SourceSlot,
     location: &ConfigLocation,
-    inline: Option<&Manifest>,
-    manifest_path: Option<&PathBuf>,
-    sources: &mut Vec<KgAgentSource>,
-) -> crate::Result<Option<Manifest>> {
-    let local_agent_path = location.local_agent(fs, &name)?;
-    let template = inline.map(|i| i.template).unwrap_or(false);
+) -> Manifest {
+    let mut ordered: Vec<&Manifest> = Vec::with_capacity(4);
 
-    match &local_agent_path {
-        None => {
-            if let Some(i) = inline {
-                if let Some(p) = manifest_path {
-                    sources.push(KgAgentSource::LocalManifest(p.clone()));
-                }
-                Ok(Some(i.clone()))
-            } else {
-                Ok(None)
+    match location {
+        ConfigLocation::Global(_) => {
+            if global_agent_file.path.is_some() {
+                ordered.push(&global_agent_file.manifest);
+            }
+            if global_manifest.path.is_some() {
+                ordered.push(&global_manifest.manifest);
             }
         }
-        Some(path) => {
-            // Template status is only defined in manifests, passed via inline config
-            match Manifest::from_path(fs, name, path, template) {
-                None => Ok(None),
-                Some(a) => {
-                    let agent = a?;
-                    sources.push(KgAgentSource::LocalFile(path.clone()));
-                    if let Some(i) = inline {
-                        if let Some(p) = manifest_path {
-                            sources.push(KgAgentSource::LocalManifest(p.clone()));
-                        }
-                        Ok(Some(agent.merge(i.clone())))
-                    } else {
-                        Ok(Some(agent))
-                    }
-                }
+        ConfigLocation::Local => {
+            if local_agent_file.path.is_some() {
+                ordered.push(&local_agent_file.manifest);
+            }
+            if local_manifest.path.is_some() {
+                ordered.push(&local_manifest.manifest);
+            }
+        }
+        ConfigLocation::Both(_) => {
+            if local_agent_file.path.is_some() {
+                ordered.push(&local_agent_file.manifest);
+            }
+            if local_manifest.path.is_some() {
+                ordered.push(&local_manifest.manifest);
+            }
+            if global_agent_file.path.is_some() {
+                ordered.push(&global_agent_file.manifest);
+            }
+            if global_manifest.path.is_some() {
+                ordered.push(&global_manifest.manifest);
             }
         }
     }
-}
 
-#[derive(Clone, Facet)]
-#[facet(opaque)]
-pub struct ResolvedAgents {
-    #[facet(default)]
-    pub agents: HashMap<String, Manifest>,
-    #[facet(skip, default)]
-    pub sources: KgSources,
-    #[facet(skip, default)]
-    pub has_local: bool,
-}
+    let mut iter = ordered.into_iter();
+    let mut merged = match iter.next() {
+        Some(first) => first.clone(),
+        None => Manifest {
+            name: name.clone(),
+            ..Default::default()
+        },
+    };
 
-impl Deref for ResolvedAgents {
-    type Target = HashMap<String, Manifest>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.agents
+    for other in iter {
+        merged = merged.merge(other.clone());
     }
+
+    if merged.name.is_empty() {
+        merged.name = name.clone();
+    }
+
+    merged
 }
 
-impl Debug for ResolvedAgents {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "resolved={}", self.agents.len())
-    }
-}
+#[tracing::instrument(level = "info", skip(fs), fields(location = %location))]
+pub fn load_sources(fs: &Fs, location: &ConfigLocation) -> crate::Result<Vec<AgentSourceSlots>> {
+    let global_manifests_dir = location.global_manifests_dir();
+    let local_manifests_dir = location.local_manifests_dir();
+    let mut global_agents = load_manifests(fs, false, global_manifests_dir)?;
+    let mut local_agents = load_manifests(fs, true, local_manifests_dir)?;
+    tracing::debug!(
+        "found {} global manifests and {} local manifests",
+        global_agents.len(),
+        local_agents.len()
+    );
+    let local_names: HashSet<String> =
+        HashSet::from_iter(local_agents.keys().map(|k| k.to_string()));
+    let global_names: HashSet<String> =
+        HashSet::from_iter(global_agents.keys().map(|k| k.to_string()));
+    let all_agents_names: HashSet<String> =
+        local_names.iter().chain(&global_names).cloned().collect();
 
-impl Display for ResolvedAgents {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "resolved={}", self.agents.len())
+    let mut slots: Vec<AgentSourceSlots> = Vec::with_capacity(all_agents_names.len());
+
+    for name in all_agents_names {
+        let _span = tracing::info_span!("merge_manifest", agent = name).entered();
+        let global_manifest: SourceSlot = global_agents.remove(&name).unwrap_or_default();
+        let local_manifest: SourceSlot = local_agents.remove(&name).unwrap_or_default();
+        let global_agent_path = location.global_agent(fs, &name)?;
+        let local_agent_path = location.local_agent(fs, &name)?;
+        if tracing::enabled!(Level::DEBUG) {
+            tracing::debug!(
+                "global_path={} local_path={}",
+                match &global_agent_path {
+                    None => "not found".to_string(),
+                    Some(p) => p.display().to_string(),
+                },
+                match &local_agent_path {
+                    None => "not found".to_string(),
+                    Some(p) => p.display().to_string(),
+                }
+            );
+        }
+        let global_agent_file = SourceSlot::from_agent_path(
+            fs,
+            &name,
+            location,
+            true,
+            global_manifest.manifest.template,
+        )?;
+        let local_agent_file = SourceSlot::from_agent_path(
+            fs,
+            &name,
+            location,
+            false,
+            local_manifest.manifest.template,
+        )?;
+        let merged = merge_manifests(
+            name.clone(),
+            &global_manifest,
+            &local_manifest,
+            &global_agent_file,
+            &local_agent_file,
+            location,
+        );
+        slots.push(AgentSourceSlots::new(
+            name,
+            global_manifest,
+            local_manifest,
+            global_agent_file,
+            local_agent_file,
+            merged,
+        ));
     }
+
+    slots.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(slots)
 }
 
 /// First pass: Discover all agents from configuration files
@@ -155,194 +234,30 @@ pub fn discover(
     fs: &Fs,
     location: &ConfigLocation,
     format: &crate::output::OutputFormat,
-) -> crate::Result<ResolvedAgents> {
-    // Validate no duplicate agent names
+) -> crate::Result<HashMap<String, AgentSourceSlots>> {
     location.validate(fs, MAX_AGENT_DIR_ENTRIES)?;
-
-    let global_manifests_dir = location.global_manifests_dir();
-    let local_manifests_dir = location.local_manifests_dir();
-
-    let (global_agents, global_manifest_paths) = load_manifests(fs, global_manifests_dir)?;
-    let (local_agents, local_manifest_paths) = load_manifests(fs, local_manifests_dir)?;
-
-    tracing::debug!("found {} local agents", local_agents.agents.len());
-
-    let local_names: HashSet<String> =
-        HashSet::from_iter(local_agents.agents.keys().map(|k| k.to_string()));
-    let global_names: HashSet<String> =
-        HashSet::from_iter(global_agents.agents.keys().map(|k| k.to_string()));
-    let all_agents_names: HashSet<String> =
-        local_names.iter().chain(&global_names).cloned().collect();
-
-    let mut resolved_agents: HashMap<String, Manifest> =
-        HashMap::with_capacity(all_agents_names.len());
-    let mut sources: KgSources = KgSources::from(&all_agents_names);
-
-    for (name, agent_sources) in sources.iter_mut() {
-        let span = tracing::info_span!("agent", name = ?name);
-        let _enter = span.enter();
-        tracing::trace!("matching location");
-
-        let template = global_agents.get(name).map(|a| a.template).unwrap_or(false);
-        let mut global_path_buf: Option<PathBuf> = None;
-        let file_source: Option<Manifest> = if let Some(global_path) =
-            location.global_agent(fs, name)?
-            && let Some(agent) = Manifest::from_path(fs, name, &global_path, template)
-        {
-            global_path_buf = Some(global_path);
-            Some(agent?)
-        } else {
-            None
-        };
-        match location {
-            ConfigLocation::Local => {
-                if let Some(a) = process_local(
-                    fs,
-                    name,
-                    location,
-                    local_agents.get(name),
-                    local_manifest_paths.get(name),
-                    agent_sources,
-                )? {
-                    resolved_agents.insert(name.to_string(), a);
-                }
-            }
-            ConfigLocation::Both(_) => {
-                // Match all possible combinations of agent sources
-                // Tuple: (local_file, global_manifest, global_file)
-                // Merge order: local <- global_file <- global_manifest (rightmost wins)
-                match (
-                    process_local(
-                        fs,
-                        name,
-                        location,
-                        local_agents.get(name),
-                        local_manifest_paths.get(name),
-                        agent_sources,
-                    )?,
-                    global_agents.get(name),
-                    file_source,
-                ) {
-                    // Invariant violation - at least one source must exist
-                    (None, None, None) => panic!("agent definitions are invalid"),
-
-                    // All three sources present: merge local <- global_file <- global_manifest
-                    (Some(l), Some(g), Some(gf)) => {
-                        tracing::trace!("found local file, inline global and global file source");
-                        if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
-                        }
-                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
-                        resolved_agents.insert(name.to_string(), l.merge(gf.merge(g.clone())));
-                    }
-
-                    // Global sources only: merge global_file <- global_manifest
-                    (None, Some(g), Some(gf)) => {
-                        tracing::trace!("found inline global and global file source");
-                        if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
-                        }
-                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
-                        resolved_agents.insert(name.to_string(), gf.merge(g.clone()));
-                    }
-
-                    // Global file only
-                    (None, None, Some(gf)) => {
-                        tracing::trace!("found global file source");
-                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
-                        resolved_agents.insert(name.to_string(), gf);
-                    }
-
-                    // Local + global manifest
-                    (Some(l), Some(g), None) => {
-                        tracing::trace!("found local and inline global");
-                        if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
-                        }
-                        resolved_agents.insert(name.to_string(), l.merge(g.clone()));
-                    }
-
-                    // Local + global file
-                    (Some(l), None, Some(gf)) => {
-                        tracing::trace!("found local and global file");
-                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
-                        resolved_agents.insert(name.to_string(), l.merge(gf));
-                    }
-
-                    // Local only
-                    (Some(l), None, None) => {
-                        tracing::trace!("found only local");
-                        resolved_agents.insert(name.to_string(), l);
-                    }
-
-                    // Global manifest only
-                    (None, Some(g), None) => {
-                        tracing::trace!("found only global manifest file");
-                        if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
-                        }
-                        resolved_agents.insert(name.to_string(), g.clone());
-                    }
-                };
-            }
-            ConfigLocation::Global(_) => {
-                match (global_agents.get(name), file_source) {
-                    (Some(i), None) => {
-                        if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
-                        }
-                        resolved_agents.insert(name.to_string(), i.clone());
-                    }
-                    (None, Some(a)) => {
-                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
-                        resolved_agents.insert(name.to_string(), a);
-                    }
-                    (Some(i), Some(a)) => {
-                        if let Some(p) = global_manifest_paths.get(name) {
-                            agent_sources.push(KgAgentSource::GlobalManifest(p.clone()));
-                        }
-                        agent_sources.push(KgAgentSource::GlobalFile(global_path_buf.unwrap()));
-                        resolved_agents.insert(name.to_string(), a.merge(i.clone()));
-                    }
-                    (None, None) => {
-                        tracing::debug!("no global agent definition found");
-                    }
-                };
-            }
-        };
-    }
-    if let Err(e) = format.sources(&sources) {
+    let agents = load_sources(fs, location)?;
+    if let Err(e) = format.sources(&agents) {
         tracing::error!("Failed to format sources: {}", e);
     }
-    let has_local = sources.values().flatten().any(|s| {
-        matches!(
-            s,
-            KgAgentSource::LocalFile(_) | KgAgentSource::LocalManifest(_)
-        )
-    });
-
-    Ok(ResolvedAgents {
-        agents: resolved_agents,
-        sources,
-        has_local,
-    })
+    Ok(agents.into_iter().map(|s| (s.name.clone(), s)).collect())
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::os::ACTIVE_USER_HOME, std::path::PathBuf};
+    use {super::*, crate::os::ACTIVE_USER_HOME, color_eyre::eyre::eyre, std::path::PathBuf};
 
     #[tokio::test]
     #[test_log::test]
     async fn test_discover_local_agents_toml() -> Result<()> {
         let fs = Fs::new();
-        let resolved = discover(
+        let agents = discover(
             &fs,
             &ConfigLocation::Local,
             &crate::output::OutputFormat::Table(true),
         )?;
-        let agents = resolved.agents;
-        let sources = resolved.sources;
+        let sources: HashMap<String, Vec<KgAgentSource>> =
+            agents.iter().map(|(k, v)| (k.clone(), v.into())).collect();
         assert!(!agents.is_empty());
         assert_eq!(sources.keys().len(), 7);
         assert!(sources.contains_key("base"));
@@ -359,15 +274,17 @@ mod tests {
         let source = sources.get("dependabot").unwrap();
         assert_eq!(source.len(), 2);
 
-        let g_path = PathBuf::from(ACTIVE_USER_HOME)
-            .join(".kiro")
-            .join("generators");
-        discover(
-            &fs,
-            &ConfigLocation::Global(g_path.clone()),
-            &crate::output::OutputFormat::Table(true),
-        )?;
-
+        for agent_sources in sources.values() {
+            for s in agent_sources {
+                assert!(
+                    matches!(
+                        s,
+                        KgAgentSource::LocalFile(_) | KgAgentSource::LocalManifest(_)
+                    ),
+                    "agent is not local"
+                );
+            }
+        }
         Ok(())
     }
 
@@ -378,13 +295,15 @@ mod tests {
         let g_path = PathBuf::from(ACTIVE_USER_HOME)
             .join(".kiro")
             .join("generators");
-        let resolved = discover(
+        let agents = discover(
             &fs,
             &ConfigLocation::Global(g_path.clone()),
             &crate::output::OutputFormat::Table(true),
         )?;
-        assert_eq!(resolved.len(), 3);
-        for agent_sources in resolved.sources.values() {
+        let sources: HashMap<String, Vec<KgAgentSource>> =
+            agents.iter().map(|(k, v)| (k.clone(), v.into())).collect();
+        assert_eq!(agents.len(), 3);
+        for agent_sources in sources.values() {
             for s in agent_sources {
                 assert!(
                     matches!(
@@ -392,7 +311,7 @@ mod tests {
                         KgAgentSource::GlobalManifest(_) | KgAgentSource::GlobalFile(_)
                     ),
                     "agent is not global"
-                )
+                );
             }
         }
         Ok(())
@@ -419,15 +338,17 @@ mod tests {
         let g_path = PathBuf::from(ACTIVE_USER_HOME)
             .join(".kiro")
             .join("generators");
-        let resolved = discover(
+        let agents = discover(
             &fs,
             &ConfigLocation::Both(g_path.clone()),
             &crate::output::OutputFormat::Table(true),
         )?;
+        let sources: HashMap<String, Vec<KgAgentSource>> =
+            agents.iter().map(|(k, v)| (k.clone(), v.into())).collect();
 
-        assert_eq!(resolved.len(), 7);
+        assert_eq!(agents.len(), 7);
 
-        for (n, agent_sources) in resolved.sources.iter() {
+        for (n, agent_sources) in sources.iter() {
             if n == "aws-test" {
                 assert_eq!(agent_sources.len(), 4);
             } else if n == "empty" {
@@ -437,8 +358,36 @@ mod tests {
             }
         }
 
-        assert!(!format!("{resolved}").is_empty());
-        assert!(!format!("{resolved:?}").is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_load_sources_both() -> Result<()> {
+        let fs = Fs::new();
+        let g_path = PathBuf::from(ACTIVE_USER_HOME)
+            .join(".kiro")
+            .join("generators");
+        let sources = load_sources(&fs, &ConfigLocation::Both(g_path))?;
+
+        let aws_test = sources
+            .iter()
+            .find(|slot| slot.name == "aws-test")
+            .ok_or_else(|| eyre!("missing aws-test manifest slots"))?;
+        assert!(aws_test.local_manifest.path.is_some());
+        assert!(aws_test.global_manifest.path.is_some());
+        assert!(aws_test.local_agent_file.path.is_some());
+        assert!(aws_test.global_agent_file.path.is_some());
+
+        let empty = sources
+            .iter()
+            .find(|slot| slot.name == "empty")
+            .ok_or_else(|| eyre!("missing empty manifest slots"))?;
+        assert!(empty.local_manifest.path.is_some());
+        assert!(empty.global_manifest.path.is_none());
+        assert!(empty.local_agent_file.path.is_some());
+        assert!(empty.global_agent_file.path.is_none());
+
         Ok(())
     }
 
@@ -446,18 +395,18 @@ mod tests {
     #[test_log::test]
     async fn test_template_not_inherited() -> Result<()> {
         let fs = Fs::new();
-        let resolved = discover(
+        let agents = discover(
             &fs,
             &ConfigLocation::Local,
             &crate::output::OutputFormat::Table(true),
         )?;
 
         // base is a template
-        let base = resolved.agents.get("base").unwrap();
+        let base = &agents.get("base").unwrap().merged;
         assert!(base.template);
 
         // aws-test inherits from base but is NOT a template
-        let aws_test = resolved.agents.get("aws-test").unwrap();
+        let aws_test = &agents.get("aws-test").unwrap().merged;
         assert!(!aws_test.template);
 
         Ok(())

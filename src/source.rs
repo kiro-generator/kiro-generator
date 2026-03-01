@@ -1,12 +1,118 @@
 use {
+    crate::{ConfigLocation, Manifest, os::Fs},
     std::{
-        collections::{HashMap, HashSet},
         fmt::{Debug, Display},
-        ops::{Deref, DerefMut},
         path::{Path, PathBuf},
     },
     super_table::Cell,
 };
+
+#[derive(Clone, Default)]
+pub struct SourceSlot {
+    pub path: Option<KgAgentSource>,
+    pub manifest: Manifest,
+}
+
+impl SourceSlot {
+    pub fn source_type(&self) -> Option<String> {
+        self.path.as_ref().map(|p| p.source_type().to_string())
+    }
+
+    pub fn from_agent_path(
+        fs: &Fs,
+        name: &str,
+        location: &ConfigLocation,
+        global: bool,
+        template: bool,
+    ) -> crate::Result<Self> {
+        let path = if global {
+            location.global_agent(fs, name)?
+        } else {
+            location.local_agent(fs, name)?
+        };
+        match path {
+            None => Ok(Self::default()),
+            Some(path) => match Manifest::from_path(fs, name, &path, template) {
+                None => Ok(Self::default()),
+                Some(result) => {
+                    let manifest = result?;
+                    Ok(Self {
+                        path: Some(if global {
+                            KgAgentSource::GlobalFile(path)
+                        } else {
+                            KgAgentSource::LocalFile(path)
+                        }),
+                        manifest,
+                    })
+                }
+            },
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct AgentSourceSlots {
+    pub name: String,
+    pub global_manifest: SourceSlot,
+    pub local_manifest: SourceSlot,
+    pub global_agent_file: SourceSlot,
+    pub local_agent_file: SourceSlot,
+    pub merged: Manifest,
+}
+
+impl AgentSourceSlots {
+    pub fn new(
+        name: String,
+        global_manifest: SourceSlot,
+        local_manifest: SourceSlot,
+        global_agent_file: SourceSlot,
+        local_agent_file: SourceSlot,
+        merged: Manifest,
+    ) -> Self {
+        Self {
+            name,
+            global_manifest,
+            local_manifest,
+            global_agent_file,
+            local_agent_file,
+            merged,
+        }
+    }
+
+    pub fn has_local(&self) -> bool {
+        self.local_manifest.path.is_some() || self.local_agent_file.path.is_some()
+    }
+}
+
+impl Debug for AgentSourceSlots {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}][local={}]", self.name, self.has_local())
+    }
+}
+
+impl From<&AgentSourceSlots> for Vec<KgAgentSource> {
+    fn from(value: &AgentSourceSlots) -> Self {
+        let mut sources = Vec::with_capacity(4);
+        let gm = value.global_manifest.path.clone();
+        let lm = value.local_manifest.path.clone();
+        let ag = value.global_agent_file.path.clone();
+        let al = value.local_agent_file.path.clone();
+
+        if let Some(s) = gm {
+            sources.push(s)
+        }
+        if let Some(s) = lm {
+            sources.push(s)
+        }
+        if let Some(s) = ag {
+            sources.push(s)
+        }
+        if let Some(s) = al {
+            sources.push(s)
+        }
+        sources
+    }
+}
 
 #[derive(Clone)]
 pub enum KgAgentSource {
@@ -31,9 +137,35 @@ impl Display for KgAgentSource {
         }
     }
 }
+
+impl Debug for KgAgentSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KgAgentSource::GlobalManifest(p) => write!(f, "{}", p.display()),
+            KgAgentSource::GlobalFile(p) => write!(f, "{}", p.display()),
+            KgAgentSource::LocalManifest(p) => write!(f, "{}", p.display()),
+            KgAgentSource::LocalFile(p) => write!(f, "{}", p.display()),
+        }
+    }
+}
+
+impl AsRef<Path> for KgAgentSource {
+    fn as_ref(&self) -> &Path {
+        self.path()
+    }
+}
+
 impl KgAgentSource {
-    fn is_local(&self) -> bool {
+    pub fn is_local(&self) -> bool {
         matches!(self, Self::LocalFile(_) | Self::LocalManifest(_))
+    }
+
+    pub fn manifest(path: PathBuf, local: bool) -> Self {
+        if local {
+            Self::LocalManifest(path)
+        } else {
+            Self::GlobalManifest(path)
+        }
     }
 
     pub fn source_type(&self) -> &str {
@@ -56,48 +188,6 @@ impl KgAgentSource {
 
     pub fn to_cell(&self) -> Cell {
         Cell::new(format!("{}:{}", self.source_type(), self.path().display()))
-    }
-}
-
-#[derive(Clone, Default)]
-pub struct KgSources(pub HashMap<String, Vec<KgAgentSource>>);
-
-impl Debug for KgSources {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "sources={}", self.0.len())
-    }
-}
-impl From<&HashSet<String>> for KgSources {
-    fn from(value: &HashSet<String>) -> Self {
-        let mut sources = Self(HashMap::with_capacity(value.len()));
-        value.iter().for_each(|n| sources.add(n));
-        sources
-    }
-}
-impl KgSources {
-    pub fn is_local(&self, name: impl AsRef<str>) -> bool {
-        if let Some(a) = self.get(name.as_ref()) {
-            return a.iter().any(|p| p.is_local());
-        }
-        false
-    }
-
-    fn add(&mut self, name: &str) {
-        self.0.insert(name.to_string(), Vec::with_capacity(4));
-    }
-}
-
-impl Deref for KgSources {
-    type Target = HashMap<String, Vec<KgAgentSource>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for KgSources {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
 
@@ -151,13 +241,5 @@ mod tests {
                 .content(),
             "local-file:bar"
         );
-    }
-
-    #[test]
-    fn kg_sources_debug() {
-        let mut sources = KgSources::default();
-        sources.add("agent1");
-        sources.add("agent2");
-        assert_eq!(format!("{:?}", sources), "sources=2");
     }
 }

@@ -53,6 +53,7 @@ pub struct GeneratorConfig {
     #[facet(default, rename = "agents")]
     pub agents: HashMap<String, Manifest>,
 }
+
 impl GeneratorConfig {
     pub fn populate_names(mut self) -> Self {
         for (k, v) in self.agents.iter_mut() {

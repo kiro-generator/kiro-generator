@@ -19,7 +19,12 @@ use {
     std::path::Path,
     tracing::enabled,
 };
-pub use {color_eyre::eyre::format_err, generator::ConfigLocation, kg_config::*};
+pub use {
+    color_eyre::eyre::format_err,
+    generator::ConfigLocation,
+    kg_config::*,
+    source::{AgentSourceSlots, SourceSlot},
+};
 
 pub type Result<T> = color_eyre::Result<T>;
 #[allow(dead_code)]

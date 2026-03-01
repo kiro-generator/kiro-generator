@@ -96,7 +96,7 @@ impl AgentResult {
 #[facet(opaque)]
 pub struct Generator {
     global_path: PathBuf,
-    pub(crate) resolved: discover::ResolvedAgents,
+    pub(crate) agents: HashMap<String, AgentSourceSlots>,
     #[facet(skip, default)]
     fs: Fs,
     #[facet(skip, default)]
@@ -108,10 +108,9 @@ impl Debug for Generator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "global_path={} exists={} local_agents={}",
+            "global_path={} exists={}",
             self.global_path.display(),
             self.fs.exists(&self.global_path),
-            self.resolved.has_local
         )
     }
 }
@@ -124,18 +123,25 @@ impl Generator {
         format: crate::output::OutputFormat,
     ) -> Result<Self> {
         let global_path = location.global_path();
-        let resolved = discover::discover(&fs, &location, &format)?;
+        let agents = discover::discover(&fs, &location, &format)?;
         Ok(Self {
             global_path,
-            resolved,
+            agents,
             fs,
             format,
         })
     }
 
+    pub fn contains_local_agents(&self) -> bool {
+        self.agents.values().any(|s| s.has_local())
+    }
+
     /// Check if an agent is defined in local kg.toml
     pub fn is_local(&self, agent_name: impl AsRef<str>) -> bool {
-        self.resolved.sources.is_local(agent_name)
+        self.agents
+            .get(agent_name.as_ref())
+            .map(|s| s.has_local())
+            .unwrap_or(false)
     }
 
     /// Get the destination directory for an agent (global or local)
@@ -217,7 +223,7 @@ impl Generator {
 
     fn diff_agents(&self, format: crate::output::DiffFormatArg, _filter: &[String]) -> Result<()> {
         let agents: Vec<Manifest> = self.merge()?.into_iter().filter(|a| !a.template).collect();
-        let all_agents = !self.resolved.has_local;
+        let all_agents = !self.contains_local_agents();
         let mut changed = 0;
         let mut unchanged = 0;
 
@@ -262,7 +268,7 @@ impl Generator {
         let mut results = Vec::with_capacity(agents.len());
         // If no local agents defined, write all (global) agents
         // If local agents exist, only write those
-        let write_all_agents = !self.resolved.has_local;
+        let write_all_agents = !self.contains_local_agents();
         for agent in agents {
             let span = tracing::info_span!("agent", name = ?agent.name, local = self.is_local(&agent.name));
             let _enter = span.enter();

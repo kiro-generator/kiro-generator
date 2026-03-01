@@ -20,12 +20,11 @@ impl Generator {
         let mut chain = Vec::new();
         for parent_name in agent.inherits.iter() {
             let parent = self
-                .resolved
                 .agents
                 .get(parent_name)
                 .ok_or_else(|| crate::format_err!("Agent '{parent_name}' not found"))?;
 
-            let parent_chain = self.resolve_transitive_inheritance(parent, visited)?;
+            let parent_chain = self.resolve_transitive_inheritance(&parent.merged, visited)?;
             for p in parent_chain {
                 if !chain.contains(&p) {
                     chain.push(p);
@@ -43,20 +42,20 @@ impl Generator {
     /// Public accessor for the resolved inheritance chain of a named agent.
     pub fn inheritance_chain(&self, name: &str) -> Result<Vec<String>> {
         let agent = self
-            .resolved
             .agents
             .get(name)
             .ok_or_else(|| crate::format_err!("Agent '{name}' not found"))?;
-        self.resolve_transitive_inheritance(agent, &mut HashSet::new())
+        self.resolve_transitive_inheritance(&agent.merged, &mut HashSet::new())
     }
 
     /// Merge all agents with transitive inheritance resolution
     #[tracing::instrument(level = "info", skip(self))]
     pub fn merge(&self) -> Result<Vec<Manifest>> {
         let mut resolved_agents: HashMap<String, Manifest> =
-            HashMap::with_capacity(self.resolved.agents.len());
+            HashMap::with_capacity(self.agents.len());
 
-        for (name, agent) in &self.resolved.agents {
+        for (name, agent_slots) in &self.agents {
+            let agent = &agent_slots.merged;
             let mut visited = HashSet::new();
             let parents = self.resolve_transitive_inheritance(agent, &mut visited)?;
             let span = tracing::info_span!(
@@ -69,10 +68,11 @@ impl Generator {
 
             let mut merged = agent.clone();
             for parent_name in parents.iter().rev() {
-                let parent =
-                    self.resolved.agents.get(parent_name).ok_or_else(|| {
-                        crate::format_err!("Parent agent '{parent_name}' not found")
-                    })?;
+                let parent = &self
+                    .agents
+                    .get(parent_name)
+                    .ok_or_else(|| crate::format_err!("Parent agent '{parent_name}' not found"))?
+                    .merged;
                 tracing::trace!(parent = %parent_name, parent_template = parent.template, "merging parent");
                 merged = merged.merge(parent.clone());
             }

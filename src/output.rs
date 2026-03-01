@@ -3,7 +3,7 @@ use {
         Result,
         generator::AgentResult,
         kiro::{KiroAgent, ToolTarget},
-        source::KgSources,
+        source::{AgentSourceSlots, KgAgentSource},
     },
     color_eyre::eyre::Context,
     colored::Colorize,
@@ -106,13 +106,14 @@ fn serialize_yaml(label: &str, values: &[String]) -> Option<Cell> {
 }
 
 impl OutputFormat {
-    pub fn sources(&self, sources: &KgSources) -> Result<()> {
+    pub fn sources(&self, agents: &[AgentSourceSlots]) -> Result<()> {
         // Always trace per agent
-        for (name, agent_sources) in sources.iter() {
-            let span = tracing::trace_span!("agent", name = name.as_str());
+        for slot in agents {
+            let span = tracing::trace_span!("agent", name = slot.name.as_str());
             let _enter = span.enter();
+            let srcs: Vec<KgAgentSource> = slot.into();
             tracing::trace!(
-                sources = ?agent_sources.iter().map(ToString::to_string).collect::<Vec<_>>(),
+                sources = ?srcs.iter().map(ToString::to_string).collect::<Vec<_>>(),
                 "agent sources"
             );
         }
@@ -134,9 +135,10 @@ impl OutputFormat {
                             .set_colspan(4)
                             .set_alignment(CellAlignment::Center),
                     ]);
-                for (name, agent_sources) in sources.iter() {
-                    let mut row: Vec<Cell> = vec![Cell::new(name.to_string())];
-                    row.extend(agent_sources.iter().map(|s| s.to_cell()));
+                for slot in agents {
+                    let srcs: Vec<KgAgentSource> = slot.into();
+                    let mut row: Vec<Cell> = vec![Cell::new(&slot.name)];
+                    row.extend(srcs.iter().map(|s| s.to_cell()));
                     table.add_row(row);
                 }
                 eprintln!("{table}");
