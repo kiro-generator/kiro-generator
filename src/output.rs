@@ -335,4 +335,12 @@ mod tests {
         let fmt = OutputFormat::default();
         assert!(matches!(fmt, OutputFormat::Table(true)));
     }
+
+    #[test]
+    fn test_diff_args() {
+        assert_eq!(format!("{}", DiffFormatArg::Full), "full");
+        assert_eq!(format!("{}", DiffFormatArg::Compact), "compact");
+        assert_eq!(format!("{}", DiffFormatArg::Plain), "plain");
+        assert_eq!(format!("{}", DiffFormatArg::Agent), "agent");
+    }
 }

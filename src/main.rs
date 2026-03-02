@@ -8,14 +8,13 @@ pub mod output;
 mod schema;
 mod source;
 mod tracing_init;
-mod util;
 
 #[cfg(test)]
 pub use kg_config::toml_parse;
 use {
     crate::{generator::Generator, os::Fs, tracing_init::init_tracing},
     clap::Parser,
-    color_eyre::eyre::Context,
+    color_eyre::eyre::{Context, bail},
     std::path::Path,
     tracing::enabled,
 };
@@ -39,30 +38,15 @@ const KG_HELPER_AGENT_JSON: &str = include_str!("../resources/agents/kg-helper.j
 const KG_HELPER_SYSTEM_PATH: &str = "/usr/share/doc/kiro-generator/agents/kg-helper.json";
 
 /// System package path for the kg-helper agent JSON on macOS (Homebrew).
-/// Tries Apple Silicon prefix first; falls back to Intel prefix at runtime.
 #[cfg(target_os = "macos")]
-const KG_HELPER_SYSTEM_PATHS: &[&str] = &[
-    "/opt/homebrew/share/kiro-generator/agents/kg-helper.json",
-    "/usr/local/share/kiro-generator/agents/kg-helper.json",
-];
+const KG_HELPER_SYSTEM_PATH: &str = "/opt/homebrew/share/kiro-generator/agents/kg-helper.json";
 
 /// Return the system package path for kg-helper.json if it exists on disk.
 fn kg_helper_system_path(fs: &Fs) -> Option<std::path::PathBuf> {
-    #[cfg(target_os = "linux")]
-    {
-        let p = std::path::Path::new(KG_HELPER_SYSTEM_PATH);
-        if fs.exists(p) {
-            return Some(p.to_path_buf());
-        }
+    let p = std::path::Path::new(KG_HELPER_SYSTEM_PATH);
+    if fs.exists(p) {
+        return Some(p.to_path_buf());
     }
-    #[cfg(target_os = "macos")]
-    for s in KG_HELPER_SYSTEM_PATHS {
-        let p = std::path::Path::new(s);
-        if fs.exists(p) {
-            return Some(p.to_path_buf());
-        }
-    }
-    let _ = fs;
     None
 }
 
@@ -71,8 +55,8 @@ fn kg_helper_system_path(fs: &Fs) -> Option<std::path::PathBuf> {
 /// Copies from the system package path when available (signed artifact),
 /// otherwise writes the embedded fallback. Always overwrites — this file
 /// is owned by kg and safe to refresh on every `kg init`.
-async fn install_kg_helper_agent(fs: &Fs, home_dir: &Path, force: bool) -> Result<()> {
-    let kiro_agents_dir = home_dir.join(".kiro").join("agents");
+async fn install_kg_helper_agent(fs: &Fs, home_dir: impl AsRef<Path>, force: bool) -> Result<()> {
+    let kiro_agents_dir = home_dir.as_ref().join(".kiro").join("agents");
     let dest = kiro_agents_dir.join("kg-helper.json");
 
     let (content, src_label) = if let Some(src) = kg_helper_system_path(fs) {
@@ -97,15 +81,26 @@ async fn install_kg_helper_agent(fs: &Fs, home_dir: &Path, force: bool) -> Resul
     println!("Source : {src_label}");
     println!("Install: {}", dest.display());
     if !force {
-        print!("Proceed? [y/N] ");
-        {
-            use std::io::Write;
-            std::io::stdout().flush()?;
+        use std::io::IsTerminal;
+        // Refuse to prompt on non-interactive stdin unless --force is used.
+        if !std::io::stdin().is_terminal() {
+            bail!(
+                "Refusing to prompt because stdin is not a TTY; rerun with --force to skip  \
+                 confirmation"
+            );
         }
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-        if !input.trim().eq_ignore_ascii_case("y") {
-            println!("Aborted.");
+        let proceed = tokio::task::spawn_blocking(|| -> std::io::Result<bool> {
+            use std::io::{self, Write};
+            print!("Proceed? [y/N] ");
+            io::stdout().flush()?;
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            Ok(input.trim().eq_ignore_ascii_case("y"))
+        })
+        .await
+        .wrap_err("interactive prompt task panicked")??;
+        if !proceed {
+            println!("Operation canceled");
             return Ok(());
         }
     }
@@ -127,8 +122,8 @@ async fn install_kg_helper_agent(fs: &Fs, home_dir: &Path, force: bool) -> Resul
 /// Create the skeleton kg configuration directory structure.
 ///
 /// Idempotent: skips files/dirs that already exist rather than erroring.
-async fn init_skeleton(fs: &Fs, home_dir: &Path) -> Result<()> {
-    let gen_dir = home_dir.join(".kiro").join("generators");
+async fn init_skeleton(fs: &Fs, home_dir: impl AsRef<Path>) -> Result<()> {
+    let gen_dir = home_dir.as_ref().join(".kiro").join("generators");
     let manifests_dir = gen_dir.join("manifests");
     let agents_dir = gen_dir.join("agents");
     let kg_toml = manifests_dir.join("kg.toml");
@@ -171,7 +166,6 @@ async fn init_skeleton(fs: &Fs, home_dir: &Path) -> Result<()> {
 }
 
 async fn init(fs: &Fs, home_dir: impl AsRef<Path>, skeleton: bool, force: bool) -> Result<()> {
-    let home_dir = home_dir.as_ref();
     if skeleton {
         init_skeleton(fs, home_dir).await
     } else {
@@ -223,16 +217,16 @@ async fn main() -> Result<()> {
     cli.record_span(&span);
     let location = cli.config_location(home_dir)?;
     let format = cli.format_color();
-    let kq_generator_config: Generator = Generator::new(fs, location, format)?;
+    let kg_generator_config: Generator = Generator::new(fs, location, format)?;
     if enabled!(tracing::Level::TRACE) {
         tracing::trace!(
             "Loaded Agent Generator Config:\n{}",
-            facet_json::to_string_pretty(&kq_generator_config)
+            facet_json::to_string_pretty(&kg_generator_config)
                 .wrap_err("unable to decode to json")?
         );
     }
 
-    cli.execute(&kq_generator_config).await?;
+    cli.execute(&kg_generator_config).await?;
 
     Ok(())
 }

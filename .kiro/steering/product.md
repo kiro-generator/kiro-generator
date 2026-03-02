@@ -22,7 +22,6 @@ Developers who use Kiro CLI and manage multiple agents across projects. Power us
 - **Diffing**: `kg diff` compares generated output against existing agent files
 - **Schema generation**: `kg schema manifest|agent` outputs JSON schemas for editor support
 - **Systemd file watching**: `kg watch` sets up automatic regeneration on config changes (Linux)
-- **Bootstrap**: `kg bootstrap` scans existing agent JSON files and installs the kg-helper skill
 
 ## Non-Goals
 
