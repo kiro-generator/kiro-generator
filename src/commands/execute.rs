@@ -166,4 +166,71 @@ mod tests {
         assert!(obj.get("dependabot").is_some(), "dependabot agent missing");
         Ok(())
     }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_execute_tree_command() -> Result<()> {
+        let fs = Fs::new();
+        let generator = Generator::new(
+            fs,
+            crate::ConfigLocation::Local,
+            crate::output::OutputFormat::Json,
+        )?;
+
+        let cli = Cli {
+            debug: false,
+            color_override: ColorOverride::Never,
+            command: Command::Tree(super::super::TreeArgs {
+                trace: None,
+                agents: vec!["base".to_string()],
+            }),
+        };
+        cli.execute(&generator).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_execute_version_noop_branch() -> Result<()> {
+        let fs = Fs::new();
+        let generator = Generator::new(
+            fs,
+            crate::ConfigLocation::Local,
+            crate::output::OutputFormat::Json,
+        )?;
+
+        let cli = Cli {
+            debug: false,
+            color_override: ColorOverride::Never,
+            command: Command::Version,
+        };
+        cli.execute(&generator).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_execute_generate_with_diff_enabled() -> Result<()> {
+        let fs = Fs::new();
+        let generator = Generator::new(
+            fs,
+            crate::ConfigLocation::Local,
+            crate::output::OutputFormat::Json,
+        )?;
+
+        let cli = Cli {
+            debug: false,
+            color_override: ColorOverride::Never,
+            command: Command::Generate(GenerateArgs {
+                local: true,
+                diff: true,
+                #[cfg(target_os = "linux")]
+                notify: false,
+                ..Default::default()
+            }),
+        };
+
+        cli.execute(&generator).await?;
+        Ok(())
+    }
 }
