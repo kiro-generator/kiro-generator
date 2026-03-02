@@ -53,6 +53,32 @@ Local configs **merge with** global configs (not replace). This is what makes kg
 - **Objects** (toolsSettings, mcpServers): Deep merged
 - **Scalars** (description, model): Child replaces parent
 
+## Getting Started
+
+If the user is new to kg, the entry point is:
+
+```bash
+kg init
+```
+
+This installs `~/.kiro/agents/kg-helper.json` (this agent). After that:
+
+```bash
+kg init --skeleton
+```
+
+Creates the TOML config scaffold at `~/.kiro/generators/`:
+
+```
+~/.kiro/generators/
+├── manifests/
+│   └── kg.toml
+└── agents/
+    └── default.toml
+```
+
+Both commands are idempotent — safe to re-run. If the user already has kg configured, skip straight to discovery.
+
 ## Step 1: Discovery
 
 Before reading or modifying any config files, run discovery. `kg tree` shows which TOML files contribute to each agent and how they inherit:
@@ -73,13 +99,27 @@ Example JSON output:
 {
   "rust": {
     "template": false,
+    "output": ".kiro/agents/rust.json",
     "description": "Rust development agent",
     "sources": [
-      {"type": "local-manifest", "path": ".kiro/generators/manifests/kg.toml"},
-      {"type": "global-manifest", "path": "/home/user/.kiro/generators/manifests/base.toml"},
-      {"type": "global-file", "path": "/home/user/.kiro/generators/agents/lang/rust.toml"}
+      {
+        "type": "local-manifest",
+        "path": ".kiro/generators/manifests/rust.toml",
+        "modified_fields": ["description", "inherits"]
+      },
+      {
+        "type": "global-manifest",
+        "path": "/home/user/.kiro/generators/manifests/base.toml",
+        "modified_fields": ["inherits"]
+      },
+      {
+        "type": "global-file",
+        "path": "/home/user/.kiro/generators/agents/rust.toml",
+        "modified_fields": ["description", "prompt", "nativeTools.shell"]
+      }
     ],
-    "inherits": ["default", "kg-resources"]
+    "inherits": ["kg-resources", "default"],
+    "resolved_chain": ["kg-resources", "cli", "resources", "knowledge", "git", "default"]
   }
 }
 ```
@@ -87,6 +127,10 @@ Example JSON output:
 **Source types:**
 - `global-manifest` / `local-manifest` -- Agent declared inline in a manifests/*.toml file
 - `global-file` / `local-file` -- Dedicated agent config file in agents/ directory
+
+**`modified_fields`** lists which fields each source file contributes. Use this to go directly to the right file when a user asks "where does this shell command / MCP server / resource come from?" — no guessing required.
+
+**`resolved_chain`** is the full flattened inheritance DAG in merge order. This differs from `inherits` (direct parents only). If `rust` inherits `["kg-resources", "default"]` but `default` itself inherits `["cli", "resources", "knowledge", "git"]`, `resolved_chain` shows all of them in the order they are merged. Use this when debugging unexpected values — find which ancestor in the chain contributes the field via `modified_fields`.
 
 **Use the `sources` array to know exactly which files to read or edit.**
 
@@ -185,16 +229,18 @@ All found configs merge together. Use `kg tree rust` to see which sources apply.
 - **Named agent not found**: `kg tree nonexistent` returns empty JSON object `{}` (exit 0). The requested agent key will be absent from the response.
 - **Invalid TOML**: `kg validate` reports parse errors with file path and line number
 
-**Recovery:** If validation fails, fix the parse error shown in the output. If `kg generate` produces unexpected results, run `kg tree <agent>` to trace which source file contributes the unexpected value.
+**Recovery:** If validation fails, fix the parse error shown in the output. If `kg generate` produces unexpected results, run `kg tree <agent>` to trace which source file contributes the unexpected value — check `modified_fields` on each source to pinpoint the exact file.
+
+**If a `kg diff` path needs tracing** (e.g. you see a JSON field change and want to know which TOML field drives it), load `assets/mappings.json` to look up the TOML→Kiro JSON mapping and the jq path to inspect the generated value directly.
 
 ## Reference Documents
 
 For detailed guidance on specific topics, load these as needed:
 
+- **`references/migration.md`** -- Migrating from hand-written JSON agents to kg. Covers user interview framework (security posture, structure preference, scope), decision framework, and example layouts. Load when helping users set up kg for the first time or convert existing agents.
 - **`references/templates.md`** -- Template categories (Permission, Capability, Context, Lifecycle), real-world examples, composition patterns, subagent templates. Load when helping users design or refactor their template hierarchy.
-- **`references/bootstrap.md`** -- Migration from hand-written JSON agents. Covers analysis.json schema, user interview framework, decision framework, example layouts. Load when helping users run `kg bootstrap` or set up kg for the first time.
-- **`references/schemas.md`** -- TOML to JSON field mappings, schema files in assets/, jq recipes for inspecting validated output. Load when verifying field names or exploring available configuration options.
+- **`references/schemas.md`** -- TOML to JSON field mappings, schema files in assets/, jq recipes for inspecting validated output. Load when verifying field names or exploring available configuration options. To trace a specific diff path back to its TOML field, use `assets/mappings.json` for machine-readable lookup.
 
 ## Keeping This Skill Updated
 
-This skill is embedded in the `kg` binary and installed by `kg bootstrap`. To update, install the latest `kg` version and re-run `kg bootstrap`.
+This skill is shipped with the `kg` package at `/usr/share/doc/kiro-generator/kg-helper/SKILL.md`. To update, install the latest `kg` version.

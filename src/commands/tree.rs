@@ -7,6 +7,7 @@ pub(super) fn execute_tree(generator: &Generator, args: &TreeArgs) -> Result<fac
     let agents: Vec<&AgentSourceSlots> = generator
         .agents
         .values()
+        .filter(|a| a.name != "kg-helper")
         .filter(|a| args.agents.is_empty() || args.agents.iter().any(|n| n == &a.name))
         .collect();
 

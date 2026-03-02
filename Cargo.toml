@@ -29,9 +29,12 @@ assets = [
     { source = "resources/systemd/home.env", dest = "etc/kg/", mode = "644" },
     # kg-helper skill documentation
     { source = "resources/kg-helper/SKILL.md", dest = "usr/share/doc/kiro-generator/kg-helper/SKILL.md", mode = "644" },
-    { source = "resources/kg-helper/references/bootstrap.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/bootstrap.md", mode = "644" },
     { source = "resources/kg-helper/references/schemas.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/schemas.md", mode = "644" },
+    { source = "resources/kg-helper/references/migration.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/migration.md", mode = "644" },
     { source = "resources/kg-helper/references/templates.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/templates.md", mode = "644" },
+    { source = "resources/kg-helper/assets/mappings.json", dest = "usr/share/doc/kiro-generator/kg-helper/assets/mappings.json", mode = "644" },
+    # kg-helper agent (reference artifact)
+    { source = "resources/agents/kg-helper.json", dest = "usr/share/doc/kiro-generator/agents/kg-helper.json", mode = "644" },
     # JSON schemas
     { source = "schemas/agent.json", dest = "usr/share/doc/kiro-generator/schemas/agent.json", mode = "644" },
     { source = "schemas/manifest.json", dest = "usr/share/doc/kiro-generator/schemas/manifest.json", mode = "644" },

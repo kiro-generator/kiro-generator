@@ -30,85 +30,153 @@ pub type Result<T> = color_eyre::Result<T>;
 #[allow(dead_code)]
 pub(crate) const DOCS_URL: &str = "https://kiro-generator.io";
 
-/// Initialize a new kg configuration directory.
+/// Embedded kg-helper agent JSON, used when the system package path is not
+/// available (e.g. `cargo install` users).
+const KG_HELPER_AGENT_JSON: &str = include_str!("../resources/agents/kg-helper.json");
+
+/// System package path for the kg-helper agent JSON on Linux.
+#[cfg(target_os = "linux")]
+const KG_HELPER_SYSTEM_PATH: &str = "/usr/share/doc/kiro-generator/agents/kg-helper.json";
+
+/// System package path for the kg-helper agent JSON on macOS (Homebrew).
+/// Tries Apple Silicon prefix first; falls back to Intel prefix at runtime.
+#[cfg(target_os = "macos")]
+const KG_HELPER_SYSTEM_PATHS: &[&str] = &[
+    "/opt/homebrew/share/kiro-generator/agents/kg-helper.json",
+    "/usr/local/share/kiro-generator/agents/kg-helper.json",
+];
+
+/// Return the system package path for kg-helper.json if it exists on disk.
+fn kg_helper_system_path(fs: &Fs) -> Option<std::path::PathBuf> {
+    #[cfg(target_os = "linux")]
+    {
+        let p = std::path::Path::new(KG_HELPER_SYSTEM_PATH);
+        if fs.exists(p) {
+            return Some(p.to_path_buf());
+        }
+    }
+    #[cfg(target_os = "macos")]
+    for s in KG_HELPER_SYSTEM_PATHS {
+        let p = std::path::Path::new(s);
+        if fs.exists(p) {
+            return Some(p.to_path_buf());
+        }
+    }
+    let _ = fs;
+    None
+}
+
+/// Install the kg-helper agent to `~/.kiro/agents/kg-helper.json`.
 ///
-/// Creates the specified directory (if needed) and populates it with
-/// default configuration files in manifests/ and agents/ subdirectories.
+/// Copies from the system package path when available (signed artifact),
+/// otherwise writes the embedded fallback. Always overwrites — this file
+/// is owned by kg and safe to refresh on every `kg init`.
+async fn install_kg_helper_agent(fs: &Fs, home_dir: &Path, force: bool) -> Result<()> {
+    let kiro_agents_dir = home_dir.join(".kiro").join("agents");
+    let dest = kiro_agents_dir.join("kg-helper.json");
+
+    let (content, src_label) = if let Some(src) = kg_helper_system_path(fs) {
+        let content = fs
+            .read_to_string(&src)
+            .await
+            .wrap_err_with(|| format!("Failed to read {}", src.display()))?;
+        let label = src.display().to_string();
+        (content, label)
+    } else {
+        (KG_HELPER_AGENT_JSON.to_string(), "embedded".to_string())
+    };
+
+    // Patch the skill:// resource URI to the correct OS-specific path.
+    // The reference artifact uses the Linux path; rewrite for macOS.
+    #[cfg(target_os = "macos")]
+    let content = content.replace(
+        "skill:///usr/share/doc/kiro-generator/kg-helper/SKILL.md",
+        "skill:///opt/homebrew/share/kiro-generator/kg-helper/SKILL.md",
+    );
+
+    println!("Source : {src_label}");
+    println!("Install: {}", dest.display());
+    if !force {
+        print!("Proceed? [y/N] ");
+        {
+            use std::io::Write;
+            std::io::stdout().flush()?;
+        }
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        if !input.trim().eq_ignore_ascii_case("y") {
+            println!("Aborted.");
+            return Ok(());
+        }
+    }
+
+    fs.create_dir_all(&kiro_agents_dir)
+        .await
+        .wrap_err_with(|| format!("Failed to create {}", kiro_agents_dir.display()))?;
+    fs.write(&dest, &content)
+        .await
+        .wrap_err_with(|| format!("Failed to write {}", dest.display()))?;
+
+    println!("✓ Installed {}", dest.display());
+    println!("\nStart the kg-helper agent:");
+    println!("  kiro-cli --agent kg-helper");
+
+    Ok(())
+}
+
+/// Create the skeleton kg configuration directory structure.
 ///
-/// # Arguments
-/// * `fs` - Filesystem abstraction for testability
-/// * `home_dir` - Target home directory path
-///
-/// # Errors
-/// Returns an error if:
-/// - manifests/kg.toml already exists in the target directory
-/// - Directory creation fails
-/// - File write operations fail
-async fn init(fs: &Fs, home_dir: impl AsRef<Path>) -> Result<()> {
-    let home_dir = home_dir.as_ref();
+/// Idempotent: skips files/dirs that already exist rather than erroring.
+async fn init_skeleton(fs: &Fs, home_dir: &Path) -> Result<()> {
     let gen_dir = home_dir.join(".kiro").join("generators");
     let manifests_dir = gen_dir.join("manifests");
     let agents_dir = gen_dir.join("agents");
     let kg_toml = manifests_dir.join("kg.toml");
 
-    if fs.exists(&kg_toml) {
-        return Err(format_err!(
-            "Configuration already exists at {}",
-            kg_toml.display()
-        ));
-    }
-
-    if fs.exists(&manifests_dir) {
-        return Err(format_err!(
-            "Directory already exists at {}",
-            manifests_dir.display()
-        ));
-    }
-
-    if fs.exists(&agents_dir) {
-        return Err(format_err!(
-            "Directory already exists at {}",
-            agents_dir.display()
-        ));
-    }
-
-    // Create directories
     fs.create_dir_all(&manifests_dir)
         .await
-        .wrap_err(format!("Failed to create {}", manifests_dir.display()))?;
+        .wrap_err_with(|| format!("Failed to create {}", manifests_dir.display()))?;
     fs.create_dir_all(&agents_dir)
         .await
-        .wrap_err(format!("Failed to create {}", agents_dir.display()))?;
+        .wrap_err_with(|| format!("Failed to create {}", agents_dir.display()))?;
 
-    // Create manifests/kg.toml
-    let kg_content = include_str!("../examples/basic/manifests/kg.toml");
-    fs.write(&kg_toml, kg_content)
-        .await
-        .wrap_err(format!("Failed to write {}", kg_toml.display()))?;
+    if !fs.exists(&kg_toml) {
+        let kg_content = include_str!("../examples/basic/manifests/kg.toml");
+        fs.write(&kg_toml, kg_content)
+            .await
+            .wrap_err_with(|| format!("Failed to write {}", kg_toml.display()))?;
+        println!("✓ Created {}", kg_toml.display());
+    }
 
-    // Create agents/git.toml
     let git_toml = agents_dir.join("git.toml");
-    let git_content = include_str!("../examples/basic/agents/git.toml");
-    fs.write(&git_toml, git_content)
-        .await
-        .wrap_err(format!("Failed to write {}", git_toml.display()))?;
+    if !fs.exists(&git_toml) {
+        let git_content = include_str!("../examples/basic/agents/git.toml");
+        fs.write(&git_toml, git_content)
+            .await
+            .wrap_err_with(|| format!("Failed to write {}", git_toml.display()))?;
+        println!("✓ Created {}", git_toml.display());
+    }
 
-    // Create agents/default.toml
     let default_toml = agents_dir.join("default.toml");
-    let default_content = include_str!("../examples/basic/agents/default.toml");
-    fs.write(&default_toml, default_content)
-        .await
-        .wrap_err(format!("Failed to write {}", default_toml.display()))?;
-
-    println!("✓ Created {}", manifests_dir.display());
-    println!("✓ Created {}", agents_dir.display());
-    println!("✓ Created {}", kg_toml.display());
-    println!("✓ Created {}", git_toml.display());
-    println!("✓ Created {}", default_toml.display());
+    if !fs.exists(&default_toml) {
+        let default_content = include_str!("../examples/basic/agents/default.toml");
+        fs.write(&default_toml, default_content)
+            .await
+            .wrap_err_with(|| format!("Failed to write {}", default_toml.display()))?;
+        println!("✓ Created {}", default_toml.display());
+    }
 
     println!("\nInitialized kg configuration in {}", gen_dir.display());
-
     Ok(())
+}
+
+async fn init(fs: &Fs, home_dir: impl AsRef<Path>, skeleton: bool, force: bool) -> Result<()> {
+    let home_dir = home_dir.as_ref();
+    if skeleton {
+        init_skeleton(fs, home_dir).await
+    } else {
+        install_kg_helper_agent(fs, home_dir, force).await
+    }
 }
 
 #[tokio::main]
@@ -139,12 +207,8 @@ async fn main() -> Result<()> {
     let home_dir = dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?;
     let fs = Fs::new();
 
-    if matches!(cli.command, commands::Command::Init(..)) {
-        return init(&fs, &home_dir).await;
-    }
-
-    if matches!(cli.command, commands::Command::Bootstrap(..)) {
-        return commands::bootstrap::execute(&fs, &home_dir).await;
+    if let commands::Command::Init(args) = &cli.command {
+        return init(&fs, &home_dir, args.skeleton, args.force).await;
     }
 
     if let commands::Command::Schema(schema_cmd) = &cli.command {
@@ -180,21 +244,37 @@ mod tests {
 
     #[tokio::test]
     #[test_log::test]
-    async fn test_init_config() -> Result<()> {
+    async fn test_init_skeleton() -> Result<()> {
         let fs = Fs::new();
         let home = PathBuf::from("init-test");
         let gen_dir = home.join(".kiro").join("generators");
 
-        init(&fs, &home).await?;
+        init(&fs, &home, true, false).await?;
         assert!(fs.exists(gen_dir.join("manifests")));
         assert!(fs.exists(gen_dir.join("agents")));
         assert!(fs.exists(gen_dir.join("manifests/kg.toml")));
         assert!(fs.exists(gen_dir.join("agents/git.toml")));
         assert!(fs.exists(gen_dir.join("agents/default.toml")));
 
-        let result = init(&fs, &home).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("already exists"));
+        // Idempotent: second run should not error
+        init(&fs, &home, true, false).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_init_installs_kg_helper_agent() -> Result<()> {
+        let fs = Fs::new();
+        let home = PathBuf::from("init-agent-test");
+        let dest = home.join(".kiro").join("agents").join("kg-helper.json");
+
+        init(&fs, &home, false, true).await?;
+
+        assert!(fs.exists(&dest), "kg-helper.json not created");
+        let content = fs.read_to_string(&dest).await?;
+        let v: serde_json::Value = serde_json::from_str(&content)?;
+        assert_eq!(v["name"], "kg-helper");
 
         Ok(())
     }
