@@ -82,7 +82,7 @@ pub fn load_inline(fs: &Fs, path: impl AsRef<Path>) -> crate::Result<GeneratorCo
 }
 
 fn merge_manifests(
-    name: String,
+    name: &str,
     global_manifest: &SourceSlot,
     local_manifest: &SourceSlot,
     global_agent_file: &SourceSlot,
@@ -132,7 +132,7 @@ fn merge_manifests(
     let mut merged = match iter.next() {
         Some(first) => first.clone(),
         None => Manifest {
-            name: name.clone(),
+            name: String::from(name),
             ..Default::default()
         },
     };
@@ -142,7 +142,7 @@ fn merge_manifests(
     }
 
     if merged.name.is_empty() {
-        merged.name = name.clone();
+        merged.name = String::from(name)
     }
 
     merged
@@ -186,7 +186,7 @@ pub fn load_sources(fs: &Fs, location: &ConfigLocation) -> crate::Result<Vec<Age
             local_manifest.manifest.template,
         )?;
         let merged = merge_manifests(
-            name.clone(),
+            &name,
             &global_manifest,
             &local_manifest,
             &global_agent_file,
@@ -209,13 +209,11 @@ pub fn load_sources(fs: &Fs, location: &ConfigLocation) -> crate::Result<Vec<Age
 
 /// First pass: Discover all agents from configuration files
 ///
-/// merge agent config from lowest precedence to higher precedence:
-/// ```text
-/// * `~/.kiro/generators/agents/<agent-name>.toml`
-/// * `~/.kiro/generators/manifests/*.toml`
-/// * `.kiro/generators/agents/<agent-name>.toml`
-/// * `.kiro/generators/manifests/*.toml`
-/// ```
+/// Precedence (highest → lowest):
+/// 1. `.kiro/generators/agents/<name>.toml`      (local agent file)
+/// 2. `.kiro/generators/manifests/*.toml`         (local manifest)
+/// 3. `~/.kiro/generators/agents/<name>.toml`     (global agent file)
+/// 4. `~/.kiro/generators/manifests/*.toml`       (global manifest)
 #[tracing::instrument(level = "info", skip(format))]
 pub fn discover(
     fs: &Fs,
