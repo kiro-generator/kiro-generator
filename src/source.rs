@@ -31,10 +31,10 @@ impl SourceSlot {
             (location.local_agent(fs, name)?, "local_path")
         };
 
-        tracing::debug!("{path_type}={}", match &path {
-            None => "not found".to_string(),
-            Some(p) => p.display().to_string(),
-        });
+        match &path {
+            None => tracing::debug!("{path_type}=not found"),
+            Some(p) => tracing::debug!("{path_type}={}", p.display()),
+        };
         match path {
             None => Ok(Self::default()),
             Some(path) => match Manifest::from_path(fs, name, &path, template) {
@@ -66,24 +66,6 @@ pub struct AgentSourceSlots {
 }
 
 impl AgentSourceSlots {
-    pub fn new(
-        name: String,
-        global_manifest: SourceSlot,
-        local_manifest: SourceSlot,
-        global_agent_file: SourceSlot,
-        local_agent_file: SourceSlot,
-        merged: Manifest,
-    ) -> Self {
-        Self {
-            name,
-            global_manifest,
-            local_manifest,
-            global_agent_file,
-            local_agent_file,
-            merged,
-        }
-    }
-
     pub fn has_local(&self) -> bool {
         self.local_manifest.path.is_some() || self.local_agent_file.path.is_some()
     }
@@ -184,7 +166,10 @@ impl KgAgentSource {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::{ConfigLocation, Fs},
+    };
 
     #[test]
     fn kg_agent_source_display() {
@@ -232,5 +217,48 @@ mod tests {
                 .content(),
             "local-file:bar"
         );
+    }
+
+    #[test]
+    fn kg_agent_source_helpers() {
+        let local_manifest = KgAgentSource::manifest(PathBuf::from("a.toml"), true);
+        let global_manifest = KgAgentSource::manifest(PathBuf::from("b.toml"), false);
+        let local_file = KgAgentSource::LocalFile(PathBuf::from("local-file.toml"));
+
+        assert!(local_manifest.is_local());
+        assert!(!global_manifest.is_local());
+        assert!(local_file.is_local());
+
+        assert_eq!(local_manifest.source_type(), "local-manifest");
+        assert_eq!(global_manifest.source_type(), "global-manifest");
+        assert_eq!(local_file.source_type(), "local-file");
+
+        assert_eq!(local_manifest.path(), Path::new("a.toml"));
+        assert_eq!(global_manifest.as_ref(), Path::new("b.toml"));
+        assert_eq!(format!("{local_file:?}"), "local-file.toml");
+    }
+
+    #[test]
+    fn agent_source_slots_has_local() {
+        let mut slots = AgentSourceSlots::default();
+        assert!(!slots.has_local());
+
+        slots.local_manifest.path = Some(KgAgentSource::LocalManifest(PathBuf::from("kg.toml")));
+        assert!(slots.has_local());
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn source_slot_from_agent_path_returns_default_when_missing() -> crate::Result<()> {
+        let fs = Fs::new();
+        let slot = SourceSlot::from_agent_path(
+            &fs,
+            "agent-name-that-does-not-exist",
+            &ConfigLocation::Local,
+            false,
+            false,
+        )?;
+        assert!(slot.path.is_none());
+        Ok(())
     }
 }

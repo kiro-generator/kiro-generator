@@ -173,3 +173,26 @@ impl Manifest {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn from_path_returns_none_when_file_missing() {
+        let fs = Fs::new();
+        let path = Path::new(".kiro/generators/agents/does-not-exist.toml");
+        let result = Manifest::from_path(&fs, "missing-agent", path, false);
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn from_path_returns_err_for_invalid_toml() {
+        let fs = Fs::new();
+        let path = Path::new(".kiro/generators/agents/bad.toml");
+        let result = Manifest::from_path(&fs, "bad-agent", path, false);
+        assert!(matches!(result, Some(Err(_))));
+    }
+}

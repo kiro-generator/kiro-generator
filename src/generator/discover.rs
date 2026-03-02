@@ -159,12 +159,11 @@ pub fn load_sources(fs: &Fs, location: &ConfigLocation) -> crate::Result<Vec<Age
         global_agents.len(),
         local_agents.len()
     );
-    let local_names: HashSet<String> =
-        HashSet::from_iter(local_agents.keys().map(|k| k.to_string()));
-    let global_names: HashSet<String> =
-        HashSet::from_iter(global_agents.keys().map(|k| k.to_string()));
-    let all_agents_names: HashSet<String> =
-        local_names.iter().chain(&global_names).cloned().collect();
+    let all_agents_names: HashSet<String> = global_agents
+        .keys()
+        .chain(local_agents.keys())
+        .cloned()
+        .collect();
 
     let mut slots: Vec<AgentSourceSlots> = Vec::with_capacity(all_agents_names.len());
 
@@ -194,14 +193,14 @@ pub fn load_sources(fs: &Fs, location: &ConfigLocation) -> crate::Result<Vec<Age
             &local_agent_file,
             location,
         );
-        slots.push(AgentSourceSlots::new(
+        slots.push(AgentSourceSlots {
             name,
             global_manifest,
             local_manifest,
             global_agent_file,
             local_agent_file,
             merged,
-        ));
+        });
     }
 
     slots.sort_by(|a, b| a.name.cmp(&b.name));

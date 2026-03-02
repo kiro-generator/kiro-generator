@@ -220,4 +220,22 @@ mod tests {
 
         Ok(())
     }
+
+    #[test_log::test]
+    fn test_generator_config_get() -> Result<()> {
+        let toml_agents = include_str!("../../fixtures/manifest-test/test-decoding.toml");
+        let config: GeneratorConfig = toml_parse(toml_agents)?;
+        assert!(config.get("test").is_some());
+        assert!(config.get("missing").is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_toml_parse_path_returns_err_for_directory() -> Result<()> {
+        let fs = Fs::new();
+        let result = toml_parse_path::<GeneratorConfig>(&fs, ".kiro/generators/agents");
+        assert!(matches!(result, Some(Err(_))));
+        Ok(())
+    }
 }

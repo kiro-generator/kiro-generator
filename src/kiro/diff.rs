@@ -364,6 +364,21 @@ mod tests {
     }
 
     #[test]
+    fn test_normalize_collects_unknown_tools() {
+        let mut agent = KiroAgent {
+            name: "test".to_string(),
+            ..Default::default()
+        };
+        agent.tools_settings.insert(
+            "my-custom-tool".to_string(),
+            facet_value::Value::from("enabled"),
+        );
+
+        let normalized = agent.normalize();
+        assert_eq!(normalized.other_tools, vec!["my-custom-tool".to_string()]);
+    }
+
+    #[test]
     fn test_normalized_agent_diff_shell_tool_changed() {
         let agent1 = NormalizedAgent {
             name: "test".to_string(),

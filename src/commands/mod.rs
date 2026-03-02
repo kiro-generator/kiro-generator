@@ -357,4 +357,49 @@ mod tests {
         };
         assert!(matches!(cli.format_color(), OutputFormat::Json));
     }
+
+    #[test_log::test]
+    fn test_cli_styles_smoke() {
+        let _ = __cli_styles();
+    }
+
+    #[test_log::test]
+    fn test_format_color_plain_and_default_branch() {
+        let cli = Cli {
+            debug: false,
+            color_override: ColorOverride::Always,
+            command: Command::Validate(ValidateArgs {
+                format: OutputFormatArg::Plain,
+                ..Default::default()
+            }),
+        };
+        assert!(matches!(cli.format_color(), OutputFormat::Plain));
+
+        let cli = Cli {
+            command: Command::Diff(DiffArgs::default()),
+            ..cli
+        };
+        assert!(matches!(cli.format_color(), OutputFormat::Table(true)));
+    }
+
+    #[test_log::test]
+    fn test_is_local_and_is_global_fallback_branches() {
+        let cli = Cli {
+            debug: false,
+            color_override: ColorOverride::Auto,
+            command: Command::Diff(DiffArgs {
+                global: true,
+                ..Default::default()
+            }),
+        };
+        assert!(!cli.is_local());
+        assert!(cli.is_global());
+
+        let cli = Cli {
+            command: Command::Version,
+            ..cli
+        };
+        assert!(!cli.is_local());
+        assert!(!cli.is_global());
+    }
 }

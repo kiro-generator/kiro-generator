@@ -108,6 +108,21 @@ mod tests {
     }
 
     #[test_log::test]
+    fn test_config_location_home_dir_uses_global() -> crate::Result<()> {
+        let home_dir = std::env::current_dir()?;
+        let cli = Cli {
+            debug: false,
+            color_override: ColorOverride::Auto,
+            command: Command::Validate(ValidateArgs::default()),
+        };
+        let location = cli.config_location(home_dir.clone())?;
+        assert!(
+            matches!(location, crate::ConfigLocation::Global(path) if path == home_dir.join(".kiro").join("generators"))
+        );
+        Ok(())
+    }
+
+    #[test_log::test]
     fn test_record_span() {
         let span = tracing::info_span!(
             "test",
