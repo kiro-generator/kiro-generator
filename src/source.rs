@@ -25,11 +25,16 @@ impl SourceSlot {
         global: bool,
         template: bool,
     ) -> crate::Result<Self> {
-        let path = if global {
-            location.global_agent(fs, name)?
+        let (path, path_type) = if global {
+            (location.global_agent(fs, name)?, "global_path")
         } else {
-            location.local_agent(fs, name)?
+            (location.local_agent(fs, name)?, "local_path")
         };
+
+        tracing::debug!("{path_type}={}", match &path {
+            None => "not found".to_string(),
+            Some(p) => p.display().to_string(),
+        });
         match path {
             None => Ok(Self::default()),
             Some(path) => match Manifest::from_path(fs, name, &path, template) {
@@ -92,25 +97,16 @@ impl Debug for AgentSourceSlots {
 
 impl From<&AgentSourceSlots> for Vec<KgAgentSource> {
     fn from(value: &AgentSourceSlots) -> Self {
-        let mut sources = Vec::with_capacity(4);
-        let gm = value.global_manifest.path.clone();
-        let lm = value.local_manifest.path.clone();
-        let ag = value.global_agent_file.path.clone();
-        let al = value.local_agent_file.path.clone();
-
-        if let Some(s) = gm {
-            sources.push(s)
-        }
-        if let Some(s) = lm {
-            sources.push(s)
-        }
-        if let Some(s) = ag {
-            sources.push(s)
-        }
-        if let Some(s) = al {
-            sources.push(s)
-        }
-        sources
+        [
+            &value.global_manifest.path,
+            &value.local_manifest.path,
+            &value.global_agent_file.path,
+            &value.local_agent_file.path,
+        ]
+        .into_iter()
+        .flatten()
+        .cloned()
+        .collect()
     }
 }
 
@@ -122,11 +118,6 @@ pub enum KgAgentSource {
     GlobalManifest(PathBuf),
 }
 
-impl Default for KgAgentSource {
-    fn default() -> Self {
-        Self::LocalManifest(PathBuf::new())
-    }
-}
 impl Display for KgAgentSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

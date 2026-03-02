@@ -3,7 +3,6 @@ use {
     crate::{GeneratorConfig, Manifest},
     color_eyre::eyre::bail,
     std::path::Path,
-    tracing::Level,
 };
 
 /// Load all TOML files from a manifests directory and combine them.
@@ -17,7 +16,7 @@ fn load_manifests(
     let dir_path = dir.as_ref();
 
     if !fs.exists(dir_path) {
-        tracing::debug!("dir does not exists");
+        tracing::debug!("dir does not exist");
         return Ok(HashMap::default());
     }
 
@@ -90,6 +89,10 @@ fn merge_manifests(
     local_agent_file: &SourceSlot,
     location: &ConfigLocation,
 ) -> Manifest {
+    // Highest-precedence source must be first: Manifest::merge keeps existing
+    // values and only fills gaps from `other`.
+    // For `Both`, precedence is:
+    // local agent file > local manifest > global agent file > global manifest.
     let mut ordered: Vec<&Manifest> = Vec::with_capacity(4);
 
     match location {
@@ -169,21 +172,6 @@ pub fn load_sources(fs: &Fs, location: &ConfigLocation) -> crate::Result<Vec<Age
         let _span = tracing::info_span!("merge_manifest", agent = name).entered();
         let global_manifest: SourceSlot = global_agents.remove(&name).unwrap_or_default();
         let local_manifest: SourceSlot = local_agents.remove(&name).unwrap_or_default();
-        let global_agent_path = location.global_agent(fs, &name)?;
-        let local_agent_path = location.local_agent(fs, &name)?;
-        if tracing::enabled!(Level::DEBUG) {
-            tracing::debug!(
-                "global_path={} local_path={}",
-                match &global_agent_path {
-                    None => "not found".to_string(),
-                    Some(p) => p.display().to_string(),
-                },
-                match &local_agent_path {
-                    None => "not found".to_string(),
-                    Some(p) => p.display().to_string(),
-                }
-            );
-        }
         let global_agent_file = SourceSlot::from_agent_path(
             fs,
             &name,
