@@ -70,14 +70,6 @@ async fn install_kg_helper_agent(fs: &Fs, home_dir: impl AsRef<Path>, force: boo
         (KG_HELPER_AGENT_JSON.to_string(), "embedded".to_string())
     };
 
-    // Patch the skill:// resource URI to the correct OS-specific path.
-    // The reference artifact uses the Linux path; rewrite for macOS.
-    #[cfg(target_os = "macos")]
-    let content = content.replace(
-        "skill:///usr/share/doc/kiro-generator/kg-helper/SKILL.md",
-        "skill:///opt/homebrew/share/kiro-generator/kg-helper/SKILL.md",
-    );
-
     println!("Source : {src_label}");
     println!("Install: {}", dest.display());
     if !force {
