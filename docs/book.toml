@@ -21,13 +21,6 @@ edit-url-template = "https://github.com/kiro-generator/kiro-generator/edit/main/
 additional-css = []
 additional-js = []
 
-# Copy schema files to output
-[output.html.copy-files]
-files = [
-  "../schemas/agent.json",
-  "../schemas/manifest.json",
-]
-
 [output.html.print]
 enable = true
 

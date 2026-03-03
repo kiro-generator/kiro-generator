@@ -5,8 +5,9 @@ if [ -z "$CI" ]; then
   exit 1
 fi
 
-set -e
-KG=./target/release/kg
+set -euo pipefail
+TARGET_DIR="$(cargo metadata --format-version=1 --no-deps | jq -r '.target_directory')"
+KG="${TARGET_DIR}/release/kg"
 cargo build --release
 
 mkdir -p .kiro
@@ -14,7 +15,8 @@ cp -a ./fixtures/kiro/generators .kiro
 
 $KG help
 $KG --help
-$KG init
+$KG init --force
+$KG init --skeleton
 $KG validate
 $KG v
 $KG v --debug

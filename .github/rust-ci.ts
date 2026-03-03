@@ -19,7 +19,11 @@ export default function () {
       features: ['default'],
     },
   };
-  if (process.env.GITHUB_REF?.includes('main') || process.env.CONTEXT?.includes('ALL_OS')) {
+  if (
+    process.env.GITHUB_REF?.includes('main') ||
+    process.env._GIT_MSG?.includes('[ci:all]') ||
+    process.env.CONTEXT?.includes('ALL_OS')
+  ) {
     clippy.matrix?.os.push(Os.LINUX_AMD64, Os.MAC);
     coverage.matrix?.os.push(Os.LINUX_AMD64, Os.MAC);
   }

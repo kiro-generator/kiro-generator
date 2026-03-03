@@ -1,5 +1,4 @@
-pub(crate) mod bootstrap;
-mod execute;
+pub(crate) mod execute;
 mod runtime;
 mod tree;
 #[cfg(target_os = "linux")]
@@ -39,15 +38,13 @@ pub struct Cli {
 }
 
 #[derive(clap::Args, Clone, Default)]
-pub struct InitArgs {}
-
-#[derive(clap::Args, Clone, Default)]
-pub struct BootstrapArgs {
-    /// Install SKILL.md from a reviewed file
-    #[arg(long, value_name = "PATH")]
-    pub install: Option<PathBuf>,
-    /// Skip prompts and overwrite existing skill directory
-    #[arg(long, hide = true)]
+pub struct InitArgs {
+    /// Create skeleton kg configuration in ~/.kiro/generators/ instead of
+    /// installing the kg-helper agent
+    #[arg(long)]
+    pub skeleton: bool,
+    /// Bypass interactive confirmation prompt (intended for CI automation)
+    #[arg(long, hide = true, default_value = "false")]
     pub force: bool,
 }
 
@@ -149,9 +146,10 @@ pub enum Command {
     /// local agents are generated. Use --global to generate $HOME agents
     #[command(alias = "g")]
     Generate(GenerateArgs),
-    /// Create default configuration in directory ~/.kiro/generators
+    /// Create default configuration or install the kg-helper agent
     #[command(
-        after_help = "To init in a custom location, override HOME:\n  HOME=$(mktemp -d) kg init"
+        after_help = "Default: installs kg-helper agent to ~/.kiro/agents/kg-helper.json\n  kg \
+                      init --skeleton  Create ~/.kiro/generators/ scaffold instead"
     )]
     Init(InitArgs),
     /// Display version information
@@ -168,13 +166,6 @@ pub enum Command {
     /// Display agent hierarchy and configuration sources as a tree
     #[command(alias = "t")]
     Tree(TreeArgs),
-    /// Scan existing .kiro/agents/*.json files and install the kg-helper skill
-    #[command(
-        alias = "b",
-        after_help = "After bootstrap, start kiro-cli and ask:\n  \"Help me set up kg for my \
-                      project\""
-    )]
-    Bootstrap(BootstrapArgs),
 }
 
 #[derive(clap::Args, Clone, Default)]

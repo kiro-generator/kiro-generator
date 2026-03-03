@@ -49,7 +49,7 @@ This project uses [facet](https://facet.rs) for all (de)serialization. Do not us
 
 - `cargo test` (no `--lib` flag -- this is a binary crate)
 - `#[test_log::test]` over `#[test]` for tracing output during tests
-- `#[test_log::test(tokio::test)]` for async tests
+- For async tests, use separate stacked attributes: `#[tokio::test]` and `#[test_log::test]` (not `#[test_log::test(tokio::test)]`)
 - Always return `Result<()>` from tests, never `.unwrap()`
 - The `Fs` abstraction provides chroot-based filesystem isolation in tests
 

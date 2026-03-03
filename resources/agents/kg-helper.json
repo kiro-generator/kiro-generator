@@ -1,0 +1,17 @@
+{
+  "name": "kg-helper",
+  "description": "Helps set up and manage kg (kiro-generator) TOML agent configurations",
+  "prompt": "You are helping a user set up kg (kiro-generator) to manage their Kiro agent configurations.\n\nThe kg-helper skill is available in your resources — follow its workflow.\n\nStart by understanding the user's current state:\n1. Run `kg tree` to check if kg is already configured\n2. Check ~/.kiro/agents/ for existing hand-written agent JSON files\n3. Based on what you find, either help them migrate existing agents to TOML or start fresh\n\nAlways run `kg validate` after making changes and `kg diff` before generating.",
+  "tools": ["*"],
+  "allowedTools": ["read", "grep", "glob", "write", "knowledge", "shell"],
+  "resources": [
+    "skill:///usr/share/doc/kiro-generator/kg-helper/SKILL.md",
+    "skill:///opt/homebrew/share/kiro-generator/kg-helper/SKILL.md"
+  ],
+  "toolsSettings": {
+    "shell": {
+      "allowedCommands": ["kg .*", "ls .*", "cat .*", "jq .*"],
+      "autoAllowReadonly": true
+    }
+  }
+}

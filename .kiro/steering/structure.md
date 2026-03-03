@@ -28,8 +28,8 @@
 - `docs/kiro/` -- Scraped Kiro reference docs (agent config spec, tools, hooks, etc.)
 - `schemas/` -- JSON schema files for manifest and agent validation
 - `resources/` -- Systemd unit files, config examples, and the kg-helper skill
-  - `resources/kg-helper/` -- Agent skill package (installed by `kg bootstrap`)
+  - `resources/kg-helper/` -- Agent skill package (installed by `kg init`)
     - `SKILL.md` -- Operational guide for agents helping users with kg
-    - `references/` -- Detailed docs loaded on demand (templates, bootstrap, schemas)
+    - `references/` -- Detailed docs loaded on demand
 - `scripts/` -- CI, formatting, coverage scripts
 - `.kiro/generators/` -- This project's own kg manifests (dogfooding)
