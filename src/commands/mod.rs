@@ -135,6 +135,15 @@ pub struct TreeArgs {
     pub trace: Option<String>,
     /// Show specific agents and their inheritance chains
     pub agents: Vec<String>,
+    /// Show reverse dependencies (what inherits from this agent/template)
+    #[arg(long)]
+    pub invert: bool,
+    /// Hide templates from summary output
+    #[arg(long)]
+    pub no_templates: bool,
+    /// Format of the console output
+    #[arg(short = 'f', long, default_value_t = OutputFormatArg::Table)]
+    pub format: OutputFormatArg,
 }
 
 #[derive(Subcommand, Clone)]

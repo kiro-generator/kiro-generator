@@ -16,11 +16,7 @@ impl Cli {
             Command::Generate(args) => self.execute_generate(generator, args).await,
             Command::Diff(args) => generator.diff(args),
             Command::Watch(args) => execute_watch(args).await,
-            Command::Tree(args) => {
-                let value = execute_tree(generator, args)?;
-                println!("{}", facet_json::to_string_pretty(&value)?);
-                Ok(())
-            }
+            Command::Tree(args) => execute_tree(generator, args),
             _ => Ok(()),
         }
     }
@@ -82,10 +78,15 @@ mod tests {
     use {
         super::*,
         crate::{
+            AgentSourceSlots,
+            GeneratorConfig,
             commands::DiffArgs,
             os::{ACTIVE_USER_HOME, Fs},
             output::ColorOverride,
+            source::KgAgentSource,
+            toml_parse,
         },
+        std::path::PathBuf,
     };
 
     #[tokio::test]
@@ -141,9 +142,11 @@ mod tests {
         let args = super::super::TreeArgs {
             trace: None,
             agents: vec!["nonexistent".to_string()],
+            invert: false,
+            no_templates: false,
+            format: crate::output::OutputFormatArg::Json,
         };
-        let value = execute_tree(&generator, &args)?;
-        assert_eq!(value, facet_value::Value::from(facet_value::VObject::new()));
+        execute_tree(&generator, &args)?;
         Ok(())
     }
 
@@ -159,11 +162,51 @@ mod tests {
         let args = super::super::TreeArgs {
             trace: None,
             agents: vec!["base".to_string(), "dependabot".to_string()],
+            invert: false,
+            no_templates: false,
+            format: crate::output::OutputFormatArg::Table,
         };
-        let value = execute_tree(&generator, &args)?;
-        let obj = value.as_object().expect("expected object");
-        assert!(obj.get("base").is_some(), "base agent missing");
-        assert!(obj.get("dependabot").is_some(), "dependabot agent missing");
+        execute_tree(&generator, &args)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_tree_fixtures() -> Result<()> {
+        let raw = include_str!("../../fixtures/manifest-test/test-merge-agent.toml");
+        let fs = Fs::new();
+        let mut generator = Generator::new(
+            fs,
+            crate::ConfigLocation::Local,
+            crate::output::OutputFormat::Json,
+        )?;
+        let agents: GeneratorConfig = toml_parse(raw)?;
+        let agents = agents.populate_names();
+        generator.agents = agents
+            .agents
+            .iter()
+            .map(|(k, v)| {
+                (k.clone(), AgentSourceSlots {
+                    name: k.clone(),
+                    merged: v.clone(),
+                    global_manifest: Default::default(),
+                    local_manifest: crate::SourceSlot {
+                        path: Some(KgAgentSource::LocalManifest(PathBuf::new().join("test"))),
+                        manifest: v.clone(),
+                    },
+                    global_agent_file: Default::default(),
+                    local_agent_file: Default::default(),
+                })
+            })
+            .collect();
+        let args = super::super::TreeArgs {
+            trace: None,
+            agents: vec![],
+            invert: false,
+            no_templates: false,
+            format: crate::output::OutputFormatArg::Table,
+        };
+        execute_tree(&generator, &args)?;
         Ok(())
     }
 
@@ -183,6 +226,9 @@ mod tests {
             command: Command::Tree(super::super::TreeArgs {
                 trace: None,
                 agents: vec!["base".to_string()],
+                invert: false,
+                no_templates: false,
+                format: crate::output::OutputFormatArg::Table,
             }),
         };
         cli.execute(&generator).await?;

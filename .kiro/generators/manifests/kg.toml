@@ -1,12 +1,8 @@
 [agents.kg-resources]
 template = true
 
-[agents.kg-resources.resources.docs]
-locations = [
-  "docs/src/SUMMARY.md",
-  "docs/src/config/*.md",
-  "docs/kiro/configuration-reference.md"
-]
+[agents.kg-resources.resources.rust]
+locations = ["docs/src/SUMMARY.md", "docs/src/config/*.md", "docs/kiro/configuration-reference.md"]
 
 [agents.kg-resources.knowledge.kiro]
 source = "file://./docs/kiro"

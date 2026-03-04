@@ -41,6 +41,8 @@ template = true
 resources = ["file://README.md", "file://~/.config/agents/resources/me.md"]
 ```
 
+**Templates** (`template = true`) are reusable configuration fragments that exist only to be inherited by other agents. They are never written to disk as JSON files — they have no output. Use them to define shared tools, resources, MCP servers, or permissions that multiple agents compose together. Template status is never inherited: if agent `rust` inherits from template `cli`, `rust` is still a concrete agent that produces a JSON file.
+
 **Agent files** (`agents/*.toml`) are for when an agent's config is large enough to warrant its own file. The filename determines the agent name — `agents/rust.toml` configures the `rust` agent.
 
 **Both approaches are equivalent.** kg doesn't dictate how you organize — a 3-line template can live inline in a manifest, a complex agent can get its own file. If both exist, they merge.
@@ -68,13 +70,31 @@ If `kg tree <agent>` shows `"type": "global-file"` or `"type": "global-manifest"
 
 ## Step 1: Discovery
 
-Before reading or modifying any config files, run discovery. `kg tree` shows which TOML files contribute to each agent and how they inherit:
+Before reading or modifying any config files, run discovery.
+
+### Summary view (default)
+
+`kg tree` with no arguments shows a summary table of all agents and templates:
 
 ```bash
-# Show all agents
+# Summary table of all agents + templates
 kg tree
 
-# Single agent
+# Agents only, hide templates
+kg tree --no-templates
+
+# Machine-readable summary
+kg tree -f json
+```
+
+The table shows agent name, description, and direct parents (inherits). Templates are grouped at the bottom.
+
+### Single agent detail
+
+`kg tree <name>` outputs full JSON detail for a specific agent, including sources, modified fields, and resolved inheritance chain:
+
+```bash
+# Single agent detail (JSON)
 kg tree rust
 
 # Multiple agents
@@ -120,6 +140,26 @@ Example JSON output:
 **`resolved_chain`** is the full flattened inheritance DAG in merge order. This differs from `inherits` (direct parents only). If `rust` inherits `["kg-resources", "default"]` but `default` itself inherits `["cli", "resources", "knowledge", "git"]`, `resolved_chain` shows all of them in the order they are merged. Use this when debugging unexpected values — find which ancestor in the chain contributes the field via `modified_fields`.
 
 **Use the `sources` array to know exactly which files to read or edit.**
+
+### Reverse dependency lookup
+
+`kg tree --invert` shows what depends on a given agent or template:
+
+```bash
+# What inherits from "default" (directly or transitively)?
+kg tree --invert default
+
+# Used/unused template report (no agent name)
+kg tree --invert
+
+# Machine-readable
+kg tree --invert -f json
+kg tree --invert default -f json
+```
+
+`kg tree --invert <name>` shows every agent that inherits from `<name>`, with the full inheritance path. Use this to assess blast radius before modifying a template or parent agent.
+
+`kg tree --invert` (no name) reports which templates are actively used and which are orphaned. Use this to find dead templates that can be removed.
 
 ## Step 2: Edit Agent Configs
 
@@ -203,8 +243,8 @@ All found configs merge together. Use `kg tree rust` to see which sources apply.
 
 ## Error States
 
-- **No agents found**: `kg tree` returns empty JSON object `{}` (exit 0). Consumers should check for an empty object.
-- **Named agent not found**: `kg tree nonexistent` returns empty JSON object `{}` (exit 0). The requested agent key will be absent from the response.
+- **No agents found**: `kg tree` shows an empty table. `kg tree <name> -f json` returns `{}` (exit 0).
+- **Named agent not found**: `kg tree nonexistent` produces no output in table/plain mode (exit 0). In JSON mode (`-f json`), it returns `{}`.
 - **Invalid TOML**: `kg diff` reports parse errors with file path and line number
 
 **Recovery:** If diff reports a parse error, fix the error at the reported location and re-run diff. If `kg generate` produces unexpected results, run `kg tree <agent>` to trace which source file contributes the unexpected value — check `modified_fields` on each source to pinpoint the exact file.
