@@ -260,7 +260,8 @@ mod tests {
         assert!(tool.denies.is_empty());
 
         // Knowledge merge tests
-        assert_eq!(merged.knowledge.len(), 2);
+        assert_eq!(merged.knowledge.len(), 3);
+        assert!(merged.knowledge.contains_key("parents"));
         let docs = merged.knowledge.get("docs");
         assert!(docs.is_some());
         let docs = docs.unwrap();
@@ -279,7 +280,7 @@ mod tests {
 
         assert_eq!(
             merged.welcome_message,
-            Some("children are better than parents".to_string())
+            Some("parents are better than children".to_string())
         );
 
         assert_eq!(merged.keyboard_shortcut, Some("ctrl+shift+a".to_string()));
@@ -290,6 +291,11 @@ mod tests {
         assert!(subagents.allow.contains("backend"));
         assert_eq!(subagents.deny.len(), 1);
         assert!(subagents.deny.contains("backend"));
+
+        assert!(merged.skills.contains_key("taker"));
+        assert_eq!(merged.tool_settings.len(), 1);
+        assert_eq!(merged.skills.len(), 3);
+        assert!(merged.skills.contains_key("default"));
 
         Ok(())
     }
