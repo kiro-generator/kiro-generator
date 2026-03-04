@@ -8,7 +8,7 @@ macro_rules! define_location_resource {
         #[facet(default, skip_all_unless_truthy, deny_unknown_fields)]
         pub struct $name {
             #[facet(default)]
-            pub enabled: Option<bool>,
+            pub disabled: Option<bool>,
             #[facet(default)]
             pub optional: Option<bool>,
             #[facet(default)]
@@ -19,8 +19,8 @@ macro_rules! define_location_resource {
             pub fn merge(mut self, other: Self) -> Self {
                 self.locations.extend(other.locations);
 
-                if self.enabled.is_none() {
-                    self.enabled = other.enabled;
+                if self.disabled.is_none() {
+                    self.disabled = other.disabled;
                 }
 
                 if self.optional.is_none() {

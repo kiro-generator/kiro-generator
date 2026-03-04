@@ -580,7 +580,7 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
-          "enabled": {
+          "disabled": {
             "anyOf": [
               {
                 "type": "boolean"
@@ -617,7 +617,7 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
-          "enabled": {
+          "disabled": {
             "anyOf": [
               {
                 "type": "boolean"

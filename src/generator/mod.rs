@@ -85,10 +85,6 @@ impl AgentResult {
             _ => vec![],
         }
     }
-
-    pub fn resources(&self) -> HashSet<String> {
-        HashSet::new()
-    }
 }
 
 /// Main generator that orchestrates agent discovery and merging

@@ -9,12 +9,12 @@ mod tests {
     #[test]
     fn test_deserialize_file_resource() -> crate::Result<()> {
         let toml = r#"
-enabled = true
+disabled = true
 optional = true
 locations = ["README.md", "/tmp/design.md"]
 "#;
         let r: KgFileResource = facet_toml::from_str(toml)?;
-        assert_eq!(r.enabled, Some(true));
+        assert_eq!(r.disabled, Some(true));
         assert_eq!(r.optional, Some(true));
         assert!(r.locations.contains("README.md"));
         assert!(r.locations.contains("/tmp/design.md"));
@@ -24,13 +24,13 @@ locations = ["README.md", "/tmp/design.md"]
     #[test]
     fn test_merge_file_locations_union() {
         let base = KgFileResource {
-            enabled: Some(true),
+            disabled: Some(true),
             optional: None,
             locations: ["README.md".to_string()].into_iter().collect(),
         };
 
         let child = KgFileResource {
-            enabled: Some(true),
+            disabled: Some(true),
             optional: None,
             locations: ["RUST.md".to_string()].into_iter().collect(),
         };

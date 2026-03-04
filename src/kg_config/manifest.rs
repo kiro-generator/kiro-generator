@@ -124,14 +124,14 @@ impl Manifest {
         let mut string_resources: BTreeSet<String> = self
             .resources
             .values()
-            .filter(|f| f.enabled != Some(false))
+            .filter(|f| f.disabled != Some(true))
             .flat_map(|f| f.locations.iter().map(|l| format!("file://{l}")))
             .collect();
 
         string_resources.extend(
             self.skills
                 .values()
-                .filter(|s| s.enabled != Some(false))
+                .filter(|s| s.disabled != Some(true))
                 .flat_map(|s| s.locations.iter().map(|l| format!("skill://{l}"))),
         );
 
@@ -177,12 +177,67 @@ mod tests {
     fn manifest_resources() -> crate::Result<()> {
         let mut m = Manifest::default();
         m.resources.insert("docs".to_string(), KgFileResource {
-            enabled: None,
+            disabled: None,
             optional: None,
             locations: ["README.md".to_string()].into_iter().collect(),
         });
         let res = m.resources()?;
         assert_eq!(res.len(), 1);
+        let v = facet_json::to_string(res.first().unwrap())?;
+        assert_eq!(v, "\"file://README.md\"");
+        Ok(())
+    }
+
+    #[test]
+    fn manifest_skills() -> crate::Result<()> {
+        let mut m = Manifest::default();
+        m.skills.insert("docs".to_string(), KgSkillResource {
+            disabled: None,
+            optional: None,
+            locations: ["SKILL.md".to_string()].into_iter().collect(),
+        });
+        let res = m.resources()?;
+        assert_eq!(res.len(), 1);
+        let v = facet_json::to_string(res.first().unwrap())?;
+        assert_eq!(v, "\"skill://SKILL.md\"");
+        Ok(())
+    }
+
+    #[test]
+    fn manifest_resources_tombstone() -> crate::Result<()> {
+        let mut m = Manifest::default();
+        // Add a resource with disabled = true (tombstone)
+        m.resources.insert("docs".to_string(), KgFileResource {
+            disabled: Some(true),
+            optional: None,
+            locations: ["README.md".to_string()].into_iter().collect(),
+        });
+        // Add a normal resource for comparison
+        m.resources.insert("config".to_string(), KgFileResource {
+            disabled: None,
+            optional: None,
+            locations: ["config.toml".to_string()].into_iter().collect(),
+        });
+        let res = m.resources()?;
+        // Should only have 1 resource (tombstone filtered out)
+        assert_eq!(res.len(), 1);
+        let v = facet_json::to_string(res.first().unwrap())?;
+        assert_eq!(v, "\"file://config.toml\"");
+        Ok(())
+    }
+
+    #[test]
+    fn manifest_skills_tombstone() -> crate::Result<()> {
+        let mut m = Manifest::default();
+        // Add a skill with disabled = true (tombstone)
+        m.skills.insert("docs".to_string(), KgSkillResource {
+            disabled: Some(true),
+            optional: None,
+            locations: ["SKILL.md".to_string()].into_iter().collect(),
+        });
+        let res = m.resources()?;
+        // Should have 0 resources (tombstone filtered out)
+        assert_eq!(res.len(), 0);
         Ok(())
     }
 }
