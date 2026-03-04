@@ -1,17 +1,57 @@
 use {
     super::TreeArgs,
-    crate::{
-        AgentSourceSlots,
-        Manifest,
-        Result,
-        SourceSlot,
-        generator::Generator,
-        output::OutputFormatArg,
-    },
-    std::collections::{BTreeMap, HashMap, HashSet},
+    crate::{AgentSourceSlots, Manifest, Result, generator::Generator, output::OutputFormatArg},
+    facet::Facet,
+    std::collections::{BTreeSet, HashMap, HashSet},
     super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
 };
 
+#[derive(Facet)]
+struct TreeSummary {
+    name: String,
+    description: String,
+    inherits: BTreeSet<String>,
+}
+
+#[derive(Facet)]
+struct TreeDependent {
+    agent: String,
+    chain: Vec<String>,
+}
+
+#[derive(Facet)]
+struct TreeInvert {
+    dependents: Vec<TreeDependent>,
+}
+
+#[derive(Facet)]
+struct TreeSource {
+    source_type: String,
+    path: String,
+    modified_fields: BTreeSet<String>,
+}
+
+#[derive(Facet)]
+struct TreeDetail {
+    template: bool,
+    output: String,
+    description: String,
+    inherits: BTreeSet<String>,
+    resolved_chain: Vec<String>,
+    sources: Vec<TreeSource>,
+}
+
+#[derive(Facet)]
+struct TemplateUsage {
+    name: String,
+    dependent_count: usize,
+}
+
+#[derive(Facet)]
+struct TemplateReport {
+    used: Vec<TemplateUsage>,
+    unused: Vec<String>,
+}
 /// Main entry point — dispatches based on args.
 pub(super) fn execute_tree(generator: &Generator, args: &TreeArgs) -> Result<()> {
     if args.invert {
@@ -32,47 +72,34 @@ pub(super) fn execute_tree(generator: &Generator, args: &TreeArgs) -> Result<()>
 // ---------------------------------------------------------------------------
 
 fn summary(generator: &Generator, args: &TreeArgs) -> Result<()> {
-    let mut agents: Vec<&AgentSourceSlots> = generator
-        .agents
-        .values()
-        .filter(|a| a.name != "kg-helper")
-        .collect();
-    agents.sort_by(|a, b| a.name.cmp(&b.name));
+    let to_summary = |a: &AgentSourceSlots| TreeSummary {
+        name: a.name.clone(),
+        description: a.merged.description.clone().unwrap_or_default(),
+        inherits: a.merged.inherits.iter().cloned().collect(),
+    };
 
-    let (concrete, templates): (Vec<_>, Vec<_>) = agents.iter().partition(|a| !a.merged.template);
+    let agents: Vec<TreeSummary> = generator.agents.values().map(to_summary).collect();
+
+    let mut concrete: HashMap<String, TreeSummary> = HashMap::new();
+    let mut templates: HashMap<String, TreeSummary> = HashMap::new();
+
+    for agent in agents {
+        let is_template = generator.agents[&agent.name].merged.template;
+        if is_template {
+            templates.insert(agent.name.clone(), agent);
+        } else {
+            concrete.insert(agent.name.clone(), agent);
+        }
+    }
 
     match args.format {
         OutputFormatArg::Json => {
-            let mut out = serde_json::Map::new();
-            let to_arr = |list: &[&&AgentSourceSlots]| -> serde_json::Value {
-                list.iter()
-                    .map(|a| {
-                        let mut m = serde_json::Map::new();
-                        m.insert("name".into(), serde_json::Value::String(a.name.clone()));
-                        m.insert(
-                            "description".into(),
-                            a.merged
-                                .description
-                                .as_ref()
-                                .map(|d| serde_json::Value::String(d.clone()))
-                                .unwrap_or(serde_json::Value::Null),
-                        );
-                        let inherits: Vec<serde_json::Value> = a
-                            .merged
-                            .inherits
-                            .iter()
-                            .map(|s| serde_json::Value::String(s.clone()))
-                            .collect();
-                        m.insert("inherits".into(), serde_json::Value::Array(inherits));
-                        serde_json::Value::Object(m)
-                    })
-                    .collect()
-            };
-            out.insert("agents".into(), to_arr(&concrete));
+            let mut out = HashMap::new();
+            out.insert("agents", concrete);
             if !args.no_templates {
-                out.insert("templates".into(), to_arr(&templates));
+                out.insert("templates", templates);
             }
-            println!("{}", serde_json::to_string_pretty(&out)?);
+            println!("{}", facet_json::to_string_pretty(&out)?);
         }
         _ => {
             let mut table = Table::new();
@@ -86,7 +113,9 @@ fn summary(generator: &Generator, args: &TreeArgs) -> Result<()> {
                     Cell::new("Inherits"),
                 ]);
 
-            for a in &concrete {
+            let mut concrete_sorted: Vec<_> = concrete.values().collect();
+            concrete_sorted.sort_by(|a, b| a.name.cmp(&b.name));
+            for a in concrete_sorted {
                 table.add_row(summary_row(a));
             }
 
@@ -97,7 +126,9 @@ fn summary(generator: &Generator, args: &TreeArgs) -> Result<()> {
                     Cell::new(""),
                     Cell::new(""),
                 ]);
-                for a in &templates {
+                let mut templates_sorted: Vec<_> = templates.values().collect();
+                templates_sorted.sort_by(|a, b| a.name.cmp(&b.name));
+                for a in templates_sorted {
                     table.add_row(summary_row(a));
                 }
             }
@@ -108,103 +139,79 @@ fn summary(generator: &Generator, args: &TreeArgs) -> Result<()> {
     Ok(())
 }
 
-fn summary_row(a: &AgentSourceSlots) -> Vec<Cell> {
-    let mut inherits: Vec<&str> = a.merged.inherits.iter().map(String::as_str).collect();
+fn summary_row(a: &TreeSummary) -> Vec<Cell> {
+    let mut inherits: Vec<&str> = a.inherits.iter().map(String::as_str).collect();
     inherits.sort();
     vec![
         Cell::new(&a.name),
-        Cell::new(a.merged.description.as_deref().unwrap_or("")),
+        Cell::new(&a.description),
         Cell::new(inherits.join(", ")),
     ]
 }
 
 // ---------------------------------------------------------------------------
-// kg tree <name> — full detail (unchanged from original behavior)
+// kg tree <name> — full detail
 // ---------------------------------------------------------------------------
 
 fn detail(generator: &Generator, args: &TreeArgs) -> Result<()> {
-    let agents: Vec<&AgentSourceSlots> = generator
-        .agents
-        .values()
-        .filter(|a| a.name != "kg-helper")
-        .filter(|a| args.agents.iter().any(|n| n == &a.name))
-        .collect();
+    let mut out: HashMap<String, TreeDetail> = HashMap::new();
 
-    if agents.is_empty() {
+    for slots in generator.agents.values() {
+        if !args.agents.iter().any(|n| n == &slots.name) {
+            continue;
+        }
+        let manifest = &slots.merged;
+        let output = if manifest.template {
+            String::new()
+        } else {
+            generator
+                .destination_dir(&slots.name)
+                .join(format!("{}.json", slots.name))
+                .to_string_lossy()
+                .into_owned()
+        };
+        let resolved_chain = generator.inheritance_chain(&slots.name).unwrap_or_default();
+
+        let sources = collect_sources(slots);
+
+        out.insert(slots.name.clone(), TreeDetail {
+            template: manifest.template,
+            output,
+            description: manifest.description.clone().unwrap_or_default(),
+            inherits: manifest.inherits.iter().cloned().collect(),
+            resolved_chain,
+            sources,
+        });
+    }
+
+    if out.is_empty() {
         if matches!(args.format, OutputFormatArg::Json) {
-            let empty = facet_value::Value::from(facet_value::VObject::new());
-            println!("{}", facet_json::to_string_pretty(&empty)?);
+            println!("{}", facet_json::to_string_pretty(&out)?);
         }
         return Ok(());
     }
 
-    let value = build_json(&agents, generator)?;
-    println!("{}", facet_json::to_string_pretty(&value)?);
+    println!("{}", facet_json::to_string_pretty(&out)?);
     Ok(())
 }
 
-fn build_json(agents: &[&AgentSourceSlots], generator: &Generator) -> Result<facet_value::Value> {
-    let mut obj = facet_value::VObject::new();
-    for agent_slots in agents {
-        let name = &agent_slots.name;
-        let manifest = &agent_slots.merged;
-        let mut agent = facet_value::VObject::new();
-        agent.insert("template", facet_value::Value::from(manifest.template));
-        if !manifest.template {
-            let output = generator.destination_dir(name).join(format!("{name}.json"));
-            agent.insert(
-                "output",
-                facet_value::Value::from(output.to_string_lossy().as_ref()),
-            );
-        }
-        if let Some(ref desc) = manifest.description {
-            agent.insert("description", facet_value::Value::from(desc.as_str()));
-        }
-        let src_arr = sources_to_json(agent_slots);
-        agent.insert("sources", facet_value::Value::from(src_arr));
-        let inherits: facet_value::VArray = manifest
-            .inherits
-            .iter()
-            .map(|s| facet_value::Value::from(s.as_str()))
-            .collect();
-        agent.insert("inherits", facet_value::Value::from(inherits));
-        if let Ok(chain) = generator.inheritance_chain(name) {
-            let chain_arr: facet_value::VArray = chain
-                .iter()
-                .map(|s| facet_value::Value::from(s.as_str()))
-                .collect();
-            agent.insert("resolved_chain", facet_value::Value::from(chain_arr));
-        }
-        obj.insert(name.as_str(), facet_value::Value::from(agent));
-    }
-    Ok(facet_value::Value::from(obj))
-}
-
-fn sources_to_json(agent_slots: &AgentSourceSlots) -> facet_value::VArray {
-    let mut sources = facet_value::VArray::new();
-    push_source(&mut sources, &agent_slots.local_agent_file);
-    push_source(&mut sources, &agent_slots.local_manifest);
-    push_source(&mut sources, &agent_slots.global_manifest);
-    push_source(&mut sources, &agent_slots.global_agent_file);
-    sources
-}
-
-fn push_source(sources: &mut facet_value::VArray, slot: &SourceSlot) {
-    let Some(path) = &slot.path else {
-        return;
-    };
-    let mut o = facet_value::VObject::new();
-    o.insert("type", slot.source_type().unwrap_or_default());
-    o.insert(
-        "path",
-        facet_value::Value::from(path.path().to_string_lossy().as_ref()),
-    );
-    let fields_arr: facet_value::VArray = manifest_fields(&slot.manifest)
-        .into_iter()
-        .map(facet_value::Value::from)
-        .collect();
-    o.insert("modified_fields", facet_value::Value::from(fields_arr));
-    sources.push(facet_value::Value::from(o));
+fn collect_sources(slots: &AgentSourceSlots) -> Vec<TreeSource> {
+    [
+        &slots.local_agent_file,
+        &slots.local_manifest,
+        &slots.global_manifest,
+        &slots.global_agent_file,
+    ]
+    .into_iter()
+    .filter_map(|slot| {
+        let src = slot.path.as_ref()?;
+        Some(TreeSource {
+            source_type: src.source_type().to_string(),
+            path: src.path().to_string_lossy().into_owned(),
+            modified_fields: manifest_fields(&slot.manifest).into_iter().collect(),
+        })
+    })
+    .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -216,8 +223,8 @@ fn invert_named(generator: &Generator, args: &TreeArgs) -> Result<()> {
 
     match args.format {
         OutputFormatArg::Json => {
-            let out = build_invert_named_json(&reverse, &args.agents);
-            println!("{}", serde_json::to_string_pretty(&out)?);
+            let out = build_invert_named(&reverse, &args.agents);
+            println!("{}", facet_json::to_string_pretty(&out)?);
         }
         _ => {
             for target in &args.agents {
@@ -237,34 +244,24 @@ fn invert_named(generator: &Generator, args: &TreeArgs) -> Result<()> {
     Ok(())
 }
 
-fn build_invert_named_json<'a>(
+fn build_invert_named<'a>(
     reverse: &HashMap<&'a str, Vec<&'a str>>,
     targets: &[String],
-) -> serde_json::Map<String, serde_json::Value> {
-    let mut out = serde_json::Map::new();
+) -> HashMap<String, TreeInvert> {
+    let mut out = HashMap::new();
     for target in targets {
         let paths = find_dependents(reverse, target);
-        let dependents: Vec<serde_json::Value> = paths
-            .iter()
-            .map(|path| {
-                let mut m = serde_json::Map::new();
-                m.insert(
-                    "agent".into(),
-                    serde_json::Value::String(path.last().unwrap().clone()),
-                );
-                m.insert(
-                    "path".into(),
-                    path.iter()
-                        .map(|s| serde_json::Value::String(s.clone()))
-                        .collect(),
-                );
-                serde_json::Value::Object(m)
+        let dependents = paths
+            .into_iter()
+            .map(|path| TreeDependent {
+                agent: path
+                    .last()
+                    .expect("path is non-empty by construction")
+                    .clone(),
+                chain: path,
             })
             .collect();
-
-        let mut inner = serde_json::Map::new();
-        inner.insert("dependents".into(), serde_json::Value::Array(dependents));
-        out.insert(target.clone(), serde_json::Value::Object(inner));
+        out.insert(target.clone(), TreeInvert { dependents });
     }
     out
 }
@@ -276,72 +273,56 @@ fn build_invert_named_json<'a>(
 fn invert_all(generator: &Generator, args: &TreeArgs) -> Result<()> {
     let reverse = build_reverse_map(generator);
 
-    // Count unique transitive dependents for each agent/template.
-    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
-    for name in generator.agents.keys() {
-        if name == "kg-helper" {
-            continue;
+    let mut used = Vec::new();
+    let mut unused = Vec::new();
+
+    for a in generator.agents.values().filter(|a| a.merged.template) {
+        let count = find_unique_dependents(&reverse, &a.name).len();
+        if count > 0 {
+            used.push(TemplateUsage {
+                name: a.name.clone(),
+                dependent_count: count,
+            });
+        } else {
+            unused.push(a.name.clone());
         }
-        let dependents = find_unique_dependents(&reverse, name);
-        counts.insert(name, dependents.len());
     }
 
-    let templates: Vec<(&str, usize)> = generator
-        .agents
-        .values()
-        .filter(|a| a.merged.template && a.name != "kg-helper")
-        .map(|a| (a.name.as_str(), *counts.get(a.name.as_str()).unwrap_or(&0)))
-        .collect();
+    used.sort_by(|a, b| {
+        b.dependent_count
+            .cmp(&a.dependent_count)
+            .then(a.name.cmp(&b.name))
+    });
+    unused.sort();
 
-    let (mut used, mut unused): (Vec<_>, Vec<_>) = templates.into_iter().partition(|(_, c)| *c > 0);
-    used.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
-    unused.sort_by(|a, b| a.0.cmp(b.0));
+    let report = TemplateReport { used, unused };
 
     match args.format {
         OutputFormatArg::Json => {
-            let used_json: Vec<serde_json::Value> = used
-                .iter()
-                .map(|(name, count)| {
-                    let mut m = serde_json::Map::new();
-                    m.insert("name".into(), serde_json::Value::String((*name).into()));
-                    m.insert(
-                        "dependent_count".into(),
-                        serde_json::Value::Number((*count).into()),
-                    );
-                    serde_json::Value::Object(m)
-                })
-                .collect();
-            let unused_json: Vec<serde_json::Value> = unused
-                .iter()
-                .map(|(name, _)| serde_json::Value::String((*name).into()))
-                .collect();
-            let mut out = serde_json::Map::new();
-            out.insert("used".into(), serde_json::Value::Array(used_json));
-            out.insert("unused".into(), serde_json::Value::Array(unused_json));
-            println!("{}", serde_json::to_string_pretty(&out)?);
+            println!("{}", facet_json::to_string_pretty(&report)?);
         }
         _ => {
-            if !used.is_empty() {
+            if !report.used.is_empty() {
                 println!("Used templates:");
-                for (name, count) in &used {
+                for t in &report.used {
                     println!(
                         "  {:<20} used by {} agent{}",
-                        name,
-                        count,
-                        if *count == 1 { "" } else { "s" }
+                        t.name,
+                        t.dependent_count,
+                        if t.dependent_count == 1 { "" } else { "s" }
                     );
                 }
             }
-            if !unused.is_empty() {
-                if !used.is_empty() {
+            if !report.unused.is_empty() {
+                if !report.used.is_empty() {
                     println!();
                 }
                 println!("Unused templates:");
-                for (name, _) in &unused {
+                for name in &report.unused {
                     println!("  {name}");
                 }
             }
-            if used.is_empty() && unused.is_empty() {
+            if report.used.is_empty() && report.unused.is_empty() {
                 println!("No templates defined");
             }
         }
@@ -357,9 +338,6 @@ fn invert_all(generator: &Generator, args: &TreeArgs) -> Result<()> {
 fn build_reverse_map(generator: &Generator) -> HashMap<&str, Vec<&str>> {
     let mut reverse: HashMap<&str, Vec<&str>> = HashMap::new();
     for (name, slots) in &generator.agents {
-        if name == "kg-helper" {
-            continue;
-        }
         for parent in &slots.merged.inherits {
             reverse
                 .entry(parent.as_str())
@@ -402,11 +380,7 @@ fn find_dependents<'a>(
                 // Record this path as a dependent
                 results.push(new_path.iter().map(|s| (*s).to_string()).collect());
                 // Continue DFS
-                stack.push({
-                    let mut p = path.clone();
-                    p.push(child);
-                    p
-                });
+                stack.push(new_path);
             }
         }
     }
@@ -540,7 +514,11 @@ fn manifest_fields(manifest: &Manifest) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::{GeneratorConfig, os::Fs, source::KgAgentSource, toml_parse},
+        std::path::PathBuf,
+    };
 
     #[test_log::test]
     fn unique_dependents_dedupes_diamond_paths() -> Result<()> {
@@ -589,10 +567,49 @@ mod tests {
         reverse.insert("base", vec!["a"]);
         reverse.insert("template", vec!["b"]);
 
-        let out = build_invert_named_json(&reverse, &["base".into(), "template".into()]);
+        let out = build_invert_named(&reverse, &["base".into(), "template".into()]);
         assert_eq!(out.len(), 2);
         assert!(out.contains_key("base"));
         assert!(out.contains_key("template"));
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn test_invert_all_with_fixtures() -> Result<()> {
+        let raw = include_str!("../../fixtures/manifest-test/test-merge-agent.toml");
+        let fs = Fs::new();
+        let mut generator = Generator::new(
+            fs,
+            crate::ConfigLocation::Local,
+            crate::output::OutputFormat::Json,
+        )?;
+        let agents: GeneratorConfig = toml_parse(raw)?;
+        let agents = agents.populate_names();
+        generator.agents = agents
+            .agents
+            .iter()
+            .map(|(k, v)| {
+                (k.clone(), AgentSourceSlots {
+                    name: k.clone(),
+                    merged: v.clone(),
+                    global_manifest: Default::default(),
+                    local_manifest: crate::SourceSlot {
+                        path: Some(KgAgentSource::LocalManifest(PathBuf::new().join("test"))),
+                        manifest: v.clone(),
+                    },
+                    global_agent_file: Default::default(),
+                    local_agent_file: Default::default(),
+                })
+            })
+            .collect();
+        let args = TreeArgs {
+            agents: vec![],
+            invert: true,
+            no_templates: false,
+            format: OutputFormatArg::Json,
+            trace: None,
+        };
+        execute_tree(&generator, &args)?;
         Ok(())
     }
 }
