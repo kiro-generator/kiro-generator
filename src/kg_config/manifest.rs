@@ -1,7 +1,9 @@
 use {
     super::{
         KgCustomToolConfig,
+        KgFileResource,
         KgKnowledge,
+        KgSkillResource,
         SubagentConfig,
         native::{AwsTool, ExecuteShellTool, NativeTools, ReadTool, WriteTool},
     },
@@ -9,7 +11,7 @@ use {
     color_eyre::eyre::WrapErr,
     facet::Facet,
     std::{
-        collections::{HashMap, HashSet},
+        collections::{BTreeSet, HashMap, HashSet},
         fmt::{Debug, Display},
     },
 };
@@ -33,7 +35,9 @@ pub struct Manifest {
     pub inherits: HashSet<String>,
     pub prompt: Option<String>,
     #[facet(default)]
-    pub resources: HashSet<String>,
+    pub resources: HashMap<String, KgFileResource>,
+    #[facet(default)]
+    pub skills: HashMap<String, KgSkillResource>,
     #[facet(default)]
     pub knowledge: HashMap<String, KgKnowledge>,
     #[facet(default, rename = "useLegacyMcpJson")]
@@ -117,13 +121,29 @@ impl Manifest {
     }
 
     pub fn resources(&self) -> crate::Result<Vec<facet_value::Value>> {
-        let mut result: Vec<facet_value::Value> = Vec::new();
+        let mut string_resources: BTreeSet<String> = self
+            .resources
+            .values()
+            .filter(|f| f.enabled != Some(false))
+            .flat_map(|f| f.locations.iter().map(|l| format!("file://{l}")))
+            .collect();
 
-        for r in &self.resources {
-            result.push(facet_value::value!(r));
-        }
+        string_resources.extend(
+            self.skills
+                .values()
+                .filter(|s| s.enabled != Some(false))
+                .flat_map(|s| s.locations.iter().map(|l| format!("skill://{l}"))),
+        );
 
-        for (name, kb) in &self.knowledge {
+        let mut result: Vec<facet_value::Value> = string_resources
+            .into_iter()
+            .map(|r| facet_value::value!(r))
+            .collect();
+
+        let mut knowledge: Vec<_> = self.knowledge.iter().collect();
+        knowledge.sort_by_key(|(k, _)| *k);
+
+        for (name, kb) in knowledge {
             let k = crate::kiro::Knowledge {
                 name: name.clone(),
                 knowledge_type: "knowledgeBase".to_string(),
@@ -156,7 +176,11 @@ mod tests {
     #[test]
     fn manifest_resources() -> crate::Result<()> {
         let mut m = Manifest::default();
-        m.resources.insert("file://README.md".to_string());
+        m.resources.insert("docs".to_string(), KgFileResource {
+            enabled: None,
+            optional: None,
+            locations: ["README.md".to_string()].into_iter().collect(),
+        });
         let res = m.resources()?;
         assert_eq!(res.len(), 1);
         Ok(())

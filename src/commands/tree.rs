@@ -97,7 +97,14 @@ fn manifest_fields(manifest: &Manifest) -> Vec<String> {
         fields.push("prompt".to_string());
     }
     if !manifest.resources.is_empty() {
-        fields.push("resources".to_string());
+        for k in manifest.resources.keys() {
+            fields.push(format!("resources.{k}"));
+        }
+    }
+    if !manifest.skills.is_empty() {
+        for k in manifest.skills.keys() {
+            fields.push(format!("skills.{k}"));
+        }
     }
     if !manifest.knowledge.is_empty() {
         for k in manifest.knowledge.keys() {

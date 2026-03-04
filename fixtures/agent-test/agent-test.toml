@@ -1,6 +1,5 @@
 description = "agent from file"
 prompt = "Generate a test prompt"
-resources = ["file://resource.md", "file://README.md"]
 useLegacyMcpJson = true
 tools = ["*"]
 allowedTools = ["@awsdocs"]
@@ -65,3 +64,23 @@ deny = [".*pastebin\\.com.*"]
 
 [toolSettings.whoami]
 env = { LOG_LEVEL = "debug" }
+
+[resources.readme]
+enabled = true
+locations = ["README.md"]
+
+[resources.rust-design]
+enabled = true
+locations = ["/absolute/path/to/rust-design.md"]
+
+[skills.blah]
+enabled = false
+locations = [".config/agent/skills/blah/SKILL.md"]
+
+[skills.money-maker]
+enabled = true
+locations = ["/home/someuser/.skills/money-maker/SKILL.md"]
+
+[skills.all]
+enabled = true
+locations = ["/home/someuser/.config/agent/skills/**/SKILL.md"]

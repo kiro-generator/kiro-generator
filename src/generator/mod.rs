@@ -87,7 +87,7 @@ impl AgentResult {
     }
 
     pub fn resources(&self) -> HashSet<String> {
-        self.agent.resources.clone()
+        HashSet::new()
     }
 }
 

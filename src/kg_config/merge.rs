@@ -46,7 +46,34 @@ impl Manifest {
         // Collections are extended (merged)
         if !other.resources.is_empty() {
             tracing::trace!(count = other.resources.len(), "resources: extended");
-            self.resources.extend(other.resources);
+            for (key, other_resource) in other.resources {
+                self.resources
+                    .entry(key.clone())
+                    .and_modify(|self_resource| {
+                        tracing::trace!(name = %key, "resource: merged");
+                        *self_resource = self_resource.clone().merge(other_resource.clone());
+                    })
+                    .or_insert_with(|| {
+                        tracing::trace!(name = %key, "resource: inserted");
+                        other_resource
+                    });
+            }
+        }
+
+        if !other.skills.is_empty() {
+            tracing::trace!(count = other.skills.len(), "skills: merging");
+            for (key, other_skill) in other.skills {
+                self.skills
+                    .entry(key.clone())
+                    .and_modify(|self_skill| {
+                        tracing::trace!(name = %key, "skill: merged");
+                        *self_skill = self_skill.clone().merge(other_skill.clone());
+                    })
+                    .or_insert_with(|| {
+                        tracing::trace!(name = %key, "skill: inserted");
+                        other_skill
+                    });
+            }
         }
 
         if !other.knowledge.is_empty() {
@@ -164,7 +191,13 @@ mod tests {
         let d = merged.description.clone().unwrap();
         assert_eq!(d, "I am a child");
 
-        assert_eq!(merged.resources.len(), 3);
+        assert_eq!(merged.resources.len(), 1);
+        let docs_resources = merged.resources.get("docs");
+        assert!(docs_resources.is_some());
+        let docs_resources = docs_resources.unwrap();
+        assert!(docs_resources.locations.contains("parent.md"));
+        assert!(docs_resources.locations.contains("child.md"));
+        assert!(docs_resources.locations.contains("README.md"));
         assert!(!merged.template);
         assert!(merged.include_mcp_json.unwrap_or_default());
 

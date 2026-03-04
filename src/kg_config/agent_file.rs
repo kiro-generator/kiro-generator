@@ -1,7 +1,9 @@
 use {
     super::{
         KgCustomToolConfig,
+        KgFileResource,
         KgKnowledge,
+        KgSkillResource,
         Result,
         SubagentConfig,
         manifest::*,
@@ -36,10 +38,16 @@ pub struct KgAgentFileDoc {
     pub prompt: Option<String>,
     #[kg_mapping(
         kiro_schema_path = "#/properties/resources",
-        description = "Files to include in the agent's context"
+        description = "File resources to include in the agent's context"
     )]
     #[facet(default)]
-    pub resources: HashSet<String>,
+    pub resources: HashMap<String, KgFileResource>,
+    #[kg_mapping(
+        kiro_schema_path = "#/properties/resources",
+        description = "Skill resources to include in the agent's context"
+    )]
+    #[facet(default)]
+    pub skills: HashMap<String, KgSkillResource>,
     #[kg_mapping(
         kiro_schema_path = "#/properties/resources",
         description = "Knowledge bases to include in the agent's context"
@@ -157,6 +165,7 @@ impl Manifest {
             inherits: Default::default(),
             prompt: file_source.prompt,
             resources: file_source.resources,
+            skills: file_source.skills,
             knowledge: file_source.knowledge,
             include_mcp_json: file_source.include_mcp_json,
             tools: file_source.tools,

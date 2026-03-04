@@ -5,9 +5,14 @@ useLegacyMcpJson = true
 inherits = ["parent"]
 description = "This is a test agent"
 prompt = "Generate a test prompt"
-resources = ["file://resource.md", "file://README.md"]
 tools = ["*"]
 allowedTools = ["@awsdocs"]
+
+[agents.test.resources.resource]
+locations = ["resource.md"]
+
+[agents.test.resources.readme]
+locations = ["README.md"]
 
 [agents.test.subagents]
 allow = ["backend"]

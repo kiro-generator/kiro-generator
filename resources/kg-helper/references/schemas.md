@@ -48,6 +48,8 @@ kg's TOML format uses different field names than Kiro's JSON format. Key mapping
 
 | TOML Field (kg) | JSON Field (Kiro) | Notes |
 |-----------------|-------------------|-------|
+| `resources` | `resources` | File resources are emitted as `file://...` strings |
+| `skills` | `resources` | Skill resources are emitted as `skill://...` strings |
 | `nativeTools.*` | `toolsSettings.*` | Native tool permissions (shell, read, write, glob, grep, web-fetch, aws) |
 | `nativeTools.*.allow` | `toolsSettings.*.allowedCommands` or `allowedPaths` | Depends on tool type |
 | `nativeTools.*.deny` | `toolsSettings.*.deniedCommands` or `deniedPaths` | Depends on tool type |
@@ -92,7 +94,8 @@ deny = ["Cargo.lock"]
 
 **TOML:**
 ```toml
-resources = ["file://README.md"]
+[resources.readme]
+locations = ["README.md"]
 
 [knowledge.project-docs]
 source = "file://docs/"
@@ -115,6 +118,23 @@ description = "Project documentation"
 ```
 
 Note: `resources` array contains both simple strings and knowledge base objects.
+
+### skills → resources
+
+**TOML:**
+```toml
+[skills.core]
+locations = [".kiro/skills/**/SKILL.md"]
+```
+
+**JSON:**
+```json
+{
+  "resources": [
+    "skill://.kiro/skills/**/SKILL.md"
+  ]
+}
+```
 
 ### subagents → toolsSettings.subagent
 
@@ -225,24 +245,6 @@ kg validate --format json | jq '.[] | select(.name == "rust")'
 
 # Compare specific field transformation
 kg validate --format json | jq '.[] | select(.name == "rust") | .toolsSettings'
-```
-
-## Updating Schemas
-
-`kg schema` always reflects the installed binary. To update system-installed schemas, update the package:
-
-```bash
-# Arch
-paru -Syu kiro-generator-git
-
-# Debian
-sudo apt upgrade kiro-generator
-
-# Homebrew
-brew upgrade kiro-generator
-
-# cargo
-cargo install kiro-generator
 ```
 
 ## Workflow for Adding/Modifying Fields
