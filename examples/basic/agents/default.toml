@@ -3,4 +3,6 @@
 description = "Default agent"
 tools = ["*"]
 allowedTools = ["read", "knowledge", "web_search"]
-resources = ["file://README.md"]
+
+[resources.default]
+locations = ["README.md"]

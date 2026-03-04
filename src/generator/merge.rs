@@ -134,9 +134,13 @@ mod tests {
 
         // Should have resources from all three
         let resources = &dependabot.resources;
-        assert!(resources.contains(&"file://README.md".to_string()));
-        assert!(resources.contains(&"file://AGENTS.md".to_string()));
-        assert!(resources.contains(&"file://.amazonq/rules/**/*.md".to_string()));
+        assert_eq!(resources.len(), 1);
+        let default = resources.get("default");
+        assert!(default.is_some());
+        let default = default.unwrap();
+        assert!(default.locations.contains("README.md"));
+        assert!(default.locations.contains("AGENTS.md"));
+        assert!(default.locations.contains(".amazonq/rules/**/*.md"));
 
         // Should have hooks from all levels
         let hooks = dependabot.hooks();

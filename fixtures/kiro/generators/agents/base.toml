@@ -1,8 +1,10 @@
 description = "Default agent for Kiro"
 tools = ["*"]
 allowedTools = ["read", "knowledge", "@fetch"]
-resources = ["file://README.md", "file://.amazonq/rules/**/*.md"]
 useLegacyMcpJson = false
+
+[resources.default]
+locations = ["README.md", ".amazonq/rules/**/*.md"]
 
 [hooks.agentSpawn.echo]
 command = "echo My name is Bob"

@@ -1,6 +1,8 @@
 prompt = "you are NOT an AWS expert"
 allowedTools = ["@awsdocs"]
-resources = ["file://AGENTS.md", "file://README.md"]
+
+[resources.default]
+locations = ["AGENTS.md", "README.md"]
 
 [nativeTools.aws]
 allow = ["ec2", "s3"]

@@ -602,11 +602,78 @@
             "description": "The intention for this field is to provide high level context to the agent. This should be seen as the same category of context as a system prompt. | kiro_schema_path = #/properties/prompt"
           },
           "resources": {
-            "type": "array",
-            "items": {
-              "type": "string"
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "disabled": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "locations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "optional": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "title": "KgFileResource"
             },
-            "description": "Files to include in the agent's context | kiro_schema_path = #/properties/resources"
+            "description": "File resources to include in the agent's context | kiro_schema_path = #/properties/resources"
+          },
+          "skills": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "disabled": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "locations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "optional": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "title": "KgSkillResource"
+            },
+            "description": "Skill resources to include in the agent's context | kiro_schema_path = #/properties/resources"
           },
           "subagents": {
             "type": "object",

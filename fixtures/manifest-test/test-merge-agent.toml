@@ -3,14 +3,20 @@ template = true
 description = "I am parent"
 prompt = "i tell you what to do"
 model = "claude"
-resources = ["file://parent.md", "file://README.md"]
 tools = ["web_search", "shell"]
 allowedTools = ["write"]
 welcomeMessage = "parents are better than children"
+keyboardShortcut = "ctrl+shift+a"
+
+[agents.parent.resources.docs]
+locations = ["parent.md", "README.md"]
 
 [agents.parent.knowledge.docs]
 source = "file://./parent-docs"
 description = "Parent documentation"
+
+[agents.parent.knowledge.parents]
+indexType = "best"
 
 [agents.parent.toolAliases]
 execute_bash = "shell"
@@ -47,15 +53,24 @@ command = "echo stopped"
 [agents.parent.subagents]
 allow = ["frontend", "backend"]
 
+[agents.parent.skills.default]
+locations = ["parent-skill.md"]
+
+[agents.parent.skills.taker]
+locations = ["job-taker-skill.md"]
+
+[agents.parent.toolSettings.parent]
+debug = true
+
 [agents.child]
 template = false
 useLegacyMcpJson = true
 description = "I am a child"
-resources = ["file://child.md", "file://README.md"]
 inherits = ["parent"]
 tools = ["@awsdocs", "shell"]
-welcomeMessage = "children are better than parents"
-keyboardShortcut = "ctrl+shift+a"
+
+[agents.child.resources.docs]
+locations = ["child.md", "README.md"]
 
 [agents.child.knowledge.docs]
 indexType = "best"
@@ -78,3 +93,9 @@ command = "echo i have spawned"
 
 [agents.child.subagents]
 deny = ["backend"]
+
+[agents.child.skills.child]
+locations = ["blah.md"]
+
+[agents.child.skills.default]
+locations = ["child-skill.md"]

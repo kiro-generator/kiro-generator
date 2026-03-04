@@ -38,7 +38,11 @@
     },
     "#/properties/resources": {
       "kiro_schema_path": "#/properties/resources",
-      "description": "Files to include in the agent's context"
+      "description": "File resources to include in the agent's context"
+    },
+    "#/properties/skills": {
+      "kiro_schema_path": "#/properties/resources",
+      "description": "Skill resources to include in the agent's context"
     },
     "#/properties/subagents": {
       "kiro_schema_path": "#/properties/toolsSettings",

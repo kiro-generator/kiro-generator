@@ -1,9 +1,9 @@
 mod agent_file;
-mod knowledge;
 mod manifest;
 mod mcp;
 mod merge;
 mod native;
+mod resources;
 mod subagent;
 
 use {
@@ -14,9 +14,9 @@ use {
 };
 pub use {
     agent_file::KgAgentFileDoc,
-    knowledge::KgKnowledge,
     manifest::Manifest,
     mcp::{KgCustomToolConfig, McpServerState},
+    resources::{KgFileResource, KgKnowledge, KgSkillResource},
     subagent::SubagentConfig,
 };
 
@@ -100,8 +100,8 @@ mod tests {
         assert_eq!(tools.iter().next().unwrap(), "*");
         let resources = &agent.resources;
         assert_eq!(resources.len(), 2);
-        assert!(resources.contains(&"file://resource.md".to_string()));
-        assert!(resources.contains(&"file://README.md".to_string()));
+        assert!(resources.contains_key("resource"));
+        assert!(resources.contains_key("readme"));
 
         let hooks = &agent.hooks;
         let agent_spawn_hooks = hooks.get("agentSpawn");

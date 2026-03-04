@@ -18,29 +18,32 @@ metadata:
 
 ## How kg Organizes Configuration
 
-kg uses a two-layer system:
+kg uses a two-layer system, but the layers are flexible:
 
 ```
-manifests/          # WHO exists and HOW they relate
-  └── kg.toml       # Agent declarations + inheritance
+manifests/          # Agent declarations — WHO exists, HOW they relate
+  └── base.toml     # Filenames are arbitrary (organize however you want)
 
-agents/             # WHAT each agent does
-  └── rust.toml     # Agent configuration
+agents/             # Agent configurations — dedicated files for larger configs
+  └── rust.toml     # Filename IS the agent name
 ```
 
-**Manifests** declare agents and relationships:
+**Manifests** declare agents. They can be minimal or contain full agent config inline:
+
 ```toml
+# Minimal — just declares relationships
 [agents]
-default = { inherits = [] }
 rust = { inherits = ["default"] }
+
+# Full inline config — no separate agent file needed
+[agents.resources]
+template = true
+resources = ["file://README.md", "file://~/.config/agents/resources/me.md"]
 ```
 
-**Agent files** define configuration:
-```toml
-# agents/rust.toml
-description = "Rust development agent"
-allowedTools = ["@rustdocs", "@cargo"]
-```
+**Agent files** (`agents/*.toml`) are for when an agent's config is large enough to warrant its own file. The filename determines the agent name — `agents/rust.toml` configures the `rust` agent.
+
+**Both approaches are equivalent.** kg doesn't dictate how you organize — a 3-line template can live inline in a manifest, a complex agent can get its own file. If both exist, they merge.
 
 Both layers exist at two locations:
 - `~/.kiro/generators/` -- Global (all projects)
@@ -53,31 +56,15 @@ Local configs **merge with** global configs (not replace). This is what makes kg
 - **Objects** (toolsSettings, mcpServers): Deep merged
 - **Scalars** (description, model): Child replaces parent
 
-## Getting Started
+## Scope
 
-If the user is new to kg, the entry point is:
+kg automatically determines scope based on your current directory:
 
-```bash
-kg init
-```
+- **In a project with `.kiro/generators/`**: Commands default to local scope
+- **Outside a project**: Commands default to global scope
+- **`--global` flag**: Forces global scope when you're in a project directory
 
-This installs `~/.kiro/agents/kg-helper.json` (this agent). After that:
-
-```bash
-kg init --skeleton
-```
-
-Creates the TOML config scaffold at `~/.kiro/generators/`:
-
-```
-~/.kiro/generators/
-├── manifests/
-│   └── kg.toml
-└── agents/
-    └── default.toml
-```
-
-Both commands are idempotent — safe to re-run. If the user already has kg configured, skip straight to discovery.
+If `kg tree <agent>` shows `"type": "global-file"` or `"type": "global-manifest"` in sources and you're in a project directory, pass `--global` to `kg diff`, `kg generate`, etc.
 
 ## Step 1: Discovery
 
@@ -139,65 +126,56 @@ Example JSON output:
 To modify an agent's configuration:
 
 1. Run `kg tree <agent-name>` to find which TOML files define it
-2. Read the `sources` array -- it tells you exactly which files to edit
+2. Read the `sources` array — it tells you exactly which files to edit
 3. Edit the TOML file(s) directly
 
-For available TOML fields, see `references/schemas.md` or run `kg schema agent`.
+Common patterns (TOML field names differ from Kiro JSON — see `references/schemas.md` for full mappings):
 
-## Step 3: Validate Changes
+```toml
+# Add allowed/denied shell commands
+[nativeTools.shell]
+allow = ["yarn install .*", "cargo .*"]
+deny = ["rm -rf .*"]
 
-After editing TOML files, validate the configuration:
+# Add an MCP server
+[mcpServers.my-server]
+command = "npx"
+args = ["-y", "@my/mcp-server"]
+```
+
+For all available fields: `kg schema agent` or load `references/schemas.md`.
+
+## Step 3: Preview Changes
+
+After editing TOML files, always diff before generating. `kg diff` validates the TOML and shows what will change in the generated JSON:
 
 ```bash
-kg validate
-```
-
-**Scope detection:** kg automatically determines whether to operate on global or local agents based on your current directory:
-
-- **In a project with `.kiro/generators/`**: Commands default to local scope
-- **Outside a project**: Commands default to global scope
-- **Force global scope**: Use `--global` flag when you're in a project but need to work with global agents
-
-**Rule of thumb:** If `kg tree <agent>` shows `"type": "global-file"` or `"type": "global-manifest"` in sources, and you're in a project directory, use `--global`.
-
-```bash
-# When editing global agents from within a project:
-kg validate --global
-
-# When editing local agents:
-kg validate
-```
-
-**Success output:**
-```
-✓ Validated 3 agents (2 changed, 1 unchanged)
-```
-
-If validation fails, kg reports parse errors with file path and line number.
-
-## Step 4: Preview Changes
-
-Always preview what will change before generating:
-
-```bash
-kg diff
-
-# Agent-friendly output (no color, dot-notation paths only)
+# Agent-friendly output (no color, dot-notation paths only) -- prefer this
 kg diff --format agent
 
+# Human-friendly with color
+kg diff
+
 # When editing global agents from within a project:
-kg diff --global
+kg diff --format agent --global
 ```
 
 **Output shows:**
 - File paths of affected agents
-- Changed paths in dot notation (e.g., `knowledge.3: +`, `description: "old" -> "new"`)
+- Changed paths in dot notation (e.g., `shell.denied_commands.31: + "npm publish .*"`)
 - Summary of changed vs unchanged agents
 
-**If diff shows no output:**
-Either there are no changes, or you may be checking the wrong scope. Verify with `kg tree <agent>` that you're editing the right files and using the correct `--global` flag if needed.
+**If diff shows parse errors:** Fix the TOML error at the reported file and line number, then re-run diff.
 
-## Step 5: Generate Agent Files
+**If diff shows many changes across multiple agents:** This is normal. Common causes:
+- Previous TOML edits that were never generated (accumulated drift)
+- A template or parent agent was modified, and changes ripple through all inheritors via `resolved_chain`
+
+Use `kg tree <agent>` and check `resolved_chain` + `modified_fields` to trace which ancestor introduced a change.
+
+**If diff shows no output:** Either there are no changes, or you may be checking the wrong scope. Verify with `kg tree <agent>` that you're editing the right files and using the correct `--global` flag if needed.
+
+## Step 4: Generate Agent Files
 
 Apply the changes:
 
@@ -227,9 +205,9 @@ All found configs merge together. Use `kg tree rust` to see which sources apply.
 
 - **No agents found**: `kg tree` returns empty JSON object `{}` (exit 0). Consumers should check for an empty object.
 - **Named agent not found**: `kg tree nonexistent` returns empty JSON object `{}` (exit 0). The requested agent key will be absent from the response.
-- **Invalid TOML**: `kg validate` reports parse errors with file path and line number
+- **Invalid TOML**: `kg diff` reports parse errors with file path and line number
 
-**Recovery:** If validation fails, fix the parse error shown in the output. If `kg generate` produces unexpected results, run `kg tree <agent>` to trace which source file contributes the unexpected value — check `modified_fields` on each source to pinpoint the exact file.
+**Recovery:** If diff reports a parse error, fix the error at the reported location and re-run diff. If `kg generate` produces unexpected results, run `kg tree <agent>` to trace which source file contributes the unexpected value — check `modified_fields` on each source to pinpoint the exact file.
 
 **If a `kg diff` path needs tracing** (e.g. you see a JSON field change and want to know which TOML field drives it), load `assets/mappings.json` to look up the TOML→Kiro JSON mapping and the jq path to inspect the generated value directly.
 
@@ -239,7 +217,7 @@ For detailed guidance on specific topics, load these as needed:
 
 - **`references/migration.md`** -- Migrating from hand-written JSON agents to kg. Covers user interview framework (security posture, structure preference, scope), decision framework, and example layouts. Load when helping users set up kg for the first time or convert existing agents.
 - **`references/templates.md`** -- Template categories (Permission, Capability, Context, Lifecycle), real-world examples, composition patterns, subagent templates. Load when helping users design or refactor their template hierarchy.
-- **`references/schemas.md`** -- TOML to JSON field mappings, schema files in assets/, jq recipes for inspecting validated output. Load when verifying field names or exploring available configuration options. To trace a specific diff path back to its TOML field, use `assets/mappings.json` for machine-readable lookup.
+- **`references/schemas.md`** -- Load when writing TOML fields beyond shell rules and MCP servers (hooks, knowledge, subagents, toolSettings). Contains full TOML→JSON field mappings, jq recipes for inspecting generated output, and schema discovery commands.
 
 ## Keeping This Skill Updated
 
