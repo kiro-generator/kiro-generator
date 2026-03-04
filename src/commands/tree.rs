@@ -574,8 +574,9 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
     #[test_log::test]
-    fn test_invert_all_with_fixtures() -> Result<()> {
+    async fn test_invert_all_with_fixtures() -> Result<()> {
         let raw = include_str!("../../fixtures/manifest-test/test-merge-agent.toml");
         let fs = Fs::new();
         let mut generator = Generator::new(
