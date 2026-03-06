@@ -16,6 +16,15 @@ metadata:
 - **Hierarchical**: Global configs merge with local project configs
 - **Deterministic**: Inherit and extend -- no gaps, no drift
 
+## Lexicon
+
+- **Manifest** — a TOML file under `manifests/`. Declares agents, their relationships, and inline config. The only place `template = true` is valid.
+- **Agent file** — a TOML file under `agents/<name>.toml`. Defines configuration for a named agent. `template = true` is **not** valid here.
+- **Template** — an agent declared with `template = true` in a manifest. Never produces a JSON output file. Exists only to be inherited.
+- **Concrete agent** — any non-template agent. Produces a JSON file in `.kiro/agents/` or `~/.kiro/agents/`.
+- **Scope** — global (`~/.kiro/generators/`) vs local (`.kiro/generators/`). Local merges on top of global.
+- **Resolved chain** — the full flattened inheritance DAG in merge order, distinct from direct `inherits` (which lists only immediate parents).
+
 ## How kg Organizes Configuration
 
 kg uses a two-layer system, but the layers are flexible:

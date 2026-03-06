@@ -8,6 +8,7 @@ pub mod output;
 mod schema;
 mod source;
 mod tracing_init;
+mod tree;
 
 #[cfg(test)]
 pub use kg_config::toml_parse;
@@ -179,7 +180,6 @@ async fn main() -> Result<()> {
         commands::Command::Validate(args) => args.trace.as_deref(),
         commands::Command::Generate(args) => args.trace.as_deref(),
         commands::Command::Diff(args) => args.trace.as_deref(),
-        commands::Command::Tree(args) => args.trace.as_deref(),
         _ => None,
     };
 

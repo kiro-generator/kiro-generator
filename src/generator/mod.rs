@@ -128,6 +128,17 @@ impl Generator {
         })
     }
 
+    pub fn concrete_agents(&self) -> Vec<&AgentSourceSlots> {
+        self.agents
+            .values()
+            .filter(|a| !a.merged.template)
+            .collect()
+    }
+
+    pub fn template_agents(&self) -> Vec<&AgentSourceSlots> {
+        self.agents.values().filter(|a| a.merged.template).collect()
+    }
+
     pub fn contains_local_agents(&self) -> bool {
         self.agents.values().any(|s| s.has_local())
     }

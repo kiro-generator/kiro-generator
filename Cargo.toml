@@ -17,28 +17,28 @@ section = "utility"
 priority = "optional"
 maintainer-scripts = "pkg/debian/"
 assets = [
-    ["target/release/kg", "usr/bin/", "755"],
-    { source = "README.md", dest = "usr/share/doc/kiro-generator/README.md", mode = "644" },
-    # Systemd units
-    { source = "resources/systemd/kiro-generator.service", dest = "usr/lib/systemd/user/", mode = "644" },
-    { source = "resources/systemd/kiro-generator-local@.service", dest = "usr/lib/systemd/user/", mode = "644" },
-    { source = "resources/systemd/kiro-generator.path", dest = "usr/lib/systemd/user/", mode = "644" },
-    { source = "resources/systemd/kiro-generator-local@.path", dest = "usr/lib/systemd/user/", mode = "644" },
-    # Default environment files
-    { source = "resources/systemd/global.env", dest = "etc/kg/", mode = "644" },
-    { source = "resources/systemd/home.env", dest = "etc/kg/", mode = "644" },
-    # kg-helper skill documentation
-    { source = "resources/kg-helper/SKILL.md", dest = "usr/share/doc/kiro-generator/kg-helper/SKILL.md", mode = "644" },
-    { source = "resources/kg-helper/references/schemas.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/schemas.md", mode = "644" },
-    { source = "resources/kg-helper/references/migration.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/migration.md", mode = "644" },
-    { source = "resources/kg-helper/references/templates.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/templates.md", mode = "644" },
-    { source = "resources/kg-helper/assets/mappings.json", dest = "usr/share/doc/kiro-generator/kg-helper/assets/mappings.json", mode = "644" },
-    # kg-helper agent (reference artifact)
-    { source = "resources/agents/kg-helper.json", dest = "usr/share/doc/kiro-generator/agents/kg-helper.json", mode = "644" },
-    # JSON schemas
-    { source = "schemas/agent.json", dest = "usr/share/doc/kiro-generator/schemas/agent.json", mode = "644" },
-    { source = "schemas/manifest.json", dest = "usr/share/doc/kiro-generator/schemas/manifest.json", mode = "644" },
-    { source = "schemas/kiro-agent.json", dest = "usr/share/doc/kiro-generator/schemas/kiro-agent.json", mode = "644" },
+  ["target/release/kg", "usr/bin/", "755"],
+  { source = "README.md", dest = "usr/share/doc/kiro-generator/README.md", mode = "644" },
+  # Systemd units
+  { source = "resources/systemd/kiro-generator.service", dest = "usr/lib/systemd/user/", mode = "644" },
+  { source = "resources/systemd/kiro-generator-local@.service", dest = "usr/lib/systemd/user/", mode = "644" },
+  { source = "resources/systemd/kiro-generator.path", dest = "usr/lib/systemd/user/", mode = "644" },
+  { source = "resources/systemd/kiro-generator-local@.path", dest = "usr/lib/systemd/user/", mode = "644" },
+  # Default environment files
+  { source = "resources/systemd/global.env", dest = "etc/kg/", mode = "644" },
+  { source = "resources/systemd/home.env", dest = "etc/kg/", mode = "644" },
+  # kg-helper skill documentation
+  { source = "resources/kg-helper/SKILL.md", dest = "usr/share/doc/kiro-generator/kg-helper/SKILL.md", mode = "644" },
+  { source = "resources/kg-helper/references/schemas.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/schemas.md", mode = "644" },
+  { source = "resources/kg-helper/references/migration.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/migration.md", mode = "644" },
+  { source = "resources/kg-helper/references/templates.md", dest = "usr/share/doc/kiro-generator/kg-helper/references/templates.md", mode = "644" },
+  { source = "resources/kg-helper/assets/mappings.json", dest = "usr/share/doc/kiro-generator/kg-helper/assets/mappings.json", mode = "644" },
+  # kg-helper agent (reference artifact)
+  { source = "resources/agents/kg-helper.json", dest = "usr/share/doc/kiro-generator/agents/kg-helper.json", mode = "644" },
+  # JSON schemas
+  { source = "schemas/agent.json", dest = "usr/share/doc/kiro-generator/schemas/agent.json", mode = "644" },
+  { source = "schemas/manifest.json", dest = "usr/share/doc/kiro-generator/schemas/manifest.json", mode = "644" },
+  { source = "schemas/kiro-agent.json", dest = "usr/share/doc/kiro-generator/schemas/kiro-agent.json", mode = "644" },
 ]
 conf-files = ["/etc/kg/global.env", "/etc/kg/home.env"]
 
@@ -75,13 +75,18 @@ tracing = { version = "0.1" }
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+[dev-dependencies]
+nix = { version = "0.30.1", features = ["user"] }
+test-log = { version = "0.2", default-features = false, features = ["trace"] }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 notify-rust = "4"
 zbus = "5.13.2"
 
-[dev-dependencies]
-nix = { version = "0.30.1", features = ["user"] }
-test-log = { version = "0.2", default-features = false, features = ["trace"] }
+[lints.rust]
+dead_code = "allow"
+unused_imports = "allow"
+unused_variables = "allow"
 
 [profile.release]
 debug = 1  # Line numbers only (smaller than full debug=2)
