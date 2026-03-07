@@ -13,7 +13,11 @@ use {
         Subcommand,
         builder::{Styles, styling::AnsiColor},
     },
-    std::{fmt::Display, io::IsTerminal, path::PathBuf},
+    std::{
+        fmt::{Debug, Display},
+        io::IsTerminal,
+        path::PathBuf,
+    },
 };
 
 /// Get the color styles for the CLI help menu.
@@ -131,9 +135,6 @@ pub struct WatchArgs {
 pub struct TreeDetailArgs {
     /// Show specific agents and their inheritance chains
     pub agents: Vec<String>,
-    /// Format of the console output
-    #[arg(short = 'f', long, default_value_t = TreeFormatArg::Table)]
-    pub format: TreeFormatArg,
 }
 
 #[derive(clap::Args, Clone, Default)]
@@ -150,7 +151,7 @@ pub struct TreeSummaryArgs {
 }
 
 #[derive(clap::Args, Clone, Default)]
-pub struct TreeInvertArgs {
+pub struct TreeDependentsArgs {
     /// Format of the console output
     #[arg(short = 'f', long, default_value_t = TreeFormatArg::Table)]
     pub format: TreeFormatArg,
@@ -175,8 +176,20 @@ impl Display for TreeFormatArg {
 #[derive(Subcommand, Clone)]
 pub enum TreeCommand {
     Summary(TreeSummaryArgs),
-    Detail(TreeDetailArgs),
-    Invert(TreeInvertArgs),
+    #[command(alias = "detail")]
+    Details(TreeDetailArgs),
+    #[command(alias = "invert")]
+    Dependents(TreeDependentsArgs),
+}
+
+impl Debug for TreeCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Summary(_) => write!(f, "summary"),
+            Self::Details(_) => write!(f, "details"),
+            Self::Dependents(_) => write!(f, "dependents"),
+        }
+    }
 }
 
 #[derive(Subcommand, Clone)]

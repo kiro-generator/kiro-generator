@@ -1,4 +1,7 @@
-use {super::*, std::collections::HashSet};
+use {
+    super::*,
+    std::collections::{BTreeSet, HashSet},
+};
 
 impl Generator {
     /// Resolve transitive inheritance chain for an agent
@@ -8,7 +11,7 @@ impl Generator {
         &self,
         agent: &Manifest,
         visited: &mut HashSet<String>,
-    ) -> Result<Vec<String>> {
+    ) -> Result<BTreeSet<String>> {
         if visited.contains(&agent.name) {
             return Err(crate::format_err!(
                 "Circular inheritance detected: {} already in chain",
@@ -36,11 +39,11 @@ impl Generator {
         }
 
         visited.remove(&agent.name);
-        Ok(chain)
+        Ok(BTreeSet::from_iter(chain.into_iter()))
     }
 
     /// Public accessor for the resolved inheritance chain of a named agent.
-    pub fn inheritance_chain(&self, name: &str) -> Result<Vec<String>> {
+    pub fn inheritance_chain(&self, name: &str) -> Result<BTreeSet<String>> {
         let agent = self
             .agents
             .get(name)

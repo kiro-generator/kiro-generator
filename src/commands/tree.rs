@@ -1,7 +1,13 @@
 use {
     crate::{
         Result,
-        commands::{TreeCommand, TreeFormatArg, TreeSummaryArgs},
+        commands::{
+            TreeCommand,
+            TreeDependentsArgs,
+            TreeDetailArgs,
+            TreeFormatArg,
+            TreeSummaryArgs,
+        },
         generator::Generator,
         tree::{SummaryEntry, SummaryReport, summarize_concrete, summarize_templates},
     },
@@ -22,15 +28,12 @@ struct SummaryJsonAgentsOnly {
     agents: BTreeMap<String, SummaryEntry>,
 }
 
+#[tracing::instrument(level = "info", skip(generator))]
 pub(super) fn execute_tree(generator: &Generator, cmd: &TreeCommand) -> Result<()> {
     match cmd {
         TreeCommand::Summary(args) => summary(generator, args),
-        TreeCommand::Detail(_) => {
-            bail!("`kg tree detail` is still being refactored; use `kg tree summary` for now")
-        }
-        TreeCommand::Invert(_) => {
-            bail!("`kg tree invert` is still being refactored; use `kg tree summary` for now")
-        }
+        TreeCommand::Details(args) => details(generator, args),
+        TreeCommand::Dependents(args) => dependencies(generator, args),
     }
 }
 
@@ -50,11 +53,7 @@ fn summary(generator: &Generator, args: &TreeSummaryArgs) -> Result<()> {
     Ok(())
 }
 
-fn print_summary_tables(
-    generator: &Generator,
-    report: &crate::tree::summary::SummaryReport,
-    show_locations: bool,
-) {
+fn print_summary_tables(generator: &Generator, report: &SummaryReport, show_locations: bool) {
     println!("{}", build_summary_table("Agents", &report.agents));
 
     if !report.templates.is_empty() {
@@ -156,6 +155,18 @@ fn build_locations_table(generator: &Generator) -> Table {
     table.add_rows(file_locations(generator));
 
     table
+}
+
+pub fn dependencies(generator: &Generator, _args: &TreeDependentsArgs) -> Result<()> {
+    let result = crate::tree::dependencies(generator, &[])?;
+    println!("{}", facet_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
+pub fn details(generator: &Generator, args: &TreeDetailArgs) -> Result<()> {
+    let result = crate::tree::details(generator, &args.agents);
+    println!("{}", facet_json::to_string_pretty(&result)?);
+    Ok(())
 }
 
 #[cfg(test)]
