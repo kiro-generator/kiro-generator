@@ -3,14 +3,7 @@ use {
         Result,
         commands::{TreeCommand, TreeFormatArg, TreeSummaryArgs},
         generator::Generator,
-        tree::summary::{
-            SummaryEntry,
-            SummaryOptions,
-            SummaryReport,
-            summarize,
-            summarize_concrete,
-            summarize_templates,
-        },
+        tree::{SummaryEntry, SummaryReport, summarize, summarize_concrete, summarize_templates},
     },
     color_eyre::eyre::bail,
     facet::Facet,
@@ -58,42 +51,51 @@ fn summary(generator: &Generator, args: &TreeSummaryArgs) -> Result<()> {
 }
 
 fn print_summary_table(report: &crate::tree::summary::SummaryReport) {
+    println!("Agents:");
+    println!("{}", build_summary_table("Agents", &report.agents));
+
+    if !report.templates.is_empty() {
+        println!();
+        println!("Templates:");
+        println!("{}", build_summary_table("Templates", &report.templates));
+    }
+}
+
+fn build_summary_table(name: &str, entries: &BTreeMap<String, SummaryEntry>) -> Table {
     let mut table = Table::new();
+    let header_title = vec![
+        Cell::new(name)
+            .set_colspan(4)
+            .set_alignment(CellAlignment::Center),
+    ];
     table
         .load_preset(UTF8_FULL)
         .apply_modifier(UTF8_ROUND_CORNERS)
         .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec![
-            Cell::new("Agent"),
-            Cell::new("Description"),
-            Cell::new("Inherits"),
-        ]);
+        .set_header(header_title);
 
-    for (name, entry) in &report.agents {
-        table.add_row(summary_row(name, entry));
-    }
-
-    if !report.templates.is_empty() {
-        table.add_row(vec![Cell::new(""), Cell::new(""), Cell::new("")]);
-        table.add_row(vec![
-            Cell::new("Templates:").fg(super_table::Color::DarkGrey),
-            Cell::new(""),
-            Cell::new(""),
-        ]);
-
-        for (name, entry) in &report.templates {
-            table.add_row(summary_row(name, entry));
-        }
-    }
-
-    println!("{table}");
-}
-
-fn summary_row(name: &str, entry: &SummaryEntry) -> Vec<Cell> {
-    let inherits: Vec<&str> = entry.inherits.iter().map(String::as_str).collect();
-    vec![
+    table.add_row(vec![
         Cell::new(name),
-        Cell::new(&entry.description),
-        Cell::new(inherits.join(", ")),
-    ]
+        Cell::new("Description"),
+        Cell::new("Inherits"),
+        Cell::new("locations"),
+    ]);
+    let rows: Vec<Row> = entries
+        .values()
+        .map(|a| {
+            vec![
+                Cell::new(a.name.clone()),
+                Cell::new(a.description.clone()),
+                Cell::new(a.inherits_join().unwrap_or_else(|e| {
+                    tracing::warn!("failed to create inherits list {e}");
+                    String::from("Failed to serialize inheritance structure")
+                })),
+                Cell::new(a.locations.join("\n")),
+            ]
+            .into()
+        })
+        .collect();
+    table.add_rows(rows);
+
+    table
 }

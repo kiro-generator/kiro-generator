@@ -18,6 +18,10 @@ impl SourceSlot {
         self.path.as_ref().map(|p| p.source_type().to_string())
     }
 
+    pub fn location(&self) -> Option<PathBuf> {
+        self.path.as_ref().map(|p| p.path().to_path_buf())
+    }
+
     pub fn from_agent_path(
         fs: &Fs,
         name: &str,
@@ -69,6 +73,28 @@ impl AgentSourceSlots {
     pub fn has_local(&self) -> bool {
         self.local_manifest.path.is_some() || self.local_agent_file.path.is_some()
     }
+
+    pub fn locations(&self) -> Vec<&KgAgentSource> {
+        let mut paths = Vec::with_capacity(4);
+
+        if let Some(ref p) = self.global_manifest.path {
+            paths.push(p);
+        }
+
+        if let Some(ref p) = self.global_agent_file.path {
+            paths.push(p);
+        }
+
+        if let Some(ref p) = self.local_manifest.path {
+            paths.push(p);
+        }
+
+        if let Some(ref p) = self.local_agent_file.path {
+            paths.push(p);
+        }
+
+        paths
+    }
 }
 
 impl Debug for AgentSourceSlots {
@@ -103,10 +129,10 @@ pub enum KgAgentSource {
 impl Display for KgAgentSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KgAgentSource::GlobalManifest(p) => write!(f, "global-manifest:{}", p.display()),
-            KgAgentSource::GlobalFile(p) => write!(f, "global-file:{}", p.display()),
-            KgAgentSource::LocalManifest(p) => write!(f, "local-manifest:{}", p.display()),
-            KgAgentSource::LocalFile(p) => write!(f, "local-file:{}", p.display()),
+            KgAgentSource::GlobalManifest(p) => write!(f, "global-manifest://{}", p.display()),
+            KgAgentSource::GlobalFile(p) => write!(f, "global-file://{}", p.display()),
+            KgAgentSource::LocalManifest(p) => write!(f, "local-manifest://{}", p.display()),
+            KgAgentSource::LocalFile(p) => write!(f, "local-file://{}", p.display()),
         }
     }
 }
@@ -160,7 +186,7 @@ impl KgAgentSource {
     }
 
     pub fn to_cell(&self) -> Cell {
-        Cell::new(format!("{}:{}", self.source_type(), self.path().display()))
+        Cell::new(format!("{self}"))
     }
 }
 
@@ -175,19 +201,19 @@ mod tests {
     fn kg_agent_source_display() {
         assert_eq!(
             KgAgentSource::GlobalManifest(PathBuf::from("kg.toml")).to_string(),
-            "global-manifest:kg.toml"
+            "global-manifest://kg.toml"
         );
         assert_eq!(
             KgAgentSource::LocalManifest(PathBuf::from("kg.toml")).to_string(),
-            "local-manifest:kg.toml"
+            "local-manifest://kg.toml"
         );
         assert_eq!(
             KgAgentSource::GlobalFile(PathBuf::from("/foo")).to_string(),
-            "global-file:/foo"
+            "global-file:///foo"
         );
         assert_eq!(
             KgAgentSource::LocalFile(PathBuf::from("bar")).to_string(),
-            "local-file:bar"
+            "local-file://bar"
         );
     }
 
@@ -197,25 +223,25 @@ mod tests {
             KgAgentSource::GlobalManifest(PathBuf::from("kg.toml"))
                 .to_cell()
                 .content(),
-            "global-manifest:kg.toml"
+            "global-manifest://kg.toml"
         );
         assert_eq!(
             KgAgentSource::LocalManifest(PathBuf::from("kg.toml"))
                 .to_cell()
                 .content(),
-            "local-manifest:kg.toml"
+            "local-manifest://kg.toml"
         );
         assert_eq!(
             KgAgentSource::GlobalFile(PathBuf::from("/foo"))
                 .to_cell()
                 .content(),
-            "global-file:/foo"
+            "global-file:///foo"
         );
         assert_eq!(
             KgAgentSource::LocalFile(PathBuf::from("bar"))
                 .to_cell()
                 .content(),
-            "local-file:bar"
+            "local-file://bar"
         );
     }
 

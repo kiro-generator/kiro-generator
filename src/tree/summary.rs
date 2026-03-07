@@ -3,29 +3,33 @@ use {
     facet::Facet,
     std::{
         collections::{BTreeMap, BTreeSet},
-        fmt::Display,
+        fmt::{Display, Write},
+        path::PathBuf,
     },
 };
 
-#[derive(Clone, Copy, Debug)]
-pub struct SummaryOptions {
-    pub include_templates: bool,
-}
-
-impl Default for SummaryOptions {
-    fn default() -> Self {
-        Self {
-            include_templates: true,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Facet, Default)]
+#[derive(Clone, Debug, Facet, Default, PartialEq, Eq)]
 pub struct SummaryEntry {
-    // #[facet(skip)]
-    // pub name: String,
+    #[facet(skip)]
+    pub name: String,
     pub description: String,
     pub inherits: BTreeSet<String>,
+    pub locations: Vec<String>,
+}
+
+impl SummaryEntry {
+    pub fn inherits_join(&self) -> crate::Result<String> {
+        if self.inherits.is_empty() {
+            return Ok(String::new());
+        }
+        let mut join = String::with_capacity(self.inherits.len() * 6);
+        for i in &self.inherits {
+            write!(&mut join, "{i},")?;
+        }
+
+        join.remove(join.len() - 1);
+        Ok(join)
+    }
 }
 
 impl Display for SummaryEntry {
@@ -42,13 +46,15 @@ impl Display for SummaryEntry {
 impl From<&AgentSourceSlots> for SummaryEntry {
     fn from(slots: &AgentSourceSlots) -> Self {
         Self {
+            name: slots.name.clone(),
             description: slots.merged.description.clone().unwrap_or_default(),
             inherits: slots.merged.inherits.iter().cloned().collect(),
+            locations: slots.locations().iter().map(|p| p.to_string()).collect(),
         }
     }
 }
 
-#[derive(Clone, Debug, Facet, Default)]
+#[derive(Clone, Debug, Facet, Default, PartialEq, Eq)]
 pub struct SummaryReport {
     pub agents: BTreeMap<String, SummaryEntry>,
     pub templates: BTreeMap<String, SummaryEntry>,
@@ -58,21 +64,12 @@ impl Display for SummaryReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "agents={} templates{}",
+            "agents={} templates={}",
             self.agents.len(),
             self.templates.len()
         )
     }
 }
-
-#[tracing::instrument(
-    level = "info",
-    skip(generator),
-    fields(
-        concrete_count = tracing::field::Empty,
-        template_count = tracing::field::Empty
-    )
-)]
 
 pub fn summarize_concrete(generator: &Generator) -> BTreeMap<String, SummaryEntry> {
     generator
@@ -140,9 +137,7 @@ mod tests {
     #[test_log::test]
     async fn summary_groups_agents_and_templates_deterministically() -> Result<()> {
         let generator = fixture_generator()?;
-        let report = summarize(&generator, SummaryOptions {
-            include_templates: true,
-        })?;
+        let report = summarize(&generator);
 
         assert!(!report.agents.is_empty());
         assert!(!report.templates.is_empty());
@@ -162,14 +157,14 @@ mod tests {
 
     #[tokio::test]
     #[test_log::test]
-    async fn summary_can_exclude_templates() -> Result<()> {
+    async fn split_summaries_match_combined_summary() -> Result<()> {
         let generator = fixture_generator()?;
-        let report = summarize(&generator, SummaryOptions {
-            include_templates: false,
-        })?;
+        let concrete = summarize_concrete(&generator);
+        let templates = summarize_templates(&generator);
+        let report = summarize(&generator);
 
-        assert!(!report.agents.is_empty());
-        assert!(report.templates.is_empty());
+        assert_eq!(report.agents, concrete);
+        assert_eq!(report.templates, templates);
 
         Ok(())
     }
