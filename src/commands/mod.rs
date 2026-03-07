@@ -141,6 +141,9 @@ pub struct TreeSummaryArgs {
     /// Hide templates from summary output
     #[arg(long)]
     pub no_templates: bool,
+    /// Show source locations in a separate table when using table output
+    #[arg(long)]
+    pub locations: bool,
     /// Format of the console output
     #[arg(short = 'f', long, default_value_t = TreeFormatArg::Table)]
     pub format: TreeFormatArg,
@@ -431,5 +434,18 @@ mod tests {
         };
         assert!(!cli.is_local());
         assert!(!cli.is_global());
+    }
+
+    #[test_log::test]
+    fn test_tree_summary_locations_flag() {
+        let cli = Cli::try_parse_from(["kg", "tree", "summary", "--locations"]).unwrap();
+        match cli.command {
+            Command::Tree(TreeCommand::Summary(args)) => {
+                assert!(args.locations);
+                assert!(!args.no_templates);
+                assert!(matches!(args.format, TreeFormatArg::Table));
+            }
+            _ => panic!("expected tree summary command"),
+        }
     }
 }
