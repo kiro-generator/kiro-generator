@@ -12,6 +12,8 @@ mod tree;
 
 #[cfg(test)]
 pub use kg_config::toml_parse;
+#[cfg(unix)]
+use libc::{SIG_DFL, SIGPIPE, signal};
 use {
     crate::{generator::Generator, os::Fs, tracing_init::init_tracing},
     clap::Parser,
@@ -166,8 +168,19 @@ async fn init(fs: &Fs, home_dir: impl AsRef<Path>, skeleton: bool, force: bool) 
     }
 }
 
+#[cfg(unix)]
+fn reset_sigpipe() {
+    unsafe {
+        signal(SIGPIPE, SIG_DFL);
+    }
+}
+
+#[cfg(not(unix))]
+fn reset_sigpipe() {}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    reset_sigpipe();
     color_eyre::install()?;
     let cli = commands::Cli::parse();
     if matches!(cli.command, commands::Command::Version) {
