@@ -23,7 +23,7 @@ pub use {
     color_eyre::eyre::format_err,
     generator::ConfigLocation,
     kg_config::*,
-    source::{AgentSourceSlots, SourceSlot},
+    source::{AgentSourceSlots, KgAgentSource, SourceSlot},
 };
 
 pub type Result<T> = color_eyre::Result<T>;

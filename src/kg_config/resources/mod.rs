@@ -48,3 +48,30 @@ macro_rules! define_location_resource {
 
 pub(crate) use define_location_resource;
 pub use {file::KgFileResource, knowledge::KgKnowledge, skill::KgSkillResource};
+
+#[cfg(test)]
+mod test {
+    use {super::*, std::collections::BTreeSet};
+
+    fn gen_locations() -> BTreeSet<String> {
+        BTreeSet::from_iter(["location1".to_string(), "location2".to_string()])
+    }
+
+    #[test]
+    pub fn test_resource_display() {
+        let object = KgFileResource {
+            locations: gen_locations(),
+            ..Default::default()
+        };
+
+        assert!(format!("{object}").contains("://"));
+        assert!(format!("{object}").contains(","));
+        let object = KgSkillResource {
+            locations: gen_locations(),
+            ..Default::default()
+        };
+
+        assert!(format!("{object}").contains("://"));
+        assert!(format!("{object}").contains(","));
+    }
+}

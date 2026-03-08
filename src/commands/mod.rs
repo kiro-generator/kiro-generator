@@ -134,6 +134,7 @@ pub struct WatchArgs {
 #[derive(clap::Args, Clone, Default)]
 pub struct TreeDetailArgs {
     /// Show specific agents and their inheritance chains
+    #[arg(required = true, num_args = 1..)]
     pub agents: Vec<String>,
 }
 
@@ -152,9 +153,9 @@ pub struct TreeSummaryArgs {
 
 #[derive(clap::Args, Clone, Default)]
 pub struct TreeDependentsArgs {
-    /// Format of the console output
-    #[arg(short = 'f', long, default_value_t = TreeFormatArg::Table)]
-    pub format: TreeFormatArg,
+    /// Agent names to look up dependents for
+    #[arg(required = true, num_args = 1..)]
+    pub agents: Vec<String>,
 }
 
 #[derive(Copy, Clone, Default, Debug, clap::ValueEnum)]
@@ -175,10 +176,11 @@ impl Display for TreeFormatArg {
 
 #[derive(Subcommand, Clone)]
 pub enum TreeCommand {
+    #[command(alias = "s")]
     Summary(TreeSummaryArgs),
-    #[command(alias = "detail")]
+    #[command(aliases = ["detail", "d"])]
     Details(TreeDetailArgs),
-    #[command(alias = "invert")]
+    #[command(aliases= ["invert", "i"])]
     Dependents(TreeDependentsArgs),
 }
 

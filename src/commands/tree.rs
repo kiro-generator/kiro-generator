@@ -11,7 +11,6 @@ use {
         generator::Generator,
         tree::{SummaryEntry, SummaryReport, summarize_concrete, summarize_templates},
     },
-    color_eyre::eyre::bail,
     facet::Facet,
     std::collections::BTreeMap,
     super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
@@ -156,9 +155,12 @@ fn build_locations_table(generator: &Generator) -> Table {
 
     table
 }
-
-pub fn dependencies(generator: &Generator, _args: &TreeDependentsArgs) -> Result<()> {
-    let result = crate::tree::dependencies(generator, &[])?;
+pub fn dependencies(generator: &Generator, args: &TreeDependentsArgs) -> Result<()> {
+    let all = crate::tree::dependencies(generator)?;
+    let result: BTreeMap<_, _> = all
+        .into_iter()
+        .filter(|(k, _)| args.agents.contains(k))
+        .collect();
     println!("{}", facet_json::to_string_pretty(&result)?);
     Ok(())
 }
@@ -220,6 +222,77 @@ mod tests {
         ]);
 
         Ok(generator)
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_exec_tree_command() -> Result<()> {
+        let generator = fixture_generator()?;
+        execute_tree(
+            &generator,
+            &TreeCommand::Summary(TreeSummaryArgs {
+                no_templates: false,
+                locations: false,
+                format: TreeFormatArg::Table,
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Summary(TreeSummaryArgs {
+                no_templates: true,
+                locations: false,
+                format: TreeFormatArg::Table,
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Summary(TreeSummaryArgs {
+                no_templates: false,
+                locations: true,
+                format: TreeFormatArg::Table,
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Summary(TreeSummaryArgs {
+                no_templates: false,
+                locations: true,
+                format: TreeFormatArg::Json,
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Details(TreeDetailArgs {
+                agents: Vec::from_iter(["aws".to_string()]),
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Details(TreeDetailArgs {
+                agents: Vec::from_iter(["devnull".to_string()]),
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Dependents(TreeDependentsArgs {
+                agents: Vec::from_iter(["aws".to_string()]),
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Dependents(TreeDependentsArgs {
+                agents: Vec::from_iter(["devnull".to_string()]),
+            }),
+        )?;
+
+        Ok(())
     }
 
     #[tokio::test]

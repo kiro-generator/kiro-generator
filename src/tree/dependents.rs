@@ -1,43 +1,34 @@
 use {
     crate::{Generator, Result},
-    facet::Facet,
     std::collections::{BTreeMap, BTreeSet},
 };
 
-#[derive(Facet)]
-struct TreeDependent {
-    agent: String,
-    chain: Vec<String>,
-}
-
-#[derive(Facet)]
-struct TreeInvert {
-    dependents: Vec<TreeDependent>,
-}
-
-fn build_reverse_map(generator: &Generator) -> BTreeMap<String, BTreeSet<String>> {
-    let mut reverse: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for (name, slots) in &generator.agents {
-        for parent in &slots.merged.inherits {
-            reverse
+pub fn dependencies(generator: &Generator) -> Result<BTreeMap<String, BTreeSet<String>>> {
+    let mut inverse: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for name in generator.agents.keys() {
+        let resolved_chain = generator.inheritance_chain_safe(name);
+        for parent in &resolved_chain {
+            inverse
                 .entry(parent.clone())
                 .or_default()
                 .insert(name.clone());
         }
     }
-    reverse
+
+    Ok(inverse)
 }
 
-pub fn dependencies(
-    generator: &Generator,
-    names: &[String],
-) -> Result<BTreeMap<String, BTreeSet<String>>> {
-    let mut result: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for (name, agent) in &generator.agents {
-        result.insert(
-            name.clone(),
-            BTreeSet::from_iter(generator.inheritance_chain(name)?),
-        );
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn child_appears_as_dependent_of_parent() -> Result<()> {
+        let generator = super::super::fixture_generator()?;
+        let result = dependencies(&generator)?;
+        assert!(result.get("parent").unwrap().contains("child"));
+        assert!(!result.contains_key("child"), "child has no dependents");
+        Ok(())
     }
-    Ok(result)
 }

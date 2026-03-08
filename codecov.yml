@@ -2,5 +2,6 @@ coverage:
   ignore:
     - "src/json_schema.rs"
     - "src/tracing_init.rs"
+    - "src/json_schema.rs"
     - "src/commands/watch_linux.rs"
     - "src/commands/watch_peasants.rs"

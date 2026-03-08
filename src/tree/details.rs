@@ -1,7 +1,7 @@
 use {
     crate::{AgentSourceSlots, Manifest, generator::Generator},
     facet::Facet,
-    std::collections::{BTreeMap, BTreeSet, HashMap},
+    std::collections::{BTreeMap, BTreeSet},
 };
 
 #[derive(Facet)]
@@ -73,12 +73,7 @@ pub fn details(generator: &Generator, names: &[String]) -> BTreeMap<String, Tree
                     .to_string_lossy()
                     .into_owned()
             };
-            let resolved_chain = BTreeSet::from_iter(
-                generator
-                    .inheritance_chain(name)
-                    .unwrap_or_default()
-                    .into_iter(),
-            );
+            let resolved_chain = generator.inheritance_chain_safe(name);
             let sources = collect_sources(agent);
 
             out.insert(name.clone(), TreeDetail {
@@ -193,4 +188,42 @@ fn manifest_fields(manifest: &Manifest) -> Vec<String> {
         fields.push("subagents".to_string());
     }
     fields
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn details_returns_child_with_resolved_chain() -> crate::Result<()> {
+        let generator = super::super::fixture_generator()?;
+        let result = details(&generator, &["child".into()]);
+        let child = result.get("child").expect("child should exist");
+        assert!(!child.template);
+        assert!(child.resolved_chain.contains("parent"));
+        assert_eq!(child.inherits, BTreeSet::from(["parent".into()]));
+        assert!(!child.sources.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn details_skips_unknown_agent() -> crate::Result<()> {
+        let generator = super::super::fixture_generator()?;
+        let result = details(&generator, &["nonexistent".into()]);
+        assert!(result.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn details_template_has_empty_output() -> crate::Result<()> {
+        let generator = super::super::fixture_generator()?;
+        let result = details(&generator, &["parent".into()]);
+        let parent = result.get("parent").expect("parent should exist");
+        assert!(parent.template);
+        assert!(parent.output.is_empty());
+        Ok(())
+    }
 }

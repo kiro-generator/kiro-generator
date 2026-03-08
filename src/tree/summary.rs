@@ -1,10 +1,9 @@
 use {
-    crate::{AgentSourceSlots, Result, generator::Generator},
+    crate::{AgentSourceSlots, generator::Generator},
     facet::Facet,
     std::{
         collections::{BTreeMap, BTreeSet},
         fmt::{Display, Write},
-        path::PathBuf,
     },
 };
 
@@ -60,17 +59,6 @@ pub struct SummaryReport {
     pub templates: BTreeMap<String, SummaryEntry>,
 }
 
-impl Display for SummaryReport {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "agents={} templates={}",
-            self.agents.len(),
-            self.templates.len()
-        )
-    }
-}
-
 pub fn summarize_concrete(generator: &Generator) -> BTreeMap<String, SummaryEntry> {
     generator
         .concrete_agents()
@@ -87,84 +75,27 @@ pub fn summarize_templates(generator: &Generator) -> BTreeMap<String, SummaryEnt
         .collect()
 }
 
-pub fn summarize(generator: &Generator) -> SummaryReport {
-    SummaryReport {
-        agents: summarize_concrete(generator),
-        templates: summarize_templates(generator),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::{GeneratorConfig, os::Fs, source::KgAgentSource, toml_parse},
-        std::path::PathBuf,
+        crate::{Result, tree::fixture_generator},
     };
 
-    fn fixture_generator() -> Result<Generator> {
-        let raw = include_str!("../../fixtures/manifest-test/test-merge-agent.toml");
-        let fs = Fs::new();
-        let mut generator = Generator::new(
-            fs,
-            crate::ConfigLocation::Local,
-            crate::output::OutputFormat::Json,
-        )?;
-        let agents: GeneratorConfig = toml_parse(raw)?;
-        let agents = agents.populate_names();
-        generator.agents = agents
-            .agents
-            .iter()
-            .map(|(k, v)| {
-                (k.clone(), crate::AgentSourceSlots {
-                    name: k.clone(),
-                    merged: v.clone(),
-                    global_manifest: Default::default(),
-                    local_manifest: crate::SourceSlot {
-                        path: Some(KgAgentSource::LocalManifest(PathBuf::from("test"))),
-                        manifest: v.clone(),
-                    },
-                    global_agent_file: Default::default(),
-                    local_agent_file: Default::default(),
-                })
-            })
-            .collect();
-
-        Ok(generator)
-    }
-
     #[tokio::test]
     #[test_log::test]
-    async fn summary_groups_agents_and_templates_deterministically() -> Result<()> {
+    async fn summary_display_debug() -> Result<()> {
         let generator = fixture_generator()?;
-        let report = summarize(&generator);
+        let agents = summarize_concrete(&generator);
+        assert_eq!(1, agents.len());
+        let agent = agents.get("child");
+        assert!(agent.is_some());
+        let agent = agent.unwrap();
 
-        assert!(!report.agents.is_empty());
-        assert!(!report.templates.is_empty());
-
-        let concrete_names: Vec<_> = report.agents.keys().cloned().collect();
-        let mut concrete_sorted = concrete_names.clone();
-        concrete_sorted.sort();
-        assert_eq!(concrete_names, concrete_sorted);
-
-        let template_names: Vec<_> = report.templates.keys().cloned().collect();
-        let mut template_sorted = template_names.clone();
-        template_sorted.sort();
-        assert_eq!(template_names, template_sorted);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[test_log::test]
-    async fn split_summaries_match_combined_summary() -> Result<()> {
-        let generator = fixture_generator()?;
-        let concrete = summarize_concrete(&generator);
-        let templates = summarize_templates(&generator);
-        let report = summarize(&generator);
-
-        assert_eq!(report.agents, concrete);
-        assert_eq!(report.templates, templates);
+        let dis = format!("{agent}");
+        assert!(dis.contains("description="));
+        assert_eq!(1, agent.inherits.len());
+        assert_eq!("parent", agent.inherits_join()?);
 
         Ok(())
     }

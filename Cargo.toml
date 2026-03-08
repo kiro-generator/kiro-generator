@@ -84,9 +84,12 @@ notify-rust = "4"
 zbus = "5.13.2"
 
 [lints.rust]
-dead_code = "allow"
-unused_imports = "allow"
-unused_variables = "allow"
+dead_code = "deny"
+unused_imports = "deny"
+unused_variables = "deny"
+
+[lints.clippy]
+useless_conversion = "allow"
 
 [profile.release]
 debug = 1  # Line numbers only (smaller than full debug=2)

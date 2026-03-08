@@ -51,6 +51,14 @@ impl Generator {
         self.resolve_transitive_inheritance(&agent.merged, &mut HashSet::new())
     }
 
+    /// Public accessor for the resolved inheritance chain of a named agent.
+    pub fn inheritance_chain_safe(&self, name: &str) -> BTreeSet<String> {
+        self.inheritance_chain(name).unwrap_or_else(|w| {
+            tracing::warn!("{w}");
+            BTreeSet::new()
+        })
+    }
+
     /// Merge all agents with transitive inheritance resolution
     #[tracing::instrument(level = "info", skip(self))]
     pub fn merge(&self) -> Result<Vec<Manifest>> {

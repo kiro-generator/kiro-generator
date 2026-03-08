@@ -78,15 +78,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            AgentSourceSlots,
-            GeneratorConfig,
             commands::DiffArgs,
             os::{ACTIVE_USER_HOME, Fs},
             output::ColorOverride,
-            source::KgAgentSource,
-            toml_parse,
         },
-        std::path::PathBuf,
     };
 
     #[tokio::test]
