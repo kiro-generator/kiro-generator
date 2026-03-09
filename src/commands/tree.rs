@@ -11,21 +11,9 @@ use {
         generator::Generator,
         tree::{SummaryEntry, SummaryReport, summarize_concrete, summarize_templates},
     },
-    facet::Facet,
     std::collections::BTreeMap,
     super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
 };
-
-#[derive(Facet)]
-struct SummaryJsonWithTemplates {
-    agents: BTreeMap<String, SummaryEntry>,
-    templates: BTreeMap<String, SummaryEntry>,
-}
-
-#[derive(Facet)]
-struct SummaryJsonAgentsOnly {
-    agents: BTreeMap<String, SummaryEntry>,
-}
 
 #[tracing::instrument(level = "info", skip(generator))]
 pub(super) fn execute_tree(generator: &Generator, cmd: &TreeCommand) -> Result<()> {

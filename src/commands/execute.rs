@@ -78,7 +78,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            commands::DiffArgs,
+            commands::{DiffArgs, TreeFormatArg},
             os::{ACTIVE_USER_HOME, Fs},
             output::ColorOverride,
         },
@@ -125,112 +125,30 @@ mod tests {
         Ok(())
     }
 
-    // #[tokio::test]
-    // #[test_log::test]
-    // async fn test_tree_nonexistent_returns_empty() -> Result<()> {
-    //     let fs = Fs::new();
-    //     let generator = Generator::new(
-    //         fs,
-    //         crate::ConfigLocation::Local,
-    //         crate::output::OutputFormat::Json,
-    //     )?;
-    //     let args = super::super::TreeArgs {
-    //         trace: None,
-    //         agents: vec!["nonexistent".to_string()],
-    //         invert: false,
-    //         no_templates: false,
-    //         format: crate::output::OutputFormatArg::Json,
-    //     };
-    //     execute_tree(&generator, &args)?;
-    //     Ok(())
-    // }
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_execute_tree_command() -> Result<()> {
+        let fs = Fs::new();
+        let generator = Generator::new(
+            fs,
+            crate::ConfigLocation::Local,
+            crate::output::OutputFormat::Json,
+        )?;
 
-    // #[tokio::test]
-    // #[test_log::test]
-    // async fn test_tree_known_agents() -> Result<()> {
-    //     let fs = Fs::new();
-    //     let generator = Generator::new(
-    //         fs,
-    //         crate::ConfigLocation::Local,
-    //         crate::output::OutputFormat::Json,
-    //     )?;
-    //     let args = super::super::TreeArgs {
-    //         trace: None,
-    //         agents: vec!["base".to_string(), "dependabot".to_string()],
-    //         invert: false,
-    //         no_templates: false,
-    //         format: crate::output::OutputFormatArg::Table,
-    //     };
-    //     execute_tree(&generator, &args)?;
-    //     Ok(())
-    // }
-
-    // #[tokio::test]
-    // #[test_log::test]
-    // async fn test_tree_fixtures() -> Result<()> {
-    //     let raw =
-    // include_str!("../../fixtures/manifest-test/test-merge-agent.toml");
-    //     let fs = Fs::new();
-    //     let mut generator = Generator::new(
-    //         fs,
-    //         crate::ConfigLocation::Local,
-    //         crate::output::OutputFormat::Json,
-    //     )?;
-    //     let agents: GeneratorConfig = toml_parse(raw)?;
-    //     let agents = agents.populate_names();
-    //     generator.agents = agents
-    //         .agents
-    //         .iter()
-    //         .map(|(k, v)| {
-    //             (k.clone(), AgentSourceSlots {
-    //                 name: k.clone(),
-    //                 merged: v.clone(),
-    //                 global_manifest: Default::default(),
-    //                 local_manifest: crate::SourceSlot {
-    //                     path:
-    // Some(KgAgentSource::LocalManifest(PathBuf::new().join("test"))),
-    //                     manifest: v.clone(),
-    //                 },
-    //                 global_agent_file: Default::default(),
-    //                 local_agent_file: Default::default(),
-    //             })
-    //         })
-    //         .collect();
-    //     let args = super::super::TreeArgs {
-    //         trace: None,
-    //         agents: vec![],
-    //         invert: false,
-    //         no_templates: false,
-    //         format: crate::output::OutputFormatArg::Table,
-    //     };
-    //     execute_tree(&generator, &args)?;
-    //     Ok(())
-    // }
-
-    // #[tokio::test]
-    // #[test_log::test]
-    // async fn test_execute_tree_command() -> Result<()> {
-    //     let fs = Fs::new();
-    //     let generator = Generator::new(
-    //         fs,
-    //         crate::ConfigLocation::Local,
-    //         crate::output::OutputFormat::Json,
-    //     )?;
-
-    //     let cli = Cli {
-    //         debug: false,
-    //         color_override: ColorOverride::Never,
-    //         command: Command::Tree(super::super::TreeArgs {
-    //             trace: None,
-    //             agents: vec!["base".to_string()],
-    //             invert: false,
-    //             no_templates: false,
-    //             format: crate::output::OutputFormatArg::Table,
-    //         }),
-    //     };
-    //     cli.execute(&generator).await?;
-    //     Ok(())
-    // }
+        let cli = Cli {
+            debug: false,
+            color_override: ColorOverride::Never,
+            command: Command::Tree(crate::commands::TreeCommand::Summary(
+                super::super::TreeSummaryArgs {
+                    no_templates: false,
+                    format: TreeFormatArg::Table,
+                    locations: true,
+                },
+            )),
+        };
+        cli.execute(&generator).await?;
+        Ok(())
+    }
 
     #[tokio::test]
     #[test_log::test]

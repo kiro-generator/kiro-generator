@@ -6,8 +6,8 @@ use {
 pub fn dependencies(generator: &Generator) -> Result<BTreeMap<String, BTreeSet<String>>> {
     let mut inverse: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for name in generator.agents.keys() {
-        let resolved_chain = generator.inheritance_chain_safe(name);
-        for parent in &resolved_chain {
+        let resolved_ancestors = generator.inheritance_chain_safe(name);
+        for parent in &resolved_ancestors {
             inverse
                 .entry(parent.clone())
                 .or_default()

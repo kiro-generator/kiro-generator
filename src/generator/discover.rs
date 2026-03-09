@@ -396,4 +396,36 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_is_template() -> Result<()> {
+        let fs = Fs::new();
+
+        let g_path = PathBuf::from(ACTIVE_USER_HOME)
+            .join(".kiro")
+            .join("generators");
+        let agents = discover(
+            &fs,
+            &ConfigLocation::Both(g_path.clone()),
+            &crate::output::OutputFormat::Table(true),
+        )?;
+
+        let generator = super::Generator {
+            global_path: g_path,
+            agents,
+            fs,
+            format: crate::output::OutputFormat::Plain,
+        };
+
+        let templates = generator
+            .write_all(true, false)
+            .await?
+            .iter()
+            .filter(|a| a.is_template())
+            .count();
+        assert_eq!(3, templates);
+
+        Ok(())
+    }
 }

@@ -36,7 +36,7 @@ pub struct TreeDetail {
     pub output: String,
     pub description: String,
     pub inherits: BTreeSet<String>,
-    pub resolved_chain: BTreeSet<String>,
+    pub resolved_ancestors: Vec<String>,
     pub sources: BTreeSet<TreeSource>,
 }
 
@@ -73,7 +73,7 @@ pub fn details(generator: &Generator, names: &[String]) -> BTreeMap<String, Tree
                     .to_string_lossy()
                     .into_owned()
             };
-            let resolved_chain = generator.inheritance_chain_safe(name);
+            let resolved_ancestors = generator.inheritance_chain_safe(name);
             let sources = collect_sources(agent);
 
             out.insert(name.clone(), TreeDetail {
@@ -81,7 +81,7 @@ pub fn details(generator: &Generator, names: &[String]) -> BTreeMap<String, Tree
                 output,
                 description: manifest.description.clone().unwrap_or_default(),
                 inherits: manifest.inherits.iter().cloned().collect(),
-                resolved_chain,
+                resolved_ancestors,
                 sources,
             });
         }
@@ -196,12 +196,12 @@ mod tests {
 
     #[tokio::test]
     #[test_log::test]
-    async fn details_returns_child_with_resolved_chain() -> crate::Result<()> {
+    async fn details_returns_child_with_resolved_ancestors() -> crate::Result<()> {
         let generator = super::super::fixture_generator()?;
         let result = details(&generator, &["child".into()]);
         let child = result.get("child").expect("child should exist");
         assert!(!child.template);
-        assert!(child.resolved_chain.contains("parent"));
+        assert_eq!(child.resolved_ancestors, vec![String::from("parent")]);
         assert_eq!(child.inherits, BTreeSet::from(["parent".into()]));
         assert!(!child.sources.is_empty());
         Ok(())

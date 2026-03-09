@@ -75,7 +75,7 @@ kg automatically determines scope based on your current directory:
 - **Outside a project**: Commands default to global scope
 - **`--global` flag**: Forces global scope when you're in a project directory
 
-If `kg tree <agent>` shows `"type": "global-file"` or `"type": "global-manifest"` in sources and you're in a project directory, pass `--global` to `kg diff`, `kg generate`, etc.
+If `kg tree details <agent>` shows `"source_type": "global-file"` or `"source_type": "global-manifest"` in sources and you're in a project directory, pass `--global` to `kg diff`, `kg generate`, etc.
 
 ## Step 1: Discovery
 
@@ -83,31 +83,41 @@ Before reading or modifying any config files, run discovery.
 
 ### Summary view (default)
 
-`kg tree` with no arguments shows a summary table of all agents and templates:
+`kg tree summary` shows a summary table of all agents and templates:
 
 ```bash
 # Summary table of all agents + templates
-kg tree
+kg tree summary
 
 # Agents only, hide templates
-kg tree --no-templates
+kg tree summary --no-templates
+
+# Add a lookup table with source file locations
+kg tree summary --locations
 
 # Machine-readable summary
-kg tree -f json
+kg tree summary -f json
 ```
 
-The table shows agent name, description, and direct parents (inherits). Templates are grouped at the bottom.
+The table shows agent name, description, and direct parents (`inherits`). Templates are grouped at the bottom.
+
+`--locations` adds a third table that shows the global/local manifest and agent-file locations for every discovered agent and template.
+
+JSON summary output always includes top-level `agents` and `templates` objects. Each entry includes `description`, `inherits`, and `locations`. With `--no-templates -f json`, the `templates` object is currently emitted as `{}` rather than being omitted.
 
 ### Single agent detail
 
-`kg tree <name>` outputs full JSON detail for a specific agent, including sources, modified fields, and resolved inheritance chain:
+`kg tree details <name>` outputs full JSON detail for one or more agents, including sources, modified fields, and the ordered transitive ancestor chain:
 
 ```bash
 # Single agent detail (JSON)
-kg tree rust
+kg tree details rust
 
 # Multiple agents
-kg tree rust node
+kg tree details rust node
+
+# Alias also accepted
+kg tree detail rust
 ```
 
 Example JSON output:
@@ -119,23 +129,23 @@ Example JSON output:
     "description": "Rust development agent",
     "sources": [
       {
-        "type": "local-manifest",
-        "path": ".kiro/generators/manifests/rust.toml",
-        "modified_fields": ["description", "inherits"]
+        "source_type": "global-file",
+        "path": "/home/user/.kiro/generators/agents/rust.toml",
+        "modified_fields": ["description", "prompt", "nativeTools.shell"]
       },
       {
-        "type": "global-manifest",
+        "source_type": "global-manifest",
         "path": "/home/user/.kiro/generators/manifests/base.toml",
         "modified_fields": ["inherits"]
       },
       {
-        "type": "global-file",
-        "path": "/home/user/.kiro/generators/agents/rust.toml",
-        "modified_fields": ["description", "prompt", "nativeTools.shell"]
+        "source_type": "local-manifest",
+        "path": ".kiro/generators/manifests/rust.toml",
+        "modified_fields": ["description", "inherits"]
       }
     ],
-    "inherits": ["kg-resources", "default"],
-    "resolved_chain": ["kg-resources", "cli", "resources", "knowledge", "git", "default"]
+    "inherits": ["default", "kg-resources"],
+    "resolved_ancestors": ["kg-resources", "cli", "cli-compress-decompress", "git", "cli-systemd", "knowledge", "resources", "default"]
   }
 }
 ```
@@ -146,35 +156,35 @@ Example JSON output:
 
 **`modified_fields`** lists which fields each source file contributes. Use this to go directly to the right file when a user asks "where does this shell command / MCP server / resource come from?" — no guessing required.
 
-**`resolved_chain`** is the full flattened inheritance DAG in merge order. This differs from `inherits` (direct parents only). If `rust` inherits `["kg-resources", "default"]` but `default` itself inherits `["cli", "resources", "knowledge", "git"]`, `resolved_chain` shows all of them in the order they are merged. Use this when debugging unexpected values — find which ancestor in the chain contributes the field via `modified_fields`.
+**`resolved_ancestors`** is the full transitive ancestor chain for the agent in merge order. This differs from `inherits` (direct parents only). Use it when debugging unexpected values to see which ancestors are applied first, then use `modified_fields` on `sources` to find the contributing file.
 
 **Use the `sources` array to know exactly which files to read or edit.**
 
 ### Reverse dependency lookup
 
-`kg tree --invert` shows what depends on a given agent or template:
+`kg tree dependents <name>` shows what depends on a given agent or template:
 
 ```bash
 # What inherits from "default" (directly or transitively)?
-kg tree --invert default
+kg tree dependents default
 
-# Used/unused template report (no agent name)
-kg tree --invert
+# Multiple lookups at once
+kg tree dependents default aws
 
-# Machine-readable
-kg tree --invert -f json
-kg tree --invert default -f json
+# Aliases also accepted
+kg tree invert default
+kg tree i default
 ```
 
-`kg tree --invert <name>` shows every agent that inherits from `<name>`, with the full inheritance path. Use this to assess blast radius before modifying a template or parent agent.
+`kg tree dependents <name>` returns a JSON object keyed by each requested name. Each value is the sorted set of concrete agents whose `resolved_ancestors` includes that name. Use this to assess blast radius before modifying a template or parent agent.
 
-`kg tree --invert` (no name) reports which templates are actively used and which are orphaned. Use this to find dead templates that can be removed.
+This command currently requires at least one name and does not emit inheritance paths or an orphaned-template report.
 
 ## Step 2: Edit Agent Configs
 
 To modify an agent's configuration:
 
-1. Run `kg tree <agent-name>` to find which TOML files define it
+1. Run `kg tree details <agent-name>` to find which TOML files define it
 2. Read the `sources` array — it tells you exactly which files to edit
 3. Edit the TOML file(s) directly
 
@@ -218,11 +228,11 @@ kg diff --format agent --global
 
 **If diff shows many changes across multiple agents:** This is normal. Common causes:
 - Previous TOML edits that were never generated (accumulated drift)
-- A template or parent agent was modified, and changes ripple through all inheritors via `resolved_chain`
+- A template or parent agent was modified, and changes ripple through all inheritors via `resolved_ancestors`
 
-Use `kg tree <agent>` and check `resolved_chain` + `modified_fields` to trace which ancestor introduced a change.
+Use `kg tree details <agent>` and check `resolved_ancestors` + `modified_fields` to trace which ancestor introduced a change.
 
-**If diff shows no output:** Either there are no changes, or you may be checking the wrong scope. Verify with `kg tree <agent>` that you're editing the right files and using the correct `--global` flag if needed.
+**If diff shows no output:** Either there are no changes, or you may be checking the wrong scope. Verify with `kg tree details <agent>` that you're editing the right files and using the correct `--global` flag if needed.
 
 ## Step 4: Generate Agent Files
 
@@ -248,15 +258,15 @@ When resolving agent `rust`, kg searches (lowest to highest precedence):
 3. `.kiro/generators/manifests/*.toml` - Local declarations
 4. `.kiro/generators/agents/rust.toml` - Local config
 
-All found configs merge together. Use `kg tree rust` to see which sources apply.
+All found configs merge together. Use `kg tree details rust` to see which sources apply.
 
 ## Error States
 
-- **No agents found**: `kg tree` shows an empty table. `kg tree <name> -f json` returns `{}` (exit 0).
-- **Named agent not found**: `kg tree nonexistent` produces no output in table/plain mode (exit 0). In JSON mode (`-f json`), it returns `{}`.
+- **No agents found**: `kg tree summary` shows an empty summary table.
+- **Named agent not found**: `kg tree details nonexistent` returns `{}` (exit 0).
 - **Invalid TOML**: `kg diff` reports parse errors with file path and line number
 
-**Recovery:** If diff reports a parse error, fix the error at the reported location and re-run diff. If `kg generate` produces unexpected results, run `kg tree <agent>` to trace which source file contributes the unexpected value — check `modified_fields` on each source to pinpoint the exact file.
+**Recovery:** If diff reports a parse error, fix the error at the reported location and re-run diff. If `kg generate` produces unexpected results, run `kg tree details <agent>` to trace which source file contributes the unexpected value — check `modified_fields` on each source to pinpoint the exact file.
 
 **If a `kg diff` path needs tracing** (e.g. you see a JSON field change and want to know which TOML field drives it), load `assets/mappings.json` to look up the TOML→Kiro JSON mapping and the jq path to inspect the generated value directly.
 
