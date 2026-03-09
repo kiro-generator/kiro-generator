@@ -3,7 +3,7 @@ use {
     facet::Facet,
     std::{
         collections::{BTreeMap, BTreeSet},
-        fmt::{Display, Write},
+        fmt::Display,
     },
 };
 
@@ -18,16 +18,7 @@ pub struct SummaryEntry {
 
 impl SummaryEntry {
     pub fn inherits_join(&self) -> crate::Result<String> {
-        if self.inherits.is_empty() {
-            return Ok(String::new());
-        }
-        let mut join = String::with_capacity(self.inherits.len() * 6);
-        for i in &self.inherits {
-            write!(&mut join, "{i},")?;
-        }
-
-        join.remove(join.len() - 1);
-        Ok(join)
+        Ok(self.inherits.iter().cloned().collect::<Vec<_>>().join(","))
     }
 }
 
