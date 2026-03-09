@@ -143,6 +143,7 @@ fn build_locations_table(generator: &Generator) -> Table {
 
     table
 }
+
 pub fn dependencies(generator: &Generator, args: &TreeDependentsArgs) -> Result<()> {
     let all = crate::tree::dependencies(generator)?;
     let result: BTreeMap<_, _> = all

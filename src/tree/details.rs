@@ -19,7 +19,10 @@ impl PartialOrd for TreeSource {
 
 impl Ord for TreeSource {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.source_type.cmp(&other.source_type)
+        match self.source_type.cmp(&other.source_type) {
+            std::cmp::Ordering::Equal => std::cmp::Ordering::Equal,
+            _ => self.path.cmp(&other.path),
+        }
     }
 }
 impl PartialEq for TreeSource {
