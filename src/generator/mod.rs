@@ -139,6 +139,16 @@ impl Generator {
         self.agents.values().filter(|a| a.merged.template).collect()
     }
 
+    pub fn source_slots(&self, agent_name: impl AsRef<str>) -> Option<[&SourceSlot; 4]> {
+        let slots = self.agents.get(agent_name.as_ref())?;
+        Some([
+            &slots.global_manifest,
+            &slots.global_agent_file,
+            &slots.local_manifest,
+            &slots.local_agent_file,
+        ])
+    }
+
     pub fn contains_local_agents(&self) -> bool {
         self.agents.values().any(|s| s.has_local())
     }
@@ -359,5 +369,35 @@ impl Generator {
             }
         }
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn source_slots_returns_agent_sources() -> Result<()> {
+        let generator = crate::tree::fixture_generator()?;
+        let slots = generator
+            .source_slots("parent")
+            .expect("parent should have source slots");
+
+        assert_eq!(slots.len(), 4);
+        assert_eq!(
+            slots
+                .iter()
+                .filter(|slot| slot.location().is_some())
+                .count(),
+            1
+        );
+        assert_eq!(
+            slots[2].location().map(|path| path.display().to_string()),
+            Some(String::from("test"))
+        );
+        assert!(generator.source_slots("missing").is_none());
+
+        Ok(())
     }
 }

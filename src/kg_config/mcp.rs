@@ -1,4 +1,8 @@
-use {facet::Facet, std::collections::HashMap};
+use {
+    crate::kg_config::{SearchQuery, Searchable},
+    facet::Facet,
+    std::collections::HashMap,
+};
 
 /// The operational state of an MCP server.
 #[derive(Facet, Clone, Debug, Eq, PartialEq)]
@@ -101,6 +105,28 @@ impl KgCustomToolConfig {
     }
 }
 
+impl Searchable for KgCustomToolConfig {
+    fn search(&self, query: &SearchQuery<'_>) -> bool {
+        query.matches(&self.url)
+            || query.matches(&self.command)
+            || self.args.iter().any(|arg| query.matches(arg))
+            || self
+                .env
+                .iter()
+                .any(|(key, value)| query.matches(key) || query.matches(value))
+            || self
+                .headers
+                .iter()
+                .any(|(key, value)| query.matches(key) || query.matches(value))
+            || self.state.as_ref().is_some_and(|state| {
+                query.matches(match state {
+                    McpServerState::Enabled => "enabled",
+                    McpServerState::Disabled => "disabled",
+                })
+            })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -179,5 +205,24 @@ command = "ctx-mcp"
         let child = KgCustomToolConfig::default();
         let merged = child.merge(parent);
         assert_eq!(merged.state, Some(McpServerState::Disabled));
+    }
+
+    #[test_log::test]
+    fn search_matches_meaningful_string_fields() {
+        let mcp = KgCustomToolConfig {
+            url: "https://example.test/mcp".into(),
+            headers: HashMap::from([(String::from("Authorization"), String::from("Bearer token"))]),
+            command: "ctx-mcp".into(),
+            args: vec![String::from("--profile"), String::from("sandbox")],
+            env: HashMap::from([(String::from("LOG_LEVEL"), String::from("debug"))]),
+            state: Some(McpServerState::Disabled),
+            ..Default::default()
+        };
+
+        assert!(mcp.search(&"ctx".into()));
+        assert!(mcp.search(&"authorization".into()));
+        assert!(mcp.search(&"sandbox".into()));
+        assert!(mcp.search(&"disabled".into()));
+        assert!(!mcp.search(&"missing".into()));
     }
 }

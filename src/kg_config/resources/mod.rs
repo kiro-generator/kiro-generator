@@ -43,6 +43,14 @@ macro_rules! define_location_resource {
                 write!(f, "{out}")
             }
         }
+
+        impl crate::kg_config::Searchable for $name {
+            fn search(&self, query: &crate::kg_config::SearchQuery<'_>) -> bool {
+                self.locations
+                    .iter()
+                    .any(|location| query.matches(location))
+            }
+        }
     };
 }
 

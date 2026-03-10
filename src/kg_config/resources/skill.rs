@@ -4,7 +4,10 @@ define_location_resource!(KgSkillResource, "skill");
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::kg_config::{SearchQuery, Searchable},
+    };
 
     #[test]
     fn test_deserialize_skill_resource() -> crate::Result<()> {
@@ -37,5 +40,19 @@ locations = [".kiro/skills/**/SKILL.md"]
         let merged = child.merge(base);
         assert!(merged.locations.contains("a/SKILL.md"));
         assert!(merged.locations.contains("b/SKILL.md"));
+    }
+
+    #[test]
+    fn search_matches_locations() {
+        let skill = KgSkillResource {
+            locations: ["foo/SKILL.md".to_string(), "bar/notes.md".to_string()]
+                .into_iter()
+                .collect(),
+            ..Default::default()
+        };
+
+        assert!(skill.search(&"skill".into()));
+        assert!(!skill.search(&SearchQuery::from("skill").case_sensitive()));
+        assert!(!skill.search(&"missing".into()));
     }
 }

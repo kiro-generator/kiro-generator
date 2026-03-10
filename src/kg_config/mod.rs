@@ -4,6 +4,7 @@ mod mcp;
 mod merge;
 mod native;
 mod resources;
+mod search;
 mod subagent;
 
 use {
@@ -17,6 +18,7 @@ pub use {
     manifest::Manifest,
     mcp::{KgCustomToolConfig, McpServerState},
     resources::{KgFileResource, KgKnowledge, KgSkillResource},
+    search::{SearchQuery, Searchable},
     subagent::SubagentConfig,
 };
 

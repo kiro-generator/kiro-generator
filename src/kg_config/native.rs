@@ -1,12 +1,15 @@
 use {
-    crate::kiro::{
-        AwsTool as KiroAwsTool,
-        ExecuteShellTool as KiroShellTool,
-        GlobTool as KiroGlobTool,
-        GrepTool as KiroGrepTool,
-        ReadTool as KiroReadTool,
-        WebFetchTool as KiroWebFetchTool,
-        WriteTool as KiroWriteTool,
+    crate::{
+        kg_config::{SearchQuery, Searchable},
+        kiro::{
+            AwsTool as KiroAwsTool,
+            ExecuteShellTool as KiroShellTool,
+            GlobTool as KiroGlobTool,
+            GrepTool as KiroGrepTool,
+            ReadTool as KiroReadTool,
+            WebFetchTool as KiroWebFetchTool,
+            WriteTool as KiroWriteTool,
+        },
     },
     facet::Facet,
     std::collections::HashSet,
@@ -58,6 +61,14 @@ macro_rules! define_tool {
                 self.auto_allow_readonly = self.auto_allow_readonly.or(other.auto_allow_readonly);
                 self.deny_by_default = self.deny_by_default.or(other.deny_by_default);
                 self
+            }
+        }
+
+        impl Searchable for $name {
+            fn search(&self, query: &SearchQuery<'_>) -> bool {
+                self.allows.iter().any(|value| query.matches(value))
+                    || self.denies.iter().any(|value| query.matches(value))
+                    || self.force_allow.iter().any(|value| query.matches(value))
             }
         }
     };
@@ -391,6 +402,34 @@ forceAllow = ["git push"]
         let kiro_tool = KiroReadTool::from(&doc);
         assert!(!kiro_tool.allowed_paths.is_empty());
         Ok(())
+    }
+
+    #[test_log::test]
+    fn search_matches_native_tool_rules() {
+        let shell = ExecuteShellTool {
+            allows: into_set(vec!["yarn install .*"]),
+            denies: into_set(vec!["npm publish .*"]),
+            force_allow: into_set(vec!["git push"]),
+            ..Default::default()
+        };
+
+        assert!(shell.search(&"yarn".into()));
+        assert!(shell.search(&"publish".into()));
+        assert!(shell.search(&"git push".into()));
+        assert!(!shell.search(&"missing".into()));
+    }
+
+    #[test_log::test]
+    fn search_matches_aws_tool_rules() {
+        let aws = AwsTool {
+            allows: into_set(vec!["s3", "ec2"]),
+            denies: into_set(vec!["iam"]),
+            ..Default::default()
+        };
+
+        assert!(aws.search(&"s3".into()));
+        assert!(aws.search(&"iam".into()));
+        assert!(!aws.search(&"missing".into()));
     }
 
     #[test_log::test]

@@ -4,7 +4,10 @@ define_location_resource!(KgFileResource, "file");
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::kg_config::{SearchQuery, Searchable},
+    };
 
     #[test]
     fn test_deserialize_file_resource() -> crate::Result<()> {
@@ -38,5 +41,19 @@ locations = ["README.md", "/tmp/design.md"]
         let merged = child.merge(base);
         assert!(merged.locations.contains("README.md"));
         assert!(merged.locations.contains("RUST.md"));
+    }
+
+    #[test]
+    fn search_matches_locations() {
+        let file = KgFileResource {
+            locations: ["README.md".to_string(), "/tmp/design.md".to_string()]
+                .into_iter()
+                .collect(),
+            ..Default::default()
+        };
+
+        assert!(file.search(&"readme".into()));
+        assert!(!file.search(&SearchQuery::from("readme").case_sensitive()));
+        assert!(!file.search(&"missing".into()));
     }
 }
