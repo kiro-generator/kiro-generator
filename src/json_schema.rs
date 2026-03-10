@@ -219,7 +219,7 @@ impl SchemaContext {
                 let inner_schema = self.schema_for_shape(opt.t);
                 JsonSchema {
                     any_of: Some(vec![inner_schema, JsonSchema {
-                        type_: Some(SchemaType::Null),
+                        type_: Some(SchemaType::Null.into()),
                         ..JsonSchema::new()
                     }]),
                     description,
@@ -227,19 +227,19 @@ impl SchemaContext {
                 }
             }
             Def::List(list) => JsonSchema {
-                type_: Some(SchemaType::Array),
+                type_: Some(SchemaType::Array.into()),
                 items: Some(Box::new(self.schema_for_shape(list.t))),
                 description,
                 ..JsonSchema::new()
             },
             Def::Array(arr) => JsonSchema {
-                type_: Some(SchemaType::Array),
+                type_: Some(SchemaType::Array.into()),
                 items: Some(Box::new(self.schema_for_shape(arr.t))),
                 description,
                 ..JsonSchema::new()
             },
             Def::Set(set) => JsonSchema {
-                type_: Some(SchemaType::Array),
+                type_: Some(SchemaType::Array.into()),
                 items: Some(Box::new(self.schema_for_shape(set.t))),
                 description,
                 ..JsonSchema::new()
@@ -247,7 +247,7 @@ impl SchemaContext {
             Def::Map(map) => {
                 // Maps become objects with additionalProperties
                 JsonSchema {
-                    type_: Some(SchemaType::Object),
+                    type_: Some(SchemaType::Object.into()),
                     additional_properties: Some(AdditionalProperties::Schema(Box::new(
                         self.schema_for_shape(map.v),
                     ))),
@@ -299,29 +299,37 @@ impl SchemaContext {
         // Map common Rust types to JSON Schema types
         let (type_, minimum, maximum) = match type_name {
             // Strings
-            "String" | "str" | "&str" | "Cow" => (Some(SchemaType::String), None, None),
+            "String" | "str" | "&str" | "Cow" => (Some(SchemaType::String.into()), None, None),
 
             // Booleans
-            "bool" => (Some(SchemaType::Boolean), None, None),
+            "bool" => (Some(SchemaType::Boolean.into()), None, None),
 
             // Unsigned integers
             "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => {
-                (Some(SchemaType::Integer), Some(0), None)
+                (Some(SchemaType::Integer.into()), Some(0), None)
             }
 
             // Signed integers
-            "i8" => (Some(SchemaType::Integer), Some(i8::MIN as i64), None),
-            "i16" => (Some(SchemaType::Integer), Some(i16::MIN as i64), None),
-            "i32" => (Some(SchemaType::Integer), Some(i32::MIN as i64), None),
-            "i64" => (Some(SchemaType::Integer), Some(i64::MIN), None),
-            "i128" => (Some(SchemaType::Integer), Some(i64::MIN), None),
-            "isize" => (Some(SchemaType::Integer), Some(i64::MIN), None),
+            "i8" => (Some(SchemaType::Integer.into()), Some(i8::MIN as i64), None),
+            "i16" => (
+                Some(SchemaType::Integer.into()),
+                Some(i16::MIN as i64),
+                None,
+            ),
+            "i32" => (
+                Some(SchemaType::Integer.into()),
+                Some(i32::MIN as i64),
+                None,
+            ),
+            "i64" => (Some(SchemaType::Integer.into()), Some(i64::MIN), None),
+            "i128" => (Some(SchemaType::Integer.into()), Some(i64::MIN), None),
+            "isize" => (Some(SchemaType::Integer.into()), Some(i64::MIN), None),
 
             // Floats
-            "f32" | "f64" => (Some(SchemaType::Number), None, None),
+            "f32" | "f64" => (Some(SchemaType::Number.into()), None, None),
 
             // Char as string
-            "char" => (Some(SchemaType::String), None, None),
+            "char" => (Some(SchemaType::String.into()), None, None),
 
             // Unknown scalar - no type constraint
             _ => (None, None, None),
@@ -347,7 +355,7 @@ impl SchemaContext {
             StructKind::Unit => {
                 // Unit struct serializes as null or empty object
                 JsonSchema {
-                    type_: Some(SchemaType::Null),
+                    type_: Some(SchemaType::Null.into()),
                     description,
                     ..JsonSchema::new()
                 }
@@ -365,7 +373,7 @@ impl SchemaContext {
 
                 // TODO: Use prefixItems for proper tuple schema (JSON Schema 2020-12)
                 JsonSchema {
-                    type_: Some(SchemaType::Array),
+                    type_: Some(SchemaType::Array.into()),
                     description,
                     ..JsonSchema::new()
                 }
@@ -408,7 +416,7 @@ impl SchemaContext {
                 self.in_progress.pop();
 
                 JsonSchema {
-                    type_: Some(SchemaType::Object),
+                    type_: Some(SchemaType::Object.into()),
                     properties: Some(properties),
                     required: if required.is_empty() {
                         None
@@ -445,7 +453,7 @@ impl SchemaContext {
                 .collect();
 
             JsonSchema {
-                type_: Some(SchemaType::String),
+                type_: Some(SchemaType::String.into()),
                 enum_: Some(values),
                 description,
                 title: Some(shape.type_identifier.to_string()),
@@ -476,7 +484,7 @@ impl SchemaContext {
                                 self.schema_for_shape(v.data.fields[0].shape.get()),
                             );
                             JsonSchema {
-                                type_: Some(SchemaType::Object),
+                                type_: Some(SchemaType::Object.into()),
                                 properties: Some(props),
                                 required: Some(vec![variant_name]),
                                 additional_properties: Some(AdditionalProperties::Bool(false)),
@@ -490,7 +498,7 @@ impl SchemaContext {
                             let mut props = BTreeMap::new();
                             props.insert(variant_name.clone(), inner);
                             JsonSchema {
-                                type_: Some(SchemaType::Object),
+                                type_: Some(SchemaType::Object.into()),
                                 properties: Some(props),
                                 required: Some(vec![variant_name]),
                                 additional_properties: Some(AdditionalProperties::Bool(false)),

@@ -13,7 +13,11 @@ use {
         Subcommand,
         builder::{Styles, styling::AnsiColor},
     },
-    std::{fmt::Display, io::IsTerminal, path::PathBuf},
+    std::{
+        fmt::{Debug, Display},
+        io::IsTerminal,
+        path::PathBuf,
+    },
 };
 
 /// Get the color styles for the CLI help menu.
@@ -128,13 +132,66 @@ pub struct WatchArgs {
 }
 
 #[derive(clap::Args, Clone, Default)]
-pub struct TreeArgs {
-    /// Enable trace level debug for an agent. Use keyword 'all' to debug all
-    /// agents. Note, this is very verbose
-    #[arg(long, short = 't', value_name = "AGENT_NAME")]
-    pub trace: Option<String>,
+pub struct TreeDetailArgs {
     /// Show specific agents and their inheritance chains
+    #[arg(required = true, num_args = 1..)]
     pub agents: Vec<String>,
+}
+
+#[derive(clap::Args, Clone, Default)]
+pub struct TreeSummaryArgs {
+    /// Hide templates from summary output
+    #[arg(long)]
+    pub no_templates: bool,
+    /// Show source locations in a separate table when using table output
+    #[arg(long)]
+    pub locations: bool,
+    /// Format of the console output
+    #[arg(short = 'f', long, default_value_t = TreeFormatArg::Table)]
+    pub format: TreeFormatArg,
+}
+
+#[derive(clap::Args, Clone, Default)]
+pub struct TreeDependentsArgs {
+    /// Agent names to look up dependents for
+    #[arg(required = true, num_args = 1..)]
+    pub agents: Vec<String>,
+}
+
+#[derive(Copy, Clone, Default, Debug, clap::ValueEnum)]
+pub enum TreeFormatArg {
+    #[default]
+    Table,
+    Json,
+}
+
+impl Display for TreeFormatArg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Table => write!(f, "table"),
+            Self::Json => write!(f, "json"),
+        }
+    }
+}
+
+#[derive(Subcommand, Clone)]
+pub enum TreeCommand {
+    #[command(alias = "s")]
+    Summary(TreeSummaryArgs),
+    #[command(aliases = ["detail", "d"])]
+    Details(TreeDetailArgs),
+    #[command(aliases= ["invert", "i"])]
+    Dependents(TreeDependentsArgs),
+}
+
+impl Debug for TreeCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Summary(_) => write!(f, "summary"),
+            Self::Details(_) => write!(f, "details"),
+            Self::Dependents(_) => write!(f, "dependents"),
+        }
+    }
 }
 
 #[derive(Subcommand, Clone)]
@@ -164,8 +221,8 @@ pub enum Command {
     #[command(alias = "w")]
     Watch(WatchArgs),
     /// Display agent hierarchy and configuration sources as a tree
-    #[command(alias = "t")]
-    Tree(TreeArgs),
+    #[command(subcommand, alias = "t")]
+    Tree(TreeCommand),
 }
 
 #[derive(clap::Args, Clone, Default)]
@@ -392,5 +449,18 @@ mod tests {
         };
         assert!(!cli.is_local());
         assert!(!cli.is_global());
+    }
+
+    #[test_log::test]
+    fn test_tree_summary_locations_flag() {
+        let cli = Cli::try_parse_from(["kg", "tree", "summary", "--locations"]).unwrap();
+        match cli.command {
+            Command::Tree(TreeCommand::Summary(args)) => {
+                assert!(args.locations);
+                assert!(!args.no_templates);
+                assert!(matches!(args.format, TreeFormatArg::Table));
+            }
+            _ => panic!("expected tree summary command"),
+        }
     }
 }

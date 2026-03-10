@@ -286,12 +286,61 @@ forceAllow = ["git push"]
         "#;
 
         let doc: NativeTools = crate::toml_parse(raw)?;
-        let shell = doc.shell;
+        let shell = &doc.shell;
         assert_eq!(shell.allows.len(), 2);
         assert_eq!(shell.denies.len(), 1);
         assert!(shell.deny_by_default.unwrap_or_default());
         assert!(!shell.auto_allow_readonly.unwrap_or_default());
         assert_eq!(shell.force_allow.len(), 1);
+
+        let kiro_tool = KiroShellTool::from(&doc);
+        assert!(!kiro_tool.allowed_commands.is_empty());
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn parse_grep_tool() -> Result<()> {
+        let raw = r#"
+[grep]
+denyByDefault=true
+autoAllowReadonly=false
+allow = ["ls .*",  "git status"]
+deny = ["rm -rf /"]
+forceAllow = ["git push"]
+        "#;
+
+        let doc: NativeTools = crate::toml_parse(raw)?;
+        let grep = &doc.grep;
+        assert_eq!(grep.allows.len(), 2);
+        assert_eq!(grep.denies.len(), 1);
+        assert!(grep.deny_by_default.unwrap_or_default());
+        assert!(!grep.auto_allow_readonly.unwrap_or_default());
+        assert_eq!(grep.force_allow.len(), 1);
+        let kiro_tool = KiroGrepTool::from(&doc);
+        assert!(!kiro_tool.allowed_paths.is_empty());
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn parse_glob_tool() -> Result<()> {
+        let raw = r#"
+[glob]
+denyByDefault=true
+autoAllowReadonly=false
+allow = ["ls .*",  "git status"]
+deny = ["rm -rf /"]
+forceAllow = ["git push"]
+        "#;
+
+        let doc: NativeTools = crate::toml_parse(raw)?;
+        let glob = &doc.glob;
+        assert_eq!(glob.allows.len(), 2);
+        assert_eq!(glob.denies.len(), 1);
+        assert!(glob.deny_by_default.unwrap_or_default());
+        assert!(!glob.auto_allow_readonly.unwrap_or_default());
+        assert_eq!(glob.force_allow.len(), 1);
+        let kiro_tool = KiroGlobTool::from(&doc);
+        assert!(!kiro_tool.allowed_paths.is_empty());
         Ok(())
     }
 
@@ -305,11 +354,14 @@ forceAllow = ["git push"]
         "#;
 
         let doc: NativeTools = crate::toml_parse(raw)?;
-        let aws = doc.aws;
+        let aws = &doc.aws;
         assert!(aws.auto_allow_readonly.is_some());
         assert!(aws.auto_allow_readonly.unwrap_or_default());
         assert_eq!(aws.allows.len(), 2);
         assert_eq!(aws.denies.len(), 1);
+
+        let kiro_tool = KiroAwsTool::from(&doc);
+        assert!(!kiro_tool.allowed_services.is_empty());
         Ok(())
     }
 
@@ -335,6 +387,9 @@ forceAllow = ["git push"]
         assert_eq!(doc.write.allows.len(), 1);
         assert_eq!(doc.write.denies.len(), 1);
         assert_eq!(doc.write.force_allow.len(), 1);
+
+        let kiro_tool = KiroReadTool::from(&doc);
+        assert!(!kiro_tool.allowed_paths.is_empty());
         Ok(())
     }
 

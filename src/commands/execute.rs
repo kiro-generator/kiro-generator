@@ -16,11 +16,7 @@ impl Cli {
             Command::Generate(args) => self.execute_generate(generator, args).await,
             Command::Diff(args) => generator.diff(args),
             Command::Watch(args) => execute_watch(args).await,
-            Command::Tree(args) => {
-                let value = execute_tree(generator, args)?;
-                println!("{}", facet_json::to_string_pretty(&value)?);
-                Ok(())
-            }
+            Command::Tree(args) => execute_tree(generator, args),
             _ => Ok(()),
         }
     }
@@ -82,7 +78,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            commands::DiffArgs,
+            commands::{DiffArgs, TreeFormatArg},
             os::{ACTIVE_USER_HOME, Fs},
             output::ColorOverride,
         },
@@ -131,44 +127,6 @@ mod tests {
 
     #[tokio::test]
     #[test_log::test]
-    async fn test_tree_nonexistent_returns_empty() -> Result<()> {
-        let fs = Fs::new();
-        let generator = Generator::new(
-            fs,
-            crate::ConfigLocation::Local,
-            crate::output::OutputFormat::Json,
-        )?;
-        let args = super::super::TreeArgs {
-            trace: None,
-            agents: vec!["nonexistent".to_string()],
-        };
-        let value = execute_tree(&generator, &args)?;
-        assert_eq!(value, facet_value::Value::from(facet_value::VObject::new()));
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[test_log::test]
-    async fn test_tree_known_agents() -> Result<()> {
-        let fs = Fs::new();
-        let generator = Generator::new(
-            fs,
-            crate::ConfigLocation::Local,
-            crate::output::OutputFormat::Json,
-        )?;
-        let args = super::super::TreeArgs {
-            trace: None,
-            agents: vec!["base".to_string(), "dependabot".to_string()],
-        };
-        let value = execute_tree(&generator, &args)?;
-        let obj = value.as_object().expect("expected object");
-        assert!(obj.get("base").is_some(), "base agent missing");
-        assert!(obj.get("dependabot").is_some(), "dependabot agent missing");
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[test_log::test]
     async fn test_execute_tree_command() -> Result<()> {
         let fs = Fs::new();
         let generator = Generator::new(
@@ -180,10 +138,13 @@ mod tests {
         let cli = Cli {
             debug: false,
             color_override: ColorOverride::Never,
-            command: Command::Tree(super::super::TreeArgs {
-                trace: None,
-                agents: vec!["base".to_string()],
-            }),
+            command: Command::Tree(crate::commands::TreeCommand::Summary(
+                super::super::TreeSummaryArgs {
+                    no_templates: false,
+                    format: TreeFormatArg::Table,
+                    locations: true,
+                },
+            )),
         };
         cli.execute(&generator).await?;
         Ok(())

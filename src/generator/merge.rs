@@ -48,6 +48,13 @@ impl Generator {
         self.resolve_transitive_inheritance(&agent.merged, &mut HashSet::new())
     }
 
+    pub fn inheritance_chain_safe(&self, name: &str) -> Vec<String> {
+        self.inheritance_chain(name).unwrap_or_else(|err| {
+            tracing::warn!(agent = name, error = %err, "failed to resolve inheritance chain");
+            Vec::new()
+        })
+    }
+
     /// Merge all agents with transitive inheritance resolution
     #[tracing::instrument(level = "info", skip(self))]
     pub fn merge(&self) -> Result<Vec<Manifest>> {

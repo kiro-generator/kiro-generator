@@ -8,9 +8,12 @@ pub mod output;
 mod schema;
 mod source;
 mod tracing_init;
+mod tree;
 
 #[cfg(test)]
 pub use kg_config::toml_parse;
+#[cfg(unix)]
+use libc::{SIG_DFL, SIGPIPE, signal};
 use {
     crate::{generator::Generator, os::Fs, tracing_init::init_tracing},
     clap::Parser,
@@ -22,7 +25,7 @@ pub use {
     color_eyre::eyre::format_err,
     generator::ConfigLocation,
     kg_config::*,
-    source::{AgentSourceSlots, SourceSlot},
+    source::{AgentSourceSlots, KgAgentSource, SourceSlot},
 };
 
 pub type Result<T> = color_eyre::Result<T>;
@@ -165,8 +168,19 @@ async fn init(fs: &Fs, home_dir: impl AsRef<Path>, skeleton: bool, force: bool) 
     }
 }
 
+#[cfg(unix)]
+fn reset_sigpipe() {
+    unsafe {
+        signal(SIGPIPE, SIG_DFL);
+    }
+}
+
+#[cfg(not(unix))]
+fn reset_sigpipe() {}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    reset_sigpipe();
     color_eyre::install()?;
     let cli = commands::Cli::parse();
     if matches!(cli.command, commands::Command::Version) {
@@ -179,7 +193,6 @@ async fn main() -> Result<()> {
         commands::Command::Validate(args) => args.trace.as_deref(),
         commands::Command::Generate(args) => args.trace.as_deref(),
         commands::Command::Diff(args) => args.trace.as_deref(),
-        commands::Command::Tree(args) => args.trace.as_deref(),
         _ => None,
     };
 

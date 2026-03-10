@@ -30,6 +30,10 @@ $KG diff
 $KG schema manifest | jq . >/dev/null
 $KG schema agent | jq . >/dev/null
 $KG schema agent -m | jq . >/dev/null
+$KG tree summary
+$KG tree summary -f json | jq . >/dev/null
+$KG tree details base
+$KG validate | head -2 && $KG generate | head -2 && $KG diff | head -2 && $KG schema agent | head -2
 
 rm -rf .kiro/generators .kiro/agents
 mkdir -p ~/.kiro/generators

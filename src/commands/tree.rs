@@ -1,184 +1,321 @@
 use {
-    super::TreeArgs,
-    crate::{AgentSourceSlots, Manifest, Result, SourceSlot, generator::Generator},
+    crate::{
+        Result,
+        commands::{
+            TreeCommand,
+            TreeDependentsArgs,
+            TreeDetailArgs,
+            TreeFormatArg,
+            TreeSummaryArgs,
+        },
+        generator::Generator,
+        tree::{SummaryEntry, SummaryReport, summarize_concrete, summarize_templates},
+    },
+    std::collections::BTreeMap,
+    super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
 };
 
-pub(super) fn execute_tree(generator: &Generator, args: &TreeArgs) -> Result<facet_value::Value> {
-    let agents: Vec<&AgentSourceSlots> = generator
-        .agents
-        .values()
-        .filter(|a| a.name != "kg-helper")
-        .filter(|a| args.agents.is_empty() || args.agents.iter().any(|n| n == &a.name))
-        .collect();
-
-    if agents.is_empty() {
-        return Ok(facet_value::Value::from(facet_value::VObject::new()));
+#[tracing::instrument(level = "info", skip(generator))]
+pub(super) fn execute_tree(generator: &Generator, cmd: &TreeCommand) -> Result<()> {
+    match cmd {
+        TreeCommand::Summary(args) => summary(generator, args),
+        TreeCommand::Details(args) => details(generator, args),
+        TreeCommand::Dependents(args) => dependencies(generator, args),
     }
-
-    build_json(&agents, generator)
 }
 
-fn build_json(agents: &[&AgentSourceSlots], generator: &Generator) -> Result<facet_value::Value> {
-    let mut obj = facet_value::VObject::new();
-    for agent_slots in agents {
-        let name = &agent_slots.name;
-        let manifest = &agent_slots.merged;
-        let mut agent = facet_value::VObject::new();
-        agent.insert("template", facet_value::Value::from(manifest.template));
-        if !manifest.template {
-            let output = generator.destination_dir(name).join(format!("{name}.json"));
-            agent.insert(
-                "output",
-                facet_value::Value::from(output.to_string_lossy().as_ref()),
-            );
-        }
-        if let Some(ref desc) = manifest.description {
-            agent.insert("description", facet_value::Value::from(desc.as_str()));
-        }
-        let src_arr = sources_to_json(agent_slots);
-        agent.insert("sources", facet_value::Value::from(src_arr));
-        let inherits: facet_value::VArray = manifest
-            .inherits
-            .iter()
-            .map(|s| facet_value::Value::from(s.as_str()))
-            .collect();
-        agent.insert("inherits", facet_value::Value::from(inherits));
-        if let Ok(chain) = generator.inheritance_chain(name) {
-            let chain_arr: facet_value::VArray = chain
-                .iter()
-                .map(|s| facet_value::Value::from(s.as_str()))
-                .collect();
-            agent.insert("resolved_chain", facet_value::Value::from(chain_arr));
-        }
-        obj.insert(name.as_str(), facet_value::Value::from(agent));
-    }
-    Ok(facet_value::Value::from(obj))
-}
-
-fn sources_to_json(agent_slots: &AgentSourceSlots) -> facet_value::VArray {
-    let mut sources = facet_value::VArray::new();
-    push_source(&mut sources, &agent_slots.local_agent_file);
-    push_source(&mut sources, &agent_slots.local_manifest);
-    push_source(&mut sources, &agent_slots.global_manifest);
-    push_source(&mut sources, &agent_slots.global_agent_file);
-    sources
-}
-
-fn push_source(sources: &mut facet_value::VArray, slot: &SourceSlot) {
-    let Some(path) = &slot.path else {
-        return;
+fn summary(generator: &Generator, args: &TreeSummaryArgs) -> Result<()> {
+    let report = SummaryReport {
+        agents: summarize_concrete(generator),
+        templates: if args.no_templates {
+            Default::default()
+        } else {
+            summarize_templates(generator)
+        },
     };
-    let mut o = facet_value::VObject::new();
-    o.insert("type", slot.source_type().unwrap_or_default());
-    o.insert(
-        "path",
-        facet_value::Value::from(path.path().to_string_lossy().as_ref()),
-    );
-    let fields_arr: facet_value::VArray = manifest_fields(&slot.manifest)
-        .into_iter()
-        .map(facet_value::Value::from)
-        .collect();
-    o.insert("modified_fields", facet_value::Value::from(fields_arr));
-    sources.push(facet_value::Value::from(o));
+    match args.format {
+        TreeFormatArg::Json => println!("{}", facet_json::to_string_pretty(&report)?),
+        TreeFormatArg::Table => print_summary_tables(generator, &report, args.locations),
+    };
+    Ok(())
 }
 
-fn manifest_fields(manifest: &Manifest) -> Vec<String> {
-    let mut fields = Vec::new();
-    if manifest.template {
-        fields.push("template".to_string());
-    }
-    if manifest.description.is_some() {
-        fields.push("description".to_string());
-    }
-    if !manifest.inherits.is_empty() {
-        fields.push("inherits".to_string());
-    }
-    if manifest.prompt.is_some() {
-        fields.push("prompt".to_string());
-    }
-    if !manifest.resources.is_empty() {
-        for k in manifest.resources.keys() {
-            fields.push(format!("resources.{k}"));
-        }
-    }
-    if !manifest.skills.is_empty() {
-        for k in manifest.skills.keys() {
-            fields.push(format!("skills.{k}"));
-        }
-    }
-    if !manifest.knowledge.is_empty() {
-        for k in manifest.knowledge.keys() {
-            fields.push(format!("knowledge.{k}"));
-        }
-    }
-    if manifest.include_mcp_json.is_some() {
-        fields.push("useLegacyMcpJson".to_string());
-    }
-    if !manifest.tools.is_empty() {
-        fields.push("tools".to_string());
-    }
-    if !manifest.allowed_tools.is_empty() {
-        fields.push("allowedTools".to_string());
-    }
-    if manifest.model.is_some() {
-        fields.push("model".to_string());
-    }
-    if !manifest.hooks.is_empty() {
-        for k in manifest.hooks.keys() {
-            fields.push(format!("hooks.{k}"));
-        }
-    }
-    if !manifest.mcp_servers.is_empty() {
-        for k in manifest.mcp_servers.keys() {
-            fields.push(format!("mcpServers.{k}"));
-        }
-    }
-    if !manifest.tool_aliases.is_empty() {
-        for k in manifest.tool_aliases.keys() {
-            fields.push(format!("toolAliases.{k}"));
-        }
-    }
-    if manifest.native_tools != Default::default() {
-        if manifest.native_tools.shell != Default::default() {
-            fields.push("nativeTools.shell".to_string());
-        }
+fn print_summary_tables(generator: &Generator, report: &SummaryReport, show_locations: bool) {
+    println!("{}", build_summary_table("Agents", &report.agents));
 
-        if manifest.native_tools.aws != Default::default() {
-            fields.push("nativeTools.aws".to_string());
-        }
+    if !report.templates.is_empty() {
+        println!();
+        println!("{}", build_summary_table("Templates", &report.templates));
+    }
 
-        if manifest.native_tools.read != Default::default() {
-            fields.push("nativeTools.read".to_string());
-        }
+    if show_locations {
+        println!();
+        println!("{}", build_locations_table(generator));
+    }
+}
 
-        if manifest.native_tools.write != Default::default() {
-            fields.push("nativeTools.write".to_string());
-        }
+fn file_locations(generator: &Generator) -> Vec<Row> {
+    let mut agents: Vec<_> = generator.agents.values().collect();
+    agents.sort_by(|left, right| left.name.cmp(&right.name));
 
-        if manifest.native_tools.web_fetch != Default::default() {
-            fields.push("nativeTools.web_fetch".to_string());
-        }
+    agents
+        .into_iter()
+        .map(|a| {
+            Row::from(vec![
+                a.name.clone(),
+                a.global_manifest
+                    .location()
+                    .unwrap_or_default()
+                    .display()
+                    .to_string(),
+                a.global_agent_file
+                    .location()
+                    .unwrap_or_default()
+                    .display()
+                    .to_string(),
+                a.local_manifest
+                    .location()
+                    .unwrap_or_default()
+                    .display()
+                    .to_string(),
+                a.local_agent_file
+                    .location()
+                    .unwrap_or_default()
+                    .display()
+                    .to_string(),
+            ])
+        })
+        .collect()
+}
 
-        if manifest.native_tools.glob != Default::default() {
-            fields.push("nativeTools.glob".to_string());
+fn build_titled_table(name: &str, columns: u16) -> Table {
+    let mut table = Table::new();
+    let header_title = vec![
+        Cell::new(name)
+            .set_colspan(columns)
+            .set_alignment(CellAlignment::Center),
+    ];
+    table
+        .load_preset(UTF8_FULL)
+        .apply_modifier(UTF8_ROUND_CORNERS)
+        .set_content_arrangement(ContentArrangement::Dynamic)
+        .set_header(header_title);
+
+    table
+}
+
+fn build_summary_table(name: &str, entries: &BTreeMap<String, SummaryEntry>) -> Table {
+    let mut table = build_titled_table(name, 3);
+    table.add_row(vec![
+        Cell::new("Name"),
+        Cell::new("Description"),
+        Cell::new("Inherits"),
+    ]);
+    let rows: Vec<Row> = entries
+        .values()
+        .map(|a| {
+            vec![
+                Cell::new(a.name.clone()),
+                Cell::new(a.description.clone()),
+                Cell::new(a.inherits_join().unwrap_or_else(|e| {
+                    tracing::warn!("failed to create inherits list {e}");
+                    String::from("Failed to serialize inheritance structure")
+                })),
+            ]
+            .into()
+        })
+        .collect();
+    table.add_rows(rows);
+
+    table
+}
+
+fn build_locations_table(generator: &Generator) -> Table {
+    let mut table = build_titled_table("Locations", 5);
+    table.add_row(vec![
+        Cell::new("Name"),
+        Cell::new("Global Manifest"),
+        Cell::new("Global File"),
+        Cell::new("Local Manifest"),
+        Cell::new("Local File"),
+    ]);
+    table.add_rows(file_locations(generator));
+
+    table
+}
+
+pub fn dependencies(generator: &Generator, args: &TreeDependentsArgs) -> Result<()> {
+    let all = crate::tree::dependencies(generator)?;
+    let result: BTreeMap<_, _> = all
+        .into_iter()
+        .filter(|(k, _)| args.agents.contains(k))
+        .collect();
+    println!("{}", facet_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
+pub fn details(generator: &Generator, args: &TreeDetailArgs) -> Result<()> {
+    let result = crate::tree::details(generator, &args.agents);
+    println!("{}", facet_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::{
+            AgentSourceSlots,
+            ConfigLocation,
+            Manifest,
+            SourceSlot,
+            os::Fs,
+            output::OutputFormat,
+            source::KgAgentSource,
+        },
+        std::{collections::HashMap, path::PathBuf},
+    };
+
+    fn source_slot(path: KgAgentSource) -> SourceSlot {
+        SourceSlot {
+            path: Some(path),
+            manifest: Manifest::default(),
         }
-        if manifest.native_tools.grep != Default::default() {
-            fields.push("nativeTools.grep".to_string());
-        }
     }
-    if !manifest.tool_settings.is_empty() {
-        for k in manifest.tool_settings.keys() {
-            fields.push(format!("toolSettings.{k}"));
-        }
+
+    fn fixture_generator() -> Result<Generator> {
+        let mut generator = Generator::new(Fs::new(), ConfigLocation::Local, OutputFormat::Json)?;
+        generator.agents = HashMap::from([
+            (String::from("rust"), AgentSourceSlots {
+                name: String::from("rust"),
+                global_manifest: source_slot(KgAgentSource::GlobalManifest(PathBuf::from(
+                    "/tmp/base.toml",
+                ))),
+                local_agent_file: source_slot(KgAgentSource::LocalFile(PathBuf::from(
+                    ".kiro/generators/agents/rust.toml",
+                ))),
+                merged: Manifest::default(),
+                ..Default::default()
+            }),
+            (String::from("aws"), AgentSourceSlots {
+                name: String::from("aws"),
+                global_agent_file: source_slot(KgAgentSource::GlobalFile(PathBuf::from(
+                    "/tmp/aws.toml",
+                ))),
+                local_manifest: source_slot(KgAgentSource::LocalManifest(PathBuf::from(
+                    ".kiro/generators/manifests/aws.toml",
+                ))),
+                merged: Manifest::default(),
+                ..Default::default()
+            }),
+        ]);
+
+        Ok(generator)
     }
-    if manifest.keyboard_shortcut.is_some() {
-        fields.push("keyboardShortcut".to_string());
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn test_exec_tree_command() -> Result<()> {
+        let generator = fixture_generator()?;
+        execute_tree(
+            &generator,
+            &TreeCommand::Summary(TreeSummaryArgs {
+                no_templates: false,
+                locations: false,
+                format: TreeFormatArg::Table,
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Summary(TreeSummaryArgs {
+                no_templates: true,
+                locations: false,
+                format: TreeFormatArg::Table,
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Summary(TreeSummaryArgs {
+                no_templates: false,
+                locations: true,
+                format: TreeFormatArg::Table,
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Summary(TreeSummaryArgs {
+                no_templates: false,
+                locations: true,
+                format: TreeFormatArg::Json,
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Details(TreeDetailArgs {
+                agents: Vec::from_iter(["aws".to_string()]),
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Details(TreeDetailArgs {
+                agents: Vec::from_iter(["devnull".to_string()]),
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Dependents(TreeDependentsArgs {
+                agents: Vec::from_iter(["aws".to_string()]),
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Dependents(TreeDependentsArgs {
+                agents: Vec::from_iter(["devnull".to_string()]),
+            }),
+        )?;
+
+        Ok(())
     }
-    if manifest.welcome_message.is_some() {
-        fields.push("welcomeMessage".to_string());
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn file_locations_are_sorted_and_include_agent_name() -> Result<()> {
+        let generator = fixture_generator()?;
+        let rows = file_locations(&generator);
+        let rendered = build_locations_table(&generator).to_string();
+
+        assert_eq!(rows.len(), 2);
+        assert!(rendered.contains("/tmp/aws.toml"));
+        assert!(rendered.contains(".kiro/generators/manifests/aws.toml"));
+        assert!(rendered.contains("/tmp/base.toml"));
+        assert!(rendered.contains(".kiro/generators/agents/rust.toml"));
+        assert!(rendered.find("aws").unwrap() < rendered.find("rust").unwrap());
+
+        Ok(())
     }
-    if manifest.subagents != Default::default() {
-        fields.push("subagents".to_string());
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn locations_table_has_lookup_headers() -> Result<()> {
+        let generator = fixture_generator()?;
+        let rendered = build_locations_table(&generator).to_string();
+
+        assert!(rendered.contains("Locations"));
+        assert!(rendered.contains("Name"));
+        assert!(rendered.contains("Global Manifest"));
+        assert!(rendered.contains("Global File"));
+        assert!(rendered.contains("Local Manifest"));
+        assert!(rendered.contains("Local File"));
+        assert!(rendered.contains("aws"));
+        assert!(rendered.contains("rust"));
+
+        Ok(())
     }
-    fields
 }
