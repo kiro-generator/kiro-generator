@@ -196,6 +196,7 @@ pub enum TreeCommand {
     Details(TreeDetailArgs),
     #[command(aliases = ["invert", "i"])]
     Dependents(TreeDependentsArgs),
+    #[command(aliases = ["find", "f", "grep" , "g"])]
     Search(TreeSearchArgs),
 }
 

@@ -39,17 +39,16 @@ pub fn search(
     let mut results: BTreeMap<String, SearchHit> = BTreeMap::new();
 
     for (agent, agent_source_slots) in generator.agents.iter() {
-        if let Some(sources) = generator.source_slots(agent) {
-            let fields: Vec<String> = sources
-                .iter()
-                .flat_map(|slot| search_slot(slot, field, &query))
-                .collect();
-            if !fields.is_empty() {
-                results.insert(agent.clone(), SearchHit {
-                    fields,
-                    summary: SummaryEntry::from(agent_source_slots),
-                });
-            }
+        let fields: Vec<String> = agent_source_slots
+            .source_slots()
+            .iter()
+            .flat_map(|slot| search_slot(slot, field, &query))
+            .collect();
+        if !fields.is_empty() {
+            results.insert(agent.clone(), SearchHit {
+                fields,
+                summary: SummaryEntry::from(agent_source_slots),
+            });
         }
     }
 

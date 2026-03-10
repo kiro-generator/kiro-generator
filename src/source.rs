@@ -95,6 +95,15 @@ impl AgentSourceSlots {
 
         paths
     }
+
+    pub fn source_slots(&self) -> [&SourceSlot; 4] {
+        [
+            &self.global_manifest,
+            &self.global_agent_file,
+            &self.local_manifest,
+            &self.local_agent_file,
+        ]
+    }
 }
 
 impl Debug for AgentSourceSlots {
