@@ -6,10 +6,18 @@ use {
             TreeDependentsArgs,
             TreeDetailArgs,
             TreeFormatArg,
+            TreeSearchArgs,
             TreeSummaryArgs,
         },
         generator::Generator,
-        tree::{SummaryEntry, SummaryReport, summarize_concrete, summarize_templates},
+        tree::{
+            SearchReport,
+            SummaryEntry,
+            SummaryReport,
+            search,
+            summarize_concrete,
+            summarize_templates,
+        },
     },
     std::collections::BTreeMap,
     super_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, *},
@@ -21,6 +29,7 @@ pub(super) fn execute_tree(generator: &Generator, cmd: &TreeCommand) -> Result<(
         TreeCommand::Summary(args) => summary(generator, args),
         TreeCommand::Details(args) => details(generator, args),
         TreeCommand::Dependents(args) => dependencies(generator, args),
+        TreeCommand::Search(args) => search_tree(generator, args),
     }
 }
 
@@ -160,6 +169,17 @@ pub fn details(generator: &Generator, args: &TreeDetailArgs) -> Result<()> {
     Ok(())
 }
 
+pub fn search_tree(generator: &Generator, args: &TreeSearchArgs) -> Result<()> {
+    let result: SearchReport = search(
+        generator,
+        &args.pattern,
+        args.field.as_deref(),
+        args.case_sensitive,
+    );
+    println!("{}", facet_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -278,6 +298,15 @@ mod tests {
             &generator,
             &TreeCommand::Dependents(TreeDependentsArgs {
                 agents: Vec::from_iter(["devnull".to_string()]),
+            }),
+        )?;
+
+        execute_tree(
+            &generator,
+            &TreeCommand::Search(TreeSearchArgs {
+                field: Some(String::from("nativeTools.shell")),
+                case_sensitive: false,
+                pattern: String::from("cargo"),
             }),
         )?;
 

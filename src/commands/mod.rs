@@ -158,6 +158,20 @@ pub struct TreeDependentsArgs {
     pub agents: Vec<String>,
 }
 
+#[derive(clap::Args, Clone, Default)]
+pub struct TreeSearchArgs {
+    /// Scope search to a specific field or field prefix
+    #[arg(long, short = 'F', value_name = "FIELD")]
+    pub field: Option<String>,
+    /// Use case-sensitive matching instead of the default case-insensitive
+    /// matching
+    #[arg(long, default_value = "false")]
+    pub case_sensitive: bool,
+    /// Text to search for
+    #[arg(value_name = "PATTERN")]
+    pub pattern: String,
+}
+
 #[derive(Copy, Clone, Default, Debug, clap::ValueEnum)]
 pub enum TreeFormatArg {
     #[default]
@@ -180,8 +194,10 @@ pub enum TreeCommand {
     Summary(TreeSummaryArgs),
     #[command(aliases = ["detail", "d"])]
     Details(TreeDetailArgs),
-    #[command(aliases= ["invert", "i"])]
+    #[command(aliases = ["invert", "i"])]
     Dependents(TreeDependentsArgs),
+    #[command(aliases = ["find", "f", "grep", "g"])]
+    Search(TreeSearchArgs),
 }
 
 impl Debug for TreeCommand {
@@ -190,6 +206,7 @@ impl Debug for TreeCommand {
             Self::Summary(_) => write!(f, "summary"),
             Self::Details(_) => write!(f, "details"),
             Self::Dependents(_) => write!(f, "dependents"),
+            Self::Search(_) => write!(f, "search"),
         }
     }
 }
@@ -461,6 +478,29 @@ mod tests {
                 assert!(matches!(args.format, TreeFormatArg::Table));
             }
             _ => panic!("expected tree summary command"),
+        }
+    }
+
+    #[test_log::test]
+    fn test_tree_search_args() {
+        let cli = Cli::try_parse_from([
+            "kg",
+            "tree",
+            "search",
+            "--field",
+            "nativeTools.shell",
+            "--case-sensitive",
+            "git push",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Tree(TreeCommand::Search(args)) => {
+                assert_eq!(args.field.as_deref(), Some("nativeTools.shell"));
+                assert!(args.case_sensitive);
+                assert_eq!(args.pattern, "git push");
+            }
+            _ => panic!("expected tree search command"),
         }
     }
 }

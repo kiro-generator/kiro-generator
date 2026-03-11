@@ -361,3 +361,32 @@ impl Generator {
         Ok(result)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn source_slots_returns_agent_sources() -> Result<()> {
+        let generator = crate::tree::fixture_generator()?;
+        let agent_source_slots = generator.agents.get("parent").expect("parent should exist");
+        let slots = agent_source_slots.source_slots();
+
+        assert_eq!(slots.len(), 4);
+        assert_eq!(
+            slots
+                .iter()
+                .filter(|slot| slot.location().is_some())
+                .count(),
+            1
+        );
+        assert_eq!(
+            slots[2].location().map(|path| path.display().to_string()),
+            Some(String::from("test"))
+        );
+        assert!(!generator.agents.contains_key("missing"));
+
+        Ok(())
+    }
+}

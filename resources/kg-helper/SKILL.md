@@ -160,6 +160,29 @@ Example JSON output:
 
 **Use the `sources` array to know exactly which files to read or edit.**
 
+### Search across agents
+
+`kg tree search <pattern>` finds which agents reference a given string, which fields matched, and where the config files live:
+
+```bash
+# Case-insensitive search (default)
+kg tree search yarn
+
+# Scope to a specific field prefix
+kg tree search "git push" --field nativeTools.shell
+
+# Case-sensitive
+kg tree search MyServer --case-sensitive
+```
+
+Output is JSON with the search parameters echoed back and a `results` object keyed by agent name. Each result includes:
+- **`fields`** — list of matched field paths (e.g. `nativeTools.shell`, `mcpServers.git`, `resources.docs`)
+- **`summary`** — agent description, direct parents, and source file locations
+
+The `--field` filter accepts a field path or prefix. `--field nativeTools` matches `nativeTools.shell`, `nativeTools.aws`, etc. `--field nativeTools.shell` matches only that exact field.
+
+Use this to answer "which agents reference X?" without manually grepping TOML files. Combine with `kg tree details <agent>` to trace the exact source file via `modified_fields`.
+
 ### Reverse dependency lookup
 
 `kg tree dependents <name>` shows what depends on a given agent or template:

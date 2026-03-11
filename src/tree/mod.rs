@@ -1,7 +1,8 @@
 mod dependents;
 mod details;
+mod search;
 mod summary;
-pub use {dependents::*, details::*, summary::*};
+pub use {dependents::*, details::*, search::*, summary::*};
 
 #[cfg(test)]
 use crate::{Fs, Generator, GeneratorConfig, KgAgentSource, toml_parse};
