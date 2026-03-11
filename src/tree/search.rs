@@ -7,12 +7,12 @@ use {
         tree::SummaryEntry,
     },
     facet::Facet,
-    std::collections::BTreeMap,
+    std::collections::{BTreeMap, BTreeSet},
 };
 
 #[derive(Facet)]
 pub struct SearchHit {
-    fields: Vec<String>,
+    fields: BTreeSet<String>,
     summary: SummaryEntry,
 }
 
@@ -39,7 +39,7 @@ pub fn search(
     let mut results: BTreeMap<String, SearchHit> = BTreeMap::new();
 
     for (agent, agent_source_slots) in generator.agents.iter() {
-        let fields: Vec<String> = agent_source_slots
+        let fields: BTreeSet<String> = agent_source_slots
             .source_slots()
             .iter()
             .flat_map(|slot| search_slot(slot, field, &query))
@@ -137,8 +137,8 @@ fn matches_field_filter(path: &str, filter: &str) -> bool {
 mod tests {
     use {
         super::*,
-        crate::{KgCustomToolConfig, KgFileResource, KgSkillResource},
-        std::collections::BTreeSet,
+        crate::{KgAgentSource, KgCustomToolConfig, KgFileResource, KgSkillResource},
+        std::{collections::BTreeSet, path::PathBuf},
     };
 
     #[tokio::test]
@@ -186,6 +186,32 @@ mod tests {
 
         let case_sensitive = search(&generator, "GIT PUSH", Some("nativeTools.shell"), true);
         assert!(case_sensitive.results.is_empty());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[test_log::test]
+    async fn search_dedupes_fields_across_source_slots() -> crate::Result<()> {
+        let mut generator = super::super::fixture_generator()?;
+        let parent = generator
+            .agents
+            .get_mut("parent")
+            .expect("parent should exist");
+        parent.global_manifest = SourceSlot {
+            path: Some(KgAgentSource::GlobalManifest(PathBuf::from(
+                "/tmp/parent.toml",
+            ))),
+            manifest: parent.local_manifest.manifest.clone(),
+        };
+
+        let result = search(&generator, "job-taker-skill", None, false);
+        let parent_hit = result.results.get("parent").expect("parent should match");
+
+        assert_eq!(
+            parent_hit.fields,
+            BTreeSet::from([String::from("skills.taker")])
+        );
 
         Ok(())
     }
