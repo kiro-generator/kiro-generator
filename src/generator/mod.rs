@@ -377,18 +377,13 @@ fn missing_agents(agents: &[Manifest], filter: &[String]) -> Vec<String> {
     if filter.is_empty() {
         return Vec::new();
     }
-
-    let available = agents
+    let available: HashSet<&str> = agents.iter().map(|a| a.name.as_str()).collect();
+    let mut seen = HashSet::new();
+    filter
         .iter()
-        .map(|agent| agent.name.as_str())
-        .collect::<Vec<_>>();
-    let mut missing = Vec::new();
-    for name in filter {
-        if !available.contains(&name.as_str()) && !missing.contains(name) {
-            missing.push(name.clone());
-        }
-    }
-    missing
+        .filter(|name| !available.contains(name.as_str()) && seen.insert(name.as_str()))
+        .cloned()
+        .collect()
 }
 
 fn diff_summary(changed: usize, unchanged: usize, missing: &[String]) -> String {

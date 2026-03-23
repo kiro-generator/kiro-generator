@@ -7,27 +7,30 @@ use {
         tree::SummaryEntry,
     },
     facet::Facet,
-    std::collections::BTreeMap,
+    std::collections::{BTreeMap, BTreeSet},
 };
 
 #[derive(Facet, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MatchFields {
     fields: Vec<String>,
-    location: String,
+    locations: Vec<String>,
 }
 
 #[derive(Facet)]
 pub struct SearchHit {
     #[facet(rename = "match")]
     matches: MatchFields,
-    summary: SummaryEntry,
+    description: String,
+    inherits: BTreeSet<String>,
 }
 
 impl SearchHit {
     fn new(matches: MatchFields, agent_slots: &AgentSourceSlots) -> Self {
+        let summary = SummaryEntry::from(agent_slots);
         Self {
             matches,
-            summary: SummaryEntry::from(agent_slots),
+            description: summary.description,
+            inherits: summary.inherits,
         }
     }
 }
@@ -57,15 +60,35 @@ pub fn search(
     for (agent, agent_source_slots) in generator.agents.iter() {
         let span = tracing::trace_span!("agent", name = agent);
         let _ = span.enter();
+
+        let mut all_fields = Vec::new();
+        let mut all_locations = Vec::new();
+
         for slot in agent_source_slots.source_slots() {
             match search_slot(slot, field, &query) {
                 None => {
                     tracing::trace!("no matches for {slot}");
                 }
                 Some(m) => {
-                    results.insert(agent.clone(), SearchHit::new(m, agent_source_slots));
+                    all_fields.extend(m.fields);
+                    all_locations.extend(m.locations);
                 }
             }
+        }
+
+        if !all_fields.is_empty() {
+            all_fields.sort();
+            all_fields.dedup();
+            all_locations.sort();
+            all_locations.dedup();
+            let merged_match = MatchFields {
+                fields: all_fields,
+                locations: all_locations,
+            };
+            results.insert(
+                agent.clone(),
+                SearchHit::new(merged_match, agent_source_slots),
+            );
         }
     }
 
@@ -96,7 +119,7 @@ fn search_slot(
             } else {
                 Some(MatchFields {
                     fields: filter,
-                    location: m.location,
+                    locations: vec![m.locations[0].clone()],
                 })
             }
         }
@@ -141,7 +164,7 @@ fn matched_fields(slot: &SourceSlot, query: &SearchQuery<'_>) -> Option<MatchFie
     } else {
         Some(MatchFields {
             fields: matches,
-            location: format!("{slot}"),
+            locations: vec![format!("{slot}")],
         })
     }
 }
@@ -182,34 +205,11 @@ mod tests {
 
     #[tokio::test]
     #[test_log::test]
-    async fn search_returns_direct_definition_sources_only() -> crate::Result<()> {
-        let generator = super::super::fixture_generator()?;
-        let result = search(&generator, "job-taker-skill", None, false);
-
-        assert_eq!(result.results.len(), 1);
-        assert!(result.results.contains_key("parent"));
-        assert_eq!(
-            result.results.get("parent").unwrap().summary.locations,
-            vec![String::from("local-manifest://test")]
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[test_log::test]
     async fn search_honors_field_filter() -> crate::Result<()> {
         let generator = super::super::fixture_generator()?;
         let result = search(&generator, "git push", Some("nativeTools.shell"), false);
 
         assert_eq!(result.results.len(), 2);
-        assert!(
-            result
-                .results
-                .values()
-                .all(|entry| entry.summary.locations == vec![String::from("local-manifest://test")])
-        );
-
         let filtered = search(&generator, "git push", Some("resources"), false);
         assert!(filtered.results.is_empty());
 
@@ -251,10 +251,10 @@ mod tests {
             parent_hit.matches.fields,
             Vec::from_iter([String::from("skills.taker")])
         );
-        assert_eq!(
-            parent_hit.matches.location,
+        assert_eq!(parent_hit.matches.locations, vec![
+            String::from("global-manifest:///tmp/parent.toml"),
             String::from("local-manifest://test")
-        );
+        ]);
 
         Ok(())
     }
@@ -295,7 +295,7 @@ mod tests {
                     String::from("skills.default"),
                     String::from("mcpServers.default"),
                 ],
-                location: String::from("local-manifest://test"),
+                locations: vec![String::from("local-manifest://test")],
             })
         );
     }

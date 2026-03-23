@@ -15,10 +15,10 @@ pub struct SourceSlot {
 
 impl Display for SourceSlot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match &self.path {
-            None => String::new(),
-            Some(p) => format!("{p}"),
-        })
+        match &self.path {
+            None => Ok(()),
+            Some(p) => Display::fmt(p, f),
+        }
     }
 }
 

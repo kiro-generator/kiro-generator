@@ -176,7 +176,8 @@ kg tree search MyServer --case-sensitive
 ```
 
 Output is JSON with the search parameters echoed back and a `results` object keyed by agent name. Each result includes:
-- **`fields`** — list of matched field paths (e.g. `nativeTools.shell`, `mcpServers.git`, `resources.docs`)
+- **`match.fields`** — list of matched field paths (e.g. `nativeTools.shell`, `mcpServers.git`, `resources.docs`)
+- **`match.locations`** — array of source file paths where matches were found (e.g. `["global-file://...", "local-manifest://..."]`)
 - **`summary`** — agent description, direct parents, and source file locations
 
 The `--field` filter accepts a field path or prefix. `--field nativeTools` matches `nativeTools.shell`, `nativeTools.aws`, etc. `--field nativeTools.shell` matches only that exact field.

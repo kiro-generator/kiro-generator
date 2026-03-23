@@ -118,6 +118,7 @@ pub struct DiffArgs {
     pub format: crate::output::DiffFormatArg,
 
     /// Only show diff for these agents
+    #[arg(value_name = "AGENT")]
     pub agents: Vec<String>,
 }
 
