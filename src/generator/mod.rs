@@ -220,7 +220,7 @@ impl Generator {
 
     #[tracing::instrument(level = "info")]
     pub fn diff(&self, args: &crate::commands::DiffArgs) -> Result<()> {
-        self.diff_agents(args.format, &[])
+        self.diff_agents(args.format, &args.agents)
     }
 
     /// Diff for generate command — always compact, no filter
@@ -228,43 +228,43 @@ impl Generator {
         self.diff_agents(crate::output::DiffFormatArg::Compact, &[])
     }
 
-    fn diff_agents(&self, format: crate::output::DiffFormatArg, _filter: &[String]) -> Result<()> {
+    fn diff_agents(&self, format: crate::output::DiffFormatArg, filter: &[String]) -> Result<()> {
         let agents: Vec<Manifest> = self.merge()?.into_iter().filter(|a| !a.template).collect();
         let all_agents = !self.contains_local_agents();
         let mut changed = 0;
         let mut unchanged = 0;
+        let visible_agents = agents
+            .into_iter()
+            .filter(|agent| all_agents || self.is_local(&agent.name))
+            .collect::<Vec<_>>();
+        let missing_agents = missing_agents(&visible_agents, filter);
+        let agents = filter_agents(visible_agents, filter);
 
         for a in agents {
-            if all_agents || self.is_local(&a.name) {
-                let destination = self
-                    .destination_dir(&a.name)
-                    .join(format!("{}.json", a.name));
-                let generated_agent = KiroAgent::try_from(&a)?;
+            let destination = self
+                .destination_dir(&a.name)
+                .join(format!("{}.json", a.name));
+            let generated_agent = KiroAgent::try_from(&a)?;
 
-                match self.compute_diff(&a.name, &generated_agent, format)? {
-                    AgentDiff::New => {
-                        println!("{}: (new agent)", destination.display());
-                        println!();
-                        changed += 1;
-                    }
-                    AgentDiff::Changed(diff_output) => {
-                        println!("{}:", destination.display());
-                        println!("{}", diff_output);
-                        println!();
-                        changed += 1;
-                    }
-                    AgentDiff::Same => {
-                        unchanged += 1;
-                    }
+            match self.compute_diff(&a.name, &generated_agent, format)? {
+                AgentDiff::New => {
+                    println!("{}: (new agent)", destination.display());
+                    println!();
+                    changed += 1;
+                }
+                AgentDiff::Changed(diff_output) => {
+                    println!("{}:", destination.display());
+                    println!("{}", diff_output);
+                    println!();
+                    changed += 1;
+                }
+                AgentDiff::Same => {
+                    unchanged += 1;
                 }
             }
         }
 
-        if changed == 0 {
-            println!("No changes ({} agents checked)", unchanged);
-        } else {
-            println!("{} changed, {} unchanged", changed, unchanged);
-        }
+        println!("{}", diff_summary(changed, unchanged, &missing_agents));
 
         Ok(())
     }
@@ -362,6 +362,54 @@ impl Generator {
     }
 }
 
+fn filter_agents(agents: Vec<Manifest>, filter: &[String]) -> Vec<Manifest> {
+    if filter.is_empty() {
+        agents
+    } else {
+        agents
+            .into_iter()
+            .filter(|agent| filter.contains(&agent.name))
+            .collect()
+    }
+}
+
+fn missing_agents(agents: &[Manifest], filter: &[String]) -> Vec<String> {
+    if filter.is_empty() {
+        return Vec::new();
+    }
+
+    let available = agents
+        .iter()
+        .map(|agent| agent.name.as_str())
+        .collect::<Vec<_>>();
+    let mut missing = Vec::new();
+    for name in filter {
+        if !available.contains(&name.as_str()) && !missing.contains(name) {
+            missing.push(name.clone());
+        }
+    }
+    missing
+}
+
+fn diff_summary(changed: usize, unchanged: usize, missing: &[String]) -> String {
+    let mut summary = if changed == 0 {
+        format!("No changes ({} agents checked)", unchanged)
+    } else {
+        format!("{} changed, {} unchanged", changed, unchanged)
+    };
+
+    if !missing.is_empty() {
+        let label = if missing.len() == 1 {
+            "agent not found in current scope"
+        } else {
+            "agents not found in current scope"
+        };
+        summary.push_str(&format!("; {label}: {}", missing.join(", ")));
+    }
+
+    summary
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -388,5 +436,72 @@ mod tests {
         assert!(!generator.agents.contains_key("missing"));
 
         Ok(())
+    }
+
+    #[test]
+    fn filter_agents_returns_all_agents_when_filter_empty() {
+        let agents = vec![
+            Manifest::new(String::from("alpha"), false),
+            Manifest::new(String::from("beta"), false),
+        ];
+
+        let filtered = filter_agents(agents, &[]);
+
+        assert_eq!(
+            filtered
+                .into_iter()
+                .map(|agent| agent.name)
+                .collect::<Vec<_>>(),
+            vec![String::from("alpha"), String::from("beta")]
+        );
+    }
+
+    #[test]
+    fn filter_agents_keeps_requested_names_in_existing_order() {
+        let agents = vec![
+            Manifest::new(String::from("alpha"), false),
+            Manifest::new(String::from("beta"), false),
+            Manifest::new(String::from("gamma"), false),
+        ];
+        let filter = vec![String::from("gamma"), String::from("alpha")];
+
+        let filtered = filter_agents(agents, &filter);
+
+        assert_eq!(
+            filtered
+                .into_iter()
+                .map(|agent| agent.name)
+                .collect::<Vec<_>>(),
+            vec![String::from("alpha"), String::from("gamma")]
+        );
+    }
+
+    #[test]
+    fn missing_agents_reports_unknown_names_once_in_filter_order() {
+        let agents = vec![
+            Manifest::new(String::from("alpha"), false),
+            Manifest::new(String::from("beta"), false),
+        ];
+        let filter = vec![
+            String::from("gamma"),
+            String::from("alpha"),
+            String::from("gamma"),
+            String::from("delta"),
+        ];
+
+        assert_eq!(missing_agents(&agents, &filter), vec![
+            String::from("gamma"),
+            String::from("delta")
+        ]);
+    }
+
+    #[test]
+    fn diff_summary_mentions_missing_agents_in_current_scope() {
+        assert_eq!(
+            diff_summary(0, 0, &[String::from("missing")]),
+            String::from(
+                "No changes (0 agents checked); agent not found in current scope: missing"
+            )
+        );
     }
 }

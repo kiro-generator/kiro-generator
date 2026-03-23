@@ -235,6 +235,9 @@ After editing TOML files, always diff before generating. `kg diff` validates the
 # Agent-friendly output (no color, dot-notation paths only) -- prefer this
 kg diff --format agent
 
+# Only diff specific agents
+kg diff --format agent rust node
+
 # Human-friendly with color
 kg diff
 
@@ -246,6 +249,7 @@ kg diff --format agent --global
 - File paths of affected agents
 - Changed paths in dot notation (e.g., `shell.denied_commands.31: + "npm publish .*"`)
 - Summary of changed vs unchanged agents
+- If you pass one or more agent names, only those agents are diffed
 
 **If diff shows parse errors:** Fix the TOML error at the reported file and line number, then re-run diff.
 
@@ -255,7 +259,9 @@ kg diff --format agent --global
 
 Use `kg tree details <agent>` and check `resolved_ancestors` + `modified_fields` to trace which ancestor introduced a change.
 
-**If diff shows no output:** Either there are no changes, or you may be checking the wrong scope. Verify with `kg tree details <agent>` that you're editing the right files and using the correct `--global` flag if needed.
+**If diff shows `No changes (...)`:** Either there are no changes, or you may be checking the wrong scope. Verify with `kg tree details <agent>` that you're editing the right files and using the correct `--global` flag if needed.
+
+**If diff says `agent not found in current scope`:** The requested agent name does not exist in the active diff scope. Common causes are a typo, or looking for a global agent while running inside a project without `--global`.
 
 ## Step 4: Generate Agent Files
 
@@ -288,6 +294,7 @@ All found configs merge together. Use `kg tree details rust` to see which source
 - **No agents found**: `kg tree summary` shows an empty summary table.
 - **Named agent not found**: `kg tree details nonexistent` returns `{}` (exit 0).
 - **Invalid TOML**: `kg diff` reports parse errors with file path and line number
+- **Diff agent not found in current scope**: `kg diff missing-agent` ends with `No changes (0 agents checked); agent not found in current scope: missing-agent`
 
 **Recovery:** If diff reports a parse error, fix the error at the reported location and re-run diff. If `kg generate` produces unexpected results, run `kg tree details <agent>` to trace which source file contributes the unexpected value — check `modified_fields` on each source to pinpoint the exact file.
 
