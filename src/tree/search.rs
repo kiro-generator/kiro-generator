@@ -1,19 +1,35 @@
 use {
     crate::{
-        Manifest,
+        AgentSourceSlots,
         SourceSlot,
         generator::Generator,
         kg_config::{SearchQuery, Searchable},
         tree::SummaryEntry,
     },
     facet::Facet,
-    std::collections::{BTreeMap, BTreeSet},
+    std::collections::BTreeMap,
 };
+
+#[derive(Facet, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MatchFields {
+    fields: Vec<String>,
+    location: String,
+}
 
 #[derive(Facet)]
 pub struct SearchHit {
-    fields: BTreeSet<String>,
+    #[facet(rename = "match")]
+    matches: MatchFields,
     summary: SummaryEntry,
+}
+
+impl SearchHit {
+    fn new(matches: MatchFields, agent_slots: &AgentSourceSlots) -> Self {
+        Self {
+            matches,
+            summary: SummaryEntry::from(agent_slots),
+        }
+    }
 }
 
 #[derive(Facet)]
@@ -39,16 +55,17 @@ pub fn search(
     let mut results: BTreeMap<String, SearchHit> = BTreeMap::new();
 
     for (agent, agent_source_slots) in generator.agents.iter() {
-        let fields: BTreeSet<String> = agent_source_slots
-            .source_slots()
-            .iter()
-            .flat_map(|slot| search_slot(slot, field, &query))
-            .collect();
-        if !fields.is_empty() {
-            results.insert(agent.clone(), SearchHit {
-                fields,
-                summary: SummaryEntry::from(agent_source_slots),
-            });
+        let span = tracing::trace_span!("agent", name = agent);
+        let _ = span.enter();
+        for slot in agent_source_slots.source_slots() {
+            match search_slot(slot, field, &query) {
+                None => {
+                    tracing::trace!("no matches for {slot}");
+                }
+                Some(m) => {
+                    results.insert(agent.clone(), SearchHit::new(m, agent_source_slots));
+                }
+            }
         }
     }
 
@@ -64,14 +81,30 @@ fn search_slot(
     slot: &SourceSlot,
     field_filter: Option<&str>,
     query: &SearchQuery<'_>,
-) -> Vec<String> {
-    matched_fields(&slot.manifest, query)
-        .into_iter()
-        .filter(|path| field_filter.is_none_or(|filter| matches_field_filter(path, filter)))
-        .collect()
+) -> Option<MatchFields> {
+    let matched = matched_fields(slot, query);
+    match matched {
+        None => None,
+        Some(m) => {
+            let filter: Vec<String> = m
+                .fields
+                .into_iter()
+                .filter(|path| field_filter.is_none_or(|filter| matches_field_filter(path, filter)))
+                .collect();
+            if filter.is_empty() {
+                None
+            } else {
+                Some(MatchFields {
+                    fields: filter,
+                    location: m.location,
+                })
+            }
+        }
+    }
 }
 
-fn matched_fields(manifest: &Manifest, query: &SearchQuery<'_>) -> Vec<String> {
+fn matched_fields(slot: &SourceSlot, query: &SearchQuery<'_>) -> Option<MatchFields> {
+    let manifest = &slot.manifest;
     let mut matches = Vec::new();
 
     matches.extend(named_matches("resources", manifest.resources.iter(), query));
@@ -103,8 +136,14 @@ fn matched_fields(manifest: &Manifest, query: &SearchQuery<'_>) -> Vec<String> {
     if manifest.native_tools.web_fetch.search(query) {
         matches.push(String::from("nativeTools.web_fetch"));
     }
-
-    matches
+    if matches.is_empty() {
+        None
+    } else {
+        Some(MatchFields {
+            fields: matches,
+            location: format!("{slot}"),
+        })
+    }
 }
 
 fn named_matches<'a, T>(
@@ -137,7 +176,7 @@ fn matches_field_filter(path: &str, filter: &str) -> bool {
 mod tests {
     use {
         super::*,
-        crate::{KgAgentSource, KgCustomToolConfig, KgFileResource, KgSkillResource},
+        crate::{KgAgentSource, KgCustomToolConfig, KgFileResource, KgSkillResource, Manifest},
         std::{collections::BTreeSet, path::PathBuf},
     };
 
@@ -209,8 +248,12 @@ mod tests {
         let parent_hit = result.results.get("parent").expect("parent should match");
 
         assert_eq!(
-            parent_hit.fields,
-            BTreeSet::from([String::from("skills.taker")])
+            parent_hit.matches.fields,
+            Vec::from_iter([String::from("skills.taker")])
+        );
+        assert_eq!(
+            parent_hit.matches.location,
+            String::from("local-manifest://test")
         );
 
         Ok(())
@@ -238,11 +281,22 @@ mod tests {
                 ..Default::default()
             });
 
-        let matches = matched_fields(&manifest, &"default".into());
-        assert_eq!(matches, vec![
-            String::from("resources.docs"),
-            String::from("skills.default"),
-            String::from("mcpServers.default"),
-        ]);
+        let slot = SourceSlot {
+            path: Some(KgAgentSource::LocalManifest(PathBuf::from("test"))),
+            manifest,
+        };
+
+        let matches = matched_fields(&slot, &"default".into());
+        assert_eq!(
+            matches,
+            Some(MatchFields {
+                fields: vec![
+                    String::from("resources.docs"),
+                    String::from("skills.default"),
+                    String::from("mcpServers.default"),
+                ],
+                location: String::from("local-manifest://test"),
+            })
+        );
     }
 }

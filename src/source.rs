@@ -7,10 +7,19 @@ use {
     super_table::Cell,
 };
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct SourceSlot {
     pub path: Option<KgAgentSource>,
     pub manifest: Manifest,
+}
+
+impl Display for SourceSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match &self.path {
+            None => String::new(),
+            Some(p) => format!("{p}"),
+        })
+    }
 }
 
 impl SourceSlot {
