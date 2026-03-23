@@ -116,6 +116,10 @@ pub struct DiffArgs {
     /// Output format
     #[arg(short = 'f', long, default_value_t, env = "KG_DIFF_FORMAT")]
     pub format: crate::output::DiffFormatArg,
+
+    /// Only show diff for these agents
+    #[arg(value_name = "AGENT")]
+    pub agents: Vec<String>,
 }
 
 #[derive(clap::Args, Clone)]
@@ -501,6 +505,22 @@ mod tests {
                 assert_eq!(args.pattern, "git push");
             }
             _ => panic!("expected tree search command"),
+        }
+    }
+
+    #[test_log::test]
+    fn test_diff_agents_args() {
+        let cli = Cli::try_parse_from(["kg", "diff", "-f", "agent", "rust", "node"]).unwrap();
+
+        match cli.command {
+            Command::Diff(args) => {
+                assert!(matches!(args.format, crate::output::DiffFormatArg::Agent));
+                assert_eq!(args.agents, vec![
+                    String::from("rust"),
+                    String::from("node")
+                ]);
+            }
+            _ => panic!("expected diff command"),
         }
     }
 }
