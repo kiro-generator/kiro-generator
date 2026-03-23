@@ -105,25 +105,17 @@ fn search_slot(
     field_filter: Option<&str>,
     query: &SearchQuery<'_>,
 ) -> Option<MatchFields> {
-    let matched = matched_fields(slot, query);
-    match matched {
-        None => None,
-        Some(m) => {
-            let filter: Vec<String> = m
-                .fields
-                .into_iter()
-                .filter(|path| field_filter.is_none_or(|filter| matches_field_filter(path, filter)))
-                .collect();
-            if filter.is_empty() {
-                None
-            } else {
-                Some(MatchFields {
-                    fields: filter,
-                    locations: vec![m.locations[0].clone()],
-                })
-            }
-        }
-    }
+    matched_fields(slot, query).and_then(|m| {
+        let fields: Vec<String> = m
+            .fields
+            .into_iter()
+            .filter(|path| field_filter.is_none_or(|f| matches_field_filter(path, f)))
+            .collect();
+        (!fields.is_empty()).then(|| MatchFields {
+            fields,
+            locations: vec![m.locations[0].clone()],
+        })
+    })
 }
 
 fn matched_fields(slot: &SourceSlot, query: &SearchQuery<'_>) -> Option<MatchFields> {
