@@ -24,8 +24,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
-      with:
-        token: ${{ inputs.git_token || github.token }}
     - name: generate
       id: generate
       uses: kiro-generator/ci@main
@@ -66,6 +64,8 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.coverage.matrix)) }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
         with:
@@ -103,6 +103,8 @@ jobs:
     name: fmt
     if: ${{ fromJSON(needs.config.outputs.config).jobs.fmt.if }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
         with:
@@ -122,6 +124,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.clippy.matrix)) }}
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
         with:
@@ -137,6 +142,9 @@ jobs:
     name: semver
     if: ${{ fromJSON(needs.config.outputs.config).jobs.semver.if }}
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
         with:
@@ -151,6 +159,9 @@ jobs:
     name: hack
     if: ${{ fromJSON(needs.config.outputs.config).jobs.hack.if }}
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
         with:
@@ -169,6 +180,9 @@ jobs:
     name: doc
     if: ${{ fromJSON(needs.config.outputs.config).jobs.docCheck.if }}
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
         with:
@@ -187,6 +201,9 @@ jobs:
     name: cargo-sort
     if: ${{ fromJSON(needs.config.outputs.config).jobs.cargoSort.if }}
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
       - name: Install cargo-sort
@@ -202,6 +219,9 @@ jobs:
     name: check unused deps
     if: ${{ fromJSON(needs.config.outputs.config).jobs.dependencies.if }}
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
       - name: Install cargo-machete
@@ -217,6 +237,9 @@ jobs:
     runs-on: ${{ vars.RUNNER }}
     needs: [config, coverage]
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
         with:
@@ -269,6 +292,8 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.extra.matrix)) }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: Init
         uses: ./.github/actions/rust-init
         with:
