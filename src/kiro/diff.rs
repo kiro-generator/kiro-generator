@@ -436,25 +436,31 @@ mod tests {
         assert!(!agent1.diff(&agent2).is_equal());
     }
 
-    // #[test]
-    // fn test_normalized_agent_diff_mcp_servers_changed() {
-    //     let make_server = |cmd: &str| NormalizedMcpServer {
-    //         name: "fetch".to_string(),
-    //         command: cmd.to_string(),
-    //         ..Default::default()
-    //     };
-    //     let agent1 = NormalizedAgent {
-    //         name: "test".to_string(),
-    //         mcp_servers: vec![make_server("fetch-v1")],
-    //         ..Default::default()
-    //     };
-    //     let agent2 = NormalizedAgent {
-    //         name: "test".to_string(),
-    //         mcp_servers: vec![make_server("fetch-v2")],
-    //         ..Default::default()
-    //     };
-    //     assert!(!agent1.diff(&agent2).is_equal());
-    // }
+    #[test]
+    fn test_normalized_agent_diff_mcp_servers_changed() {
+        let make_server = |cmd: &str| NormalizedMcpServer {
+            name: "fetch".to_string(),
+            command: cmd.to_string(),
+            ..Default::default()
+        };
+        let agent1 = NormalizedAgent {
+            name: "test".to_string(),
+            mcp_servers: vec![make_server("fetch-v1")]
+                .into_iter()
+                .map(|m| (m.name.clone(), m))
+                .collect(),
+            ..Default::default()
+        };
+        let agent2 = NormalizedAgent {
+            name: "test".to_string(),
+            mcp_servers: vec![make_server("fetch-v2")]
+                .into_iter()
+                .map(|m| (m.name.clone(), m))
+                .collect(),
+            ..Default::default()
+        };
+        assert!(!agent1.diff(&agent2).is_equal());
+    }
 
     #[test]
     fn test_normalized_agent_diff_tool_aliases_changed() {
