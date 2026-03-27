@@ -1,10 +1,5 @@
 use {
-    crate::{
-        KgAgentFileDoc,
-        Result,
-        commands::SchemaCommand,
-        // json_schema::{AdditionalProperties, JsonSchema, schema_for},
-    },
+    crate::{KgAgentFileDoc, Result, commands::SchemaCommand},
     color_eyre::eyre::{Context, eyre},
     facet::Facet,
     facet_json_schema::{AdditionalProperties, JsonSchema, schema_for},
