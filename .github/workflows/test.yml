@@ -12,10 +12,254 @@ on:
         description: "context"
         required: false
         default: ""
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 jobs:
-  verify:
-    name: verify
-    uses: kiro-generator/ci/.github/workflows/rust.yml@main
-    secrets: inherit
-    with:
-      context: ${{ inputs.context }}
+  config:
+    runs-on: ${{ vars.RUNNER }}
+    name: generate config
+    outputs:
+      config: ${{ steps.config.outputs.config }}
+    steps:
+      - name: config
+        id: config
+        uses: .github/actions/rust-config@main
+        with:
+          context: ${{ inputs.context }}
+          arm64: ${{ vars.RUNNER_ARM64 }}
+          amd64: ${{ vars.RUNNER_AMD64 }}
+          win: "windows-latest"
+          mac: "macos-latest"
+          git_token: ${{ github.token }}
+  coverage:
+    runs-on: ${{ matrix.os }}
+    needs: [config]
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.coverage.if }}
+    name: ${{ matrix.features }} / ${{ matrix.os }} / ${{ matrix.toolchains }} / coverage
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.coverage.matrix)) }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+        with:
+          packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
+      - name: llvm-tools
+        shell: bash
+        run: |
+          rustup default ${{ matrix.toolchains }}
+          rustup component add llvm-tools-preview
+          cargo install cargo-llvm-cov
+      - name: cargo generate-lockfile
+        if: hashFiles('Cargo.lock') == ''
+        run: cargo generate-lockfile
+      - name: llvm-cov (${{ matrix.features }})
+        run: |
+          ${{ fromJSON(needs.config.outputs.config).jobs.coverage.run }}
+        env:
+          FEATURES: ${{ matrix.features }}
+          LLVM_ARGS: ${{ fromJSON(needs.config.outputs.config).jobs.coverage.args.llvm || '' }}
+          CARGO_ARGS: ${{ fromJSON(needs.config.outputs.config).jobs.coverage.args.test || '' }}
+          RUST_LOG: "${{ fromJSON(needs.config.outputs.config).global.rustlog || 'info' }}"
+      - name: Record Rust version
+        run: echo "RUST=$(rustc --version)" >> "$GITHUB_ENV"
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov-${{ matrix.features }}.info
+          flags: ${{ matrix.features }}
+          env_vars: OS,RUST
+  fmt:
+    needs: [config]
+    runs-on: ${{ vars.RUNNER }}
+    name: fmt
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.fmt.if }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+        with:
+          nightly: "true"
+      - name: fmt
+        run: |
+          ${{ fromJSON(needs.config.outputs.config).jobs.fmt.run }}
+  clippy:
+    needs: [config]
+    runs-on: ${{ matrix.os }}
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.clippy.if }}
+    name: ${{ matrix.features }} / ${{ matrix.os }} / clippy
+    permissions:
+      contents: read
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.clippy.matrix)) }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+        with:
+          packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
+      - name: clippy / ${{ matrix.features }}
+        shell: bash
+        run: |
+          FLAGS="${{ matrix.features != 'default' && format('--features {0}', matrix.features) || '' }}"
+          cargo clippy --all-targets $FLAGS -- -D warnings
+  semver:
+    needs: [config]
+    runs-on: ${{ vars.RUNNER_AMD64 }}
+    name: semver
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.semver.if }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+        with:
+          packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
+      - name: cargo-semver-checks
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+  hack:
+    needs: [config]
+    # cargo-hack checks combinations of feature flags to ensure that features are all additive
+    # which is required for feature unification
+    runs-on: ${{ vars.RUNNER }}
+    name: hack
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.hack.if }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+        with:
+          packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
+      - name: Install cargo-hack
+        uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-hack
+      # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
+      # --feature-powerset runs for every combination of features
+      - name: cargo hack
+        run: cargo hack --feature-powerset check
+  doc:
+    needs: [config]
+    runs-on: ${{ vars.RUNNER }}
+    name: doc
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.docCheck.if }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+        with:
+          packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
+          nightly: "true"
+      - name: Install cargo-docs-rs
+        uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-docs-rs
+      - name: cargo docs-rs
+        run: |
+          ${{ fromJSON(needs.config.outputs.config).jobs.docCheck.run }}
+  cargo-sort:
+    needs: [config]
+    runs-on: ${{ vars.RUNNER }}
+    name: cargo-sort
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.cargoSort.if }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+      - name: Install cargo-sort
+        uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-sort
+      - name: Check `Cargo.toml` sort
+        run: |
+          ${{ fromJSON(needs.config.outputs.config).jobs.cargoSort.run }}
+  dependencies:
+    needs: [config]
+    runs-on: ${{ vars.RUNNER }}
+    name: check unused deps
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.dependencies.if }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+      - name: Install cargo-machete
+        uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-machete
+      - name: Check unused Cargo dependencies
+        run: |
+          ${{ fromJSON(needs.config.outputs.config).jobs.dependencies.run }}
+  sanitizers:
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.sanitizers.enabled }}
+    name: sanitizers
+    runs-on: ${{ vars.RUNNER }}
+    needs: [config, coverage]
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+        with:
+          packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
+      - name: Enable debug symbols
+        run: |
+          #rustup target add x86_64-unknown-linux-gnu
+          echo _rust_target=aarch64-unknown-linux-gnu >> $GITHUB_ENV
+          rustup default nightly
+          # to get the symbolizer for debug symbol resolution
+          sudo apt install llvm
+          # to fix buggy leak analyzer:
+          # https://github.com/japaric/rust-san#unrealiable-leaksanitizer
+          # ensure there's a profile.dev section
+          if ! grep -qE '^[ \t]*[profile.dev]' Cargo.toml; then
+              echo >> Cargo.toml
+              echo '[profile.dev]' >> Cargo.toml
+          fi
+          # remove pre-existing opt-levels in profile.dev
+          sed -i '/^\s*\[profile.dev\]/,/^\s*\[/ {/^\s*opt-level/d}' Cargo.toml
+          # now set opt-level to 1
+          sed -i '/^\s*\[profile.dev\]/a opt-level = 1' Cargo.toml
+      - name: cargo test -Zsanitizer=address
+        if: ${{ fromJSON(needs.config.outputs.config).jobs.sanitizers.address.if }}
+        # only --lib --tests b/c of https://github.com/rust-lang/rust/issues/53945
+        run: |
+          cargo test --lib --tests --no-fail-fast --target ${_rust_target} -- --no-capture
+        env:
+          ASAN_OPTIONS: 'detect_odr_violation=0:detect_leaks=0'
+          RUSTFLAGS: '-Z sanitizer=address'
+      - name: cargo test -Zsanitizer=leak
+        if: ${{ fromJSON(needs.config.outputs.config).jobs.sanitizers.leak.if }}
+        run: |
+          cargo test --target ${_rust_target}  -- --no-capture
+        env:
+          LSAN_OPTIONS: 'suppressions=lsan-suppressions.txt'
+          RUSTFLAGS: '-Z sanitizer=leak'
+      - name: cargo test -Zsanitizer=thread
+        if: ${{ fromJSON(needs.config.outputs.config).jobs.sanitizers.thread.if }}
+        run: cargo test --target ${_rust_target} -- --test-threads=1 --no-capture
+        env:
+          RUSTFLAGS: '-Z sanitizer=thread'
+
+  extra:
+    needs: [config]
+    runs-on: ${{ matrix.os }}
+    name: ${{ fromJSON(needs.config.outputs.config).jobs.extra.name }}
+    if: ${{ fromJSON(needs.config.outputs.config).jobs.extra.if }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.extra.matrix)) }}
+    steps:
+      - name: Init
+        uses: .github/actions/rust-init@main
+        with:
+          packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
+      - name: Install cargo tools
+        if: ${{ fromJSON(needs.config.outputs.config).jobs.extra.cache.cargoTools }}
+        uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: ${{ join(fromJSON(needs.config.outputs.config).jobs.extra.cache.cargoTools, ',') }}
+      - name: Cache paths
+        if: ${{ fromJSON(needs.config.outputs.config).jobs.extra.cache.paths }}
+        uses: actions/cache@v5
+        with:
+          path: ${{ join(fromJSON(needs.config.outputs.config).jobs.extra.cache.paths, '\n') }}
+          key: ${{ runner.os }}-extra-${{ hashFiles('**/Cargo.lock') }}
+      - name: ${{ fromJSON(needs.config.outputs.config).jobs.extra.name }} / ${{ matrix.os }}
+        run: |
+          ${{ fromJSON(needs.config.outputs.config).jobs.extra.run }}
+
