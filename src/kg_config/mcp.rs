@@ -19,7 +19,7 @@ pub enum McpServerState {
 
 impl McpServerState {
     pub fn is_disabled(&self) -> bool {
-        matches!(self, Self::Disabled)
+        matches!(self, Self::Disabled | Self::Hide)
     }
 }
 

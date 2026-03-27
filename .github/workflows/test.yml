@@ -22,16 +22,41 @@ jobs:
     outputs:
       config: ${{ steps.config.outputs.config }}
     steps:
-      - name: config
-        id: config
-        uses: .github/actions/rust-config@main
-        with:
-          context: ${{ inputs.context }}
-          arm64: ${{ vars.RUNNER_ARM64 }}
-          amd64: ${{ vars.RUNNER_AMD64 }}
-          win: "windows-latest"
-          mac: "macos-latest"
-          git_token: ${{ github.token }}
+    - name: Checkout code
+      uses: actions/checkout@v6
+      with:
+        token: ${{ inputs.git_token || github.token }}
+    - name: generate
+      id: generate
+      uses: kiro-generator/ci@main
+      env:
+        CONTEXT: ${{ inputs.context }}
+    - name: replace runners
+      id: config
+      shell: bash
+      env:
+        CONFIG_JSON: ${{ steps.generate.outputs.config }}
+        ARM64_RUNNER: ${{ vars.RUNNER_ARM64 }}
+        AMD64_RUNNER: ${{ vars.RUNNER_AMD64 }}
+        WIN_RUNNER: windows-latest
+        MAC_RUNNER: macos-latest
+      run: |
+        CONFIG="$(echo "$CONFIG_JSON" | sed \
+            -e "s/vars.RUNNER_ARM64/$ARM64_RUNNER/g" \
+            -e "s/vars.RUNNER_AMD64/$AMD64_RUNNER/g" \
+            -e "s/vars.RUNNER_WIN/$WIN_RUNNER/g" \
+            -e "s/vars.RUNNER_MAC/$MAC_RUNNER/g")"
+        echo "config=$CONFIG" >> $GITHUB_OUTPUT
+      # - name: config
+      #   id: config
+      #   uses: ./.github/actions/rust-config
+      #   with:
+      #     context: ${{ inputs.context }}
+      #     arm64: ${{ vars.RUNNER_ARM64 }}
+      #     amd64: ${{ vars.RUNNER_AMD64 }}
+      #     win: "windows-latest"
+      #     mac: "macos-latest"
+      #     git_token: ${{ github.token }}
   coverage:
     runs-on: ${{ matrix.os }}
     needs: [config]
@@ -42,7 +67,7 @@ jobs:
       matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.coverage.matrix)) }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
         with:
           packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
       - name: llvm-tools
@@ -79,7 +104,7 @@ jobs:
     if: ${{ fromJSON(needs.config.outputs.config).jobs.fmt.if }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
         with:
           nightly: "true"
       - name: fmt
@@ -98,7 +123,7 @@ jobs:
       matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.clippy.matrix)) }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
         with:
           packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
       - name: clippy / ${{ matrix.features }}
@@ -113,7 +138,7 @@ jobs:
     if: ${{ fromJSON(needs.config.outputs.config).jobs.semver.if }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
         with:
           packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
       - name: cargo-semver-checks
@@ -127,7 +152,7 @@ jobs:
     if: ${{ fromJSON(needs.config.outputs.config).jobs.hack.if }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
         with:
           packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
       - name: Install cargo-hack
@@ -145,7 +170,7 @@ jobs:
     if: ${{ fromJSON(needs.config.outputs.config).jobs.docCheck.if }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
         with:
           packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
           nightly: "true"
@@ -163,7 +188,7 @@ jobs:
     if: ${{ fromJSON(needs.config.outputs.config).jobs.cargoSort.if }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
       - name: Install cargo-sort
         uses: taiki-e/cache-cargo-install-action@v3
         with:
@@ -178,7 +203,7 @@ jobs:
     if: ${{ fromJSON(needs.config.outputs.config).jobs.dependencies.if }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
       - name: Install cargo-machete
         uses: taiki-e/cache-cargo-install-action@v3
         with:
@@ -193,7 +218,7 @@ jobs:
     needs: [config, coverage]
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
         with:
           packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
       - name: Enable debug symbols
@@ -245,7 +270,7 @@ jobs:
       matrix: ${{ fromJSON(toJSON(fromJSON(needs.config.outputs.config).jobs.extra.matrix)) }}
     steps:
       - name: Init
-        uses: .github/actions/rust-init@main
+        uses: ./.github/actions/rust-init
         with:
           packages: ${{ toJSON(fromJSON(needs.config.outputs.config).global.packages) }}
       - name: Install cargo tools
