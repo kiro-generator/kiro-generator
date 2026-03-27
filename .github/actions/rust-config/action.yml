@@ -1,0 +1,53 @@
+name: Rust CI Config
+description: Merge Rust CI Config
+inputs:
+  context:
+    description: blah
+    required: false
+  git_token:
+    description: 'Token to authenticate for git'
+    required: false
+  arm64:
+    default: "depot-ubuntu-24.04-arm"
+    required: false
+  amd64:
+    default: "depot-ubuntu-24.04"
+    required: false
+  win:
+    default: "windows-latest"
+    required: false
+  mac:
+    default: "macos-latest"
+    required: false
+outputs:
+  config:
+    description: 'Configuration JSON output'
+    value: ${{ steps.config.outputs.config }}
+runs:
+  using: composite
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+      with:
+        token: ${{ inputs.git_token || github.token }}
+    - name: generate
+      id: generate
+      uses: kiro-generator/ci@main
+      env:
+        CONTEXT: ${{ inputs.context }}
+    - name: replace runners
+      id: config
+      shell: bash
+      env:
+        CONFIG_JSON: ${{ steps.generate.outputs.config }}
+        ARM64_RUNNER: ${{ inputs.arm64 }}
+        AMD64_RUNNER: ${{ inputs.amd64 }}
+        WIN_RUNNER: ${{ inputs.win }}
+        MAC_RUNNER: ${{ inputs.mac }}
+      run: |
+        CONFIG="$(echo "$CONFIG_JSON" | sed \
+            -e "s/vars.RUNNER_ARM64/$ARM64_RUNNER/g" \
+            -e "s/vars.RUNNER_AMD64/$AMD64_RUNNER/g" \
+            -e "s/vars.RUNNER_WIN/$WIN_RUNNER/g" \
+            -e "s/vars.RUNNER_MAC/$MAC_RUNNER/g")"
+        echo "config=$CONFIG" >> $GITHUB_OUTPUT

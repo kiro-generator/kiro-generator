@@ -796,6 +796,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "facet-json-schema"
+version = "0.44.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97110cb35f22aad6453f7ea9036df752287b43bd187d3d898cee714f47a5d533"
+dependencies = [
+ "facet",
+ "facet-core",
+ "facet-json",
+]
+
+[[package]]
 name = "facet-macro-parse"
 version = "0.44.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1319,9 +1330,9 @@ dependencies = [
 
 [[package]]
 name = "indextree"
-version = "4.7.4"
+version = "4.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb9e21e48c85fa6643a38caca564645a3bbc9211edf506fc8ed690c7e7b4d3c7"
+checksum = "3f80a9409db2176ff13877276660f5149fee32592698d2100afe8b52043d4405"
 dependencies = [
  "indextree-macros",
 ]
@@ -1435,8 +1446,8 @@ dependencies = [
  "emojis-rs",
  "enum-iterator",
  "facet",
- "facet-core",
  "facet-json",
+ "facet-json-schema",
  "facet-toml",
  "facet-value",
  "futures",
@@ -1478,9 +1489,9 @@ checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
 
 [[package]]
 name = "libredox"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1744e39d1d6a9948f4f388969627434e31128196de472883b39f148769bfe30a"
+checksum = "7ddbf48fd451246b1f8c2610bd3b4ac0cc6e149d89832867093ab69a17194f08"
 dependencies = [
  "libc",
 ]
@@ -1661,9 +1672,9 @@ dependencies = [
 
 [[package]]
 name = "num-conv"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf97ec579c3c42f953ef76dbf8d55ac91fb219dde70e49aa4a6b7d74e9919050"
+checksum = "c6673768db2d862beb9b39a78fdcb1a69439615d5794a1be50caa9bc92c81967"
 
 [[package]]
 name = "num-integer"
@@ -2634,9 +2645,9 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "unicode-segmentation"
-version = "1.12.0"
+version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6ccf251212114b54433ec949fd6a7841275f9ada20dddd2f29e9ceea4501493"
+checksum = "da36089a805484bcccfffe0739803392c8298778a2d2f09febf76fac5ad9025b"
 
 [[package]]
 name = "unicode-width"

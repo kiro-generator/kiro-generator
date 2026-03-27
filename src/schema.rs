@@ -1,12 +1,8 @@
 use {
-    crate::{
-        KgAgentFileDoc,
-        Result,
-        commands::SchemaCommand,
-        json_schema::{AdditionalProperties, JsonSchema, schema_for},
-    },
+    crate::{KgAgentFileDoc, Result, commands::SchemaCommand},
     color_eyre::eyre::{Context, eyre},
     facet::Facet,
+    facet_json_schema::{AdditionalProperties, JsonSchema, schema_for},
     std::collections::BTreeMap,
 };
 
@@ -189,7 +185,7 @@ pub(crate) fn handle_schema_command(cmd: &SchemaCommand) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::json_schema::schema_for, color_eyre::eyre::eyre};
+    use {super::*, color_eyre::eyre::eyre, facet_json_schema::schema_for};
 
     #[test_log::test]
     fn test_mappings() -> Result<()> {

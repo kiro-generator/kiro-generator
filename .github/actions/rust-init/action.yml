@@ -1,0 +1,77 @@
+name: Rust Init
+description: Initialize a Rust project with a basic structure and dependencies.
+inputs:
+  git_token:
+    description: 'Token to authenticate for git'
+    required: false
+  packages:
+    description: 'Packages to install per OS'
+    required: false
+    default: ''
+  ref:
+    description: 'Ref to checkout'
+    required: false
+    default: ''
+  nightly:
+    description: include nightly
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: 'true'
+    - name: rustup
+      id: rustup
+      shell: bash
+      run: |
+        if ! command -v rustup &> /dev/null ; then
+          echo "downloading rustup"
+          curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain stable -y
+          # Resolve the correct CARGO_HOME path depending on OS
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "${CARGO_HOME:-$USERPROFILE/.cargo}/bin" | sed 's|/|\\|g' >> $GITHUB_PATH
+          else
+            echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> $GITHUB_PATH
+          fi
+        fi
+        rustup toolchain list
+        if [ "${{ inputs.nightly }}" == "true" ] ; then
+           if ! rustup toolchain list | grep -q '^nightly-'; then
+             rustup toolchain install nightly --component clippy,rustfmt --profile minimal --no-self-update
+           fi
+           cargo +nightly --version
+        fi
+        echo "name=stable" >> $GITHUB_OUTPUT
+        cargo +stable --version
+      env:
+        RUNNER_OS: "${{ runner.os }}"
+    - name: packages
+      shell: bash
+      if: ${{ inputs.packages }}
+      run: |
+        set -x
+        packages=""
+        case $RUNNER_OS in
+          Linux)
+            packages="${{ fromJSON(inputs.packages).Linux }}"
+            ;;
+          macOS)
+            packages="${{ fromJSON(inputs.packages).macOS }}"
+            ;;
+          *)
+            echo "Cannot handle OS of type $RUNNER_OS"
+            echo "Expected one of: [ Linux macOS ]"
+            exit 0
+            ;;
+        esac
+
+        if [ -z "$packages" ]; then
+          echo "No packages to install"
+          exit 0
+        fi
+
+        echo "Installing packages: $packages"
+        sudo $packages
