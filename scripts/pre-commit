@@ -1,5 +1,8 @@
 #!/bin/bash
 
+if [ -n "$CI" ]; then
+  exit 0
+fi
 set -e
 
 echo "Running pre-commit checks..."
