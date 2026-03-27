@@ -5,13 +5,16 @@ use {
 };
 
 /// The operational state of an MCP server.
-#[derive(Facet, Clone, Debug, Eq, PartialEq)]
+#[derive(Facet, Default, Clone, Debug, Eq, PartialEq)]
 #[repr(C)]
 pub enum McpServerState {
     #[facet(rename = "enabled")]
     Enabled,
+    #[default]
     #[facet(rename = "disabled")]
     Disabled,
+    #[facet(rename = "hide")]
+    Hide,
 }
 
 impl McpServerState {
@@ -41,8 +44,8 @@ pub struct KgCustomToolConfig {
     pub env: HashMap<String, String>,
     /// Timeout for each MCP request in milliseconds
     pub timeout: Option<u64>,
-    /// MCP server operational state ("enabled" or "disabled", maps to disabled
-    /// boolean in JSON)
+    /// MCP server operational state ("enabled", "disabled", "hide", maps to
+    /// disabled boolean in JSON)
     pub state: Option<McpServerState>,
 }
 
@@ -122,6 +125,7 @@ impl Searchable for KgCustomToolConfig {
                 query.matches(match state {
                     McpServerState::Enabled => "enabled",
                     McpServerState::Disabled => "disabled",
+                    McpServerState::Hide => "hide",
                 })
             })
     }
@@ -165,6 +169,19 @@ state = "enabled"
         let mcp = doc.mcp_servers.get("ctx").unwrap();
         assert_eq!(mcp.state, Some(McpServerState::Enabled));
         assert!(!mcp.state.as_ref().unwrap().is_disabled());
+        Ok(())
+    }
+
+    #[test_log::test]
+    fn state_hide_from_toml() -> Result<()> {
+        let raw = r#"
+[mcpServers.ctx]
+command = "ctx-mcp"
+state = "hide"
+"#;
+        let doc: McpDoc = toml_parse(raw)?;
+        let mcp = doc.mcp_servers.get("ctx").unwrap();
+        assert_eq!(mcp.state, Some(McpServerState::Hide));
         Ok(())
     }
 

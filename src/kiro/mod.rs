@@ -158,16 +158,19 @@ impl TryFrom<&Manifest> for KiroAgent {
             }
         }
 
+        let mcp_servers: HashMap<String, CustomToolConfig> = value
+            .mcp_servers
+            .clone()
+            .into_iter()
+            .filter(|(_, v)| !matches!(v.state, Some(crate::McpServerState::Hide)))
+            .map(|(k, v)| (k, CustomToolConfig::from(v)))
+            .collect();
+
         Ok(Self {
             name: value.name.clone(),
             description: value.description.clone(),
             prompt: value.prompt.clone(),
-            mcp_servers: value
-                .mcp_servers
-                .clone()
-                .into_iter()
-                .map(|(k, v)| (k, CustomToolConfig::from(v)))
-                .collect(),
+            mcp_servers,
             tools: if tools.is_empty() {
                 default_agent.tools
             } else {
