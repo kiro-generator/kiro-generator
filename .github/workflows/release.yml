@@ -110,11 +110,14 @@ jobs:
       - name: Package
         env:
           BIN: target/aarch64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}
-        run: tar czf ${BIN}-arm64-linux.tar.gz ${BIN} resources/kg-helper
+        run: |
+          mkdir bin
+          mv -v ${BIN} bin/kg
+          tar czf target/kg-arm64-linux.tar.gz bin resources schemas
       - uses: actions/upload-artifact@v6
         with:
           name: build-linux-arm64
-          path: target/aarch64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}-arm64-linux.tar.gz
+          path: target/kg*.tar.gz
 
   linux-amd64:
     name: Linux AMD64
@@ -133,11 +136,14 @@ jobs:
       - name: Package
         env:
           BIN: target/x86_64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}
-        run: tar czf ${BIN}-amd64-linux.tar.gz ${BIN} resources/kg-helper
+        run: |
+          mkdir bin
+          mv -v ${BIN} bin/kg
+          tar czf target/kg-amd64-linux.tar.gz bin resources schemas
       - uses: actions/upload-artifact@v6
         with:
           name: build-linux-amd64
-          path: target/x86_64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}-amd64-linux.tar.gz
+          path: target/kg*.tar.gz
 
   mac-arm:
     name: macOS ARM64
@@ -157,11 +163,13 @@ jobs:
         env:
           BIN: target/aarch64-apple-darwin/release/${{ needs.release.outputs.bin }}
         run: |
-          tar czf ${BIN}-arm64-darwin.tar.gz ${BIN} resources/kg-helper
+          mkdir bin
+          mv -v ${BIN} bin/kg
+          tar czf target/kg-arm64-darwin.tar.gz bin resources schemas
       - uses: actions/upload-artifact@v6
         with:
           name: build-mac-arm64
-          path: target/aarch64-apple-darwin/release/${{ needs.release.outputs.bin }}-arm64-darwin.tar.gz
+          path: target/kg*.tar.gz
 
   windows:
     name: Windows AMD64
