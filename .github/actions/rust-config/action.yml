@@ -26,10 +26,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
-      with:
-        token: ${{ inputs.git_token || github.token }}
     - name: generate
       id: generate
       uses: kiro-generator/ci@main

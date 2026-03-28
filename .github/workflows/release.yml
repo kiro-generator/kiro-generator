@@ -25,6 +25,8 @@ jobs:
     outputs:
       config: ${{ steps.config.outputs.config }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
       - name: config
         id: config
         uses: ./.github/actions/rust-config
