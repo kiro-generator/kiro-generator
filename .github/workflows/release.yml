@@ -110,7 +110,7 @@ jobs:
       - name: Package
         env:
           BIN: target/aarch64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}
-        run: tar czf ${BIN}-arm64-linux.tar.gz ${BIN}
+        run: tar czf ${BIN}-arm64-linux.tar.gz ${BIN} resources/kg-helper
       - uses: actions/upload-artifact@v6
         with:
           name: build-linux-arm64
@@ -133,7 +133,7 @@ jobs:
       - name: Package
         env:
           BIN: target/x86_64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}
-        run: tar czf ${BIN}-amd64-linux.tar.gz ${BIN}
+        run: tar czf ${BIN}-amd64-linux.tar.gz ${BIN} resources/kg-helper
       - uses: actions/upload-artifact@v6
         with:
           name: build-linux-amd64
@@ -156,7 +156,8 @@ jobs:
       - name: Package
         env:
           BIN: target/aarch64-apple-darwin/release/${{ needs.release.outputs.bin }}
-        run: tar czf ${BIN}-arm64-darwin.tar.gz ${BIN}
+        run: |
+          tar czf ${BIN}-arm64-darwin.tar.gz ${BIN} resources/kg-helper
       - uses: actions/upload-artifact@v6
         with:
           name: build-mac-arm64
@@ -235,10 +236,10 @@ jobs:
         run: |
           mkdir target
           tar czf target/schemas.tar.gz schemas/*.json
-          zip -r schemas.zip schemas
+          zip -r target/schemas.zip schemas
           cd resources
           tar czf ../target/kg-helper.tar.gz kg-helper
-          zip -r ../kg-helper.zip kg-helper
+          zip -r ../target/kg-helper.zip kg-helper
       - uses: actions/upload-artifact@v6
         with:
           name: build-release-assets
