@@ -19,10 +19,249 @@ on:
           - major
           - release
 jobs:
-  releaser:
-    name: release
-    uses: kiro-generator/ci/.github/workflows/rust-release.yml@main
-    secrets: inherit
-    with:
-      version: ${{ inputs.version }}
-      package: "kiro-generator"
+  config:
+    runs-on: ${{ vars.RUNNER }}
+    name: generate config
+    outputs:
+      config: ${{ steps.config.outputs.config }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: config
+        id: config
+        uses: ./.github/actions/rust-config
+        with:
+          arm64: ${{ vars.RUNNER_ARM64 }}
+          amd64: ${{ vars.RUNNER_AMD64 }}
+          git_token: ${{ github.token }}
+
+  release:
+    needs: [config]
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      bin: ${{ steps.release.outputs.bin }}
+    runs-on: ${{ vars.RUNNER }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Init
+        uses: ./.github/actions/rust-init
+      - name: Install cargo-release
+        uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-release
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Release
+        id: release
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NO_PUBLISH: ${{ fromJSON(needs.config.outputs.config).release.cargoPublish && '' || '--no-publish' }}
+        run: |
+          cargo release \
+            --package kiro-generator \
+            --execute \
+            --no-confirm ${NO_PUBLISH} \
+            ${{ inputs.cargo-release-args }} ${{ inputs.version }}
+
+          TAG=$(git describe --tags --abbrev=0)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          case ${{ inputs.version }} in
+            alpha|beta|rc)
+              echo "make_latest=false" >> $GITHUB_OUTPUT
+              echo "prerelease=true" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "make_latest=true" >> $GITHUB_OUTPUT
+              echo "prerelease=false" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+          echo "bin=${{ fromJSON(needs.config.outputs.config).release.bin.name }}" >> $GITHUB_OUTPUT
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          generate_release_notes: true
+          make_latest: ${{ steps.release.outputs.make_latest }}
+          prerelease: ${{ steps.release.outputs.prerelease == 'true' }}
+
+  linux-arm64:
+    name: Linux ARM64
+    if: needs.release.outputs.bin && fromJSON(needs.config.outputs.config).release.bin.linux.arm64
+    needs: [config, release]
+    runs-on: ${{ vars.RUNNER_ARM64 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Init
+        uses: ./.github/actions/rust-init
+      - name: Build
+        run: cargo build --release --target aarch64-unknown-linux-gnu
+      - name: Package
+        env:
+          BIN: target/aarch64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}
+        run: tar czf ${BIN}-arm64-linux.tar.gz ${BIN} resources/kg-helper
+      - uses: actions/upload-artifact@v6
+        with:
+          name: build-linux-arm64
+          path: target/aarch64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}-arm64-linux.tar.gz
+
+  linux-amd64:
+    name: Linux AMD64
+    if: needs.release.outputs.bin && fromJSON(needs.config.outputs.config).release.bin.linux.amd64
+    needs: [config, release]
+    runs-on: ${{ vars.RUNNER_AMD64 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Init
+        uses: ./.github/actions/rust-init
+      - name: Build
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Package
+        env:
+          BIN: target/x86_64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}
+        run: tar czf ${BIN}-amd64-linux.tar.gz ${BIN} resources/kg-helper
+      - uses: actions/upload-artifact@v6
+        with:
+          name: build-linux-amd64
+          path: target/x86_64-unknown-linux-gnu/release/${{ needs.release.outputs.bin }}-amd64-linux.tar.gz
+
+  mac-arm:
+    name: macOS ARM64
+    if: needs.release.outputs.bin != '' && fromJSON(needs.config.outputs.config).release.bin.mac
+    needs: [config, release]
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Init
+        uses: ./.github/actions/rust-init
+      - name: Build
+        run: cargo build --release --target aarch64-apple-darwin
+      - name: Package
+        env:
+          BIN: target/aarch64-apple-darwin/release/${{ needs.release.outputs.bin }}
+        run: |
+          tar czf ${BIN}-arm64-darwin.tar.gz ${BIN} resources/kg-helper
+      - uses: actions/upload-artifact@v6
+        with:
+          name: build-mac-arm64
+          path: target/aarch64-apple-darwin/release/${{ needs.release.outputs.bin }}-arm64-darwin.tar.gz
+
+  windows:
+    name: Windows AMD64
+    if: false
+    needs: [config, release]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Init
+        uses: ./.github/actions/rust-init
+      - name: Build
+        run: cargo build --release --target x86_64-pc-windows-msvc
+      - name: Package
+        shell: bash
+        env:
+          BIN: target/x86_64-pc-windows-msvc/release/${{ needs.release.outputs.bin }}.exe
+        run: zip ${BIN}-amd64-windows.zip ${BIN}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: build-windows-amd64
+          path: target/x86_64-pc-windows-msvc/release/${{ needs.release.outputs.bin }}.exe-amd64-windows.zip
+
+  debian:
+    name: Debian / ${{ matrix.arch }}
+    if: ${{ fromJSON(needs.config.outputs.config).release.debian }}
+    needs: [config, release]
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            target: aarch64-unknown-linux-gnu
+            runner: ${{ vars.RUNNER_ARM64 }}
+          - arch: amd64
+            target: x86_64-unknown-linux-gnu
+            runner: ${{ vars.RUNNER_AMD64 }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Init
+        uses: ./.github/actions/rust-init
+      - name: Install cargo-deb
+        uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-deb
+      - name: Build deb
+        id: deb
+        run: |
+          cargo deb --target ${{ matrix.target }}
+          echo "deb=$(ls target/${{ matrix.target }}/debian/*.deb)" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v6
+        with:
+          name: build-debian-${{ matrix.arch }}
+          path: ${{ steps.deb.outputs.deb }}
+
+  assets:
+    name: Additional Assets
+    if: ${{ fromJSON(needs.config.outputs.config).release.assets }}
+    needs: [config, release]
+    runs-on: ${{ vars.RUNNER }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: assets
+        shell: bash
+        run: |
+          mkdir target
+          tar czf target/schemas.tar.gz schemas/*.json
+          zip -r target/schemas.zip schemas
+          cd resources
+          tar czf ../target/kg-helper.tar.gz kg-helper
+          zip -r ../target/kg-helper.zip kg-helper
+      - uses: actions/upload-artifact@v6
+        with:
+          name: build-release-assets
+          path: target/*.*
+  upload:
+    name: Upload
+    needs: [release, linux-arm64, linux-amd64, mac-arm, debian, assets, windows]
+    if: ${{ always() && needs.release.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          pattern: build-*
+          merge-multiple: true
+      - name: SHA256SUMS + Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          cd artifacts
+          sha256sum * > SHA256SUMS
+          gh release upload $TAG * --clobber --repo ${{ github.repository }}
