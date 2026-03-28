@@ -1437,7 +1437,7 @@ dependencies = [
 
 [[package]]
 name = "kiro-generator"
-version = "0.1.2-rc.7"
+version = "0.1.2-rc.8"
 dependencies = [
  "clap",
  "color-eyre",
