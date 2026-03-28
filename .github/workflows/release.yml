@@ -180,11 +180,11 @@ jobs:
         shell: bash
         env:
           BIN: target/x86_64-pc-windows-msvc/release/${{ needs.release.outputs.bin }}.exe
-        run: tar czf ${BIN}-amd64-windows.tar.gz ${BIN}
+        run: zip ${BIN}-amd64-windows.zip ${BIN}
       - uses: actions/upload-artifact@v6
         with:
           name: build-windows-amd64
-          path: target/x86_64-pc-windows-msvc/release/${{ needs.release.outputs.bin }}.exe-amd64-windows.tar.gz
+          path: target/x86_64-pc-windows-msvc/release/${{ needs.release.outputs.bin }}.exe-amd64-windows.zip
 
   debian:
     name: Debian / ${{ matrix.arch }}
@@ -235,12 +235,14 @@ jobs:
         run: |
           mkdir target
           tar czf target/schemas.tar.gz schemas/*.json
+          zip -r schemas.zip schemas
           cd resources
           tar czf ../target/kg-helper.tar.gz kg-helper
+          zip -r ../kg-helper.zip kg-helper
       - uses: actions/upload-artifact@v6
         with:
           name: build-release-assets
-          path: target/*.tar.gz
+          path: target/*.*
   upload:
     name: Upload
     needs: [release, linux-arm64, linux-amd64, mac-arm, debian, assets, windows]
