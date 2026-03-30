@@ -21,7 +21,7 @@ Stop writing JSON. Define your Kiro agents in TOML with inheritance, templates, 
 
 ```shell
 # Initialize configuration
-kg init
+kg init --skeleton
 
 # Edit your agent manifest
 $EDITOR ~/.kiro/generators/manifests/kg.toml
@@ -33,7 +33,7 @@ kg validate
 kg generate
 ```
 
-See [documentation](https://kg.com) for detailed guides and examples.
+See [documentation](https://kiro-generator.io) for detailed guides and examples.
 
 ---
 

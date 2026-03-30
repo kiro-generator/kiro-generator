@@ -196,7 +196,8 @@
                 "type": "string",
                 "enum": [
                   "enabled",
-                  "disabled"
+                  "disabled",
+                  "hide"
                 ],
                 "description": "The operational state of an MCP server.",
                 "title": "McpServerState"
@@ -205,7 +206,7 @@
                 "type": "null"
               }
             ],
-            "description": "MCP server operational state (\"enabled\" or \"disabled\", maps to disabled\n boolean in JSON)"
+            "description": "MCP server operational state (\"enabled\", \"disabled\", \"hide\", maps to\n disabled boolean in JSON)"
           },
           "timeout": {
             "anyOf": [
