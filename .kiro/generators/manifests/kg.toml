@@ -1,20 +1,20 @@
-[agents.kg-resources]
+[agents.project-resources]
 template = true
 
-[agents.kg-resources.resources.rust]
+[agents.project-resources.resources.rust]
 locations = [
   "docs/src/SUMMARY.md",
   "docs/src/config/*.md",
   "docs/kiro/configuration-reference.md"
 ]
 
-[agents.kg-resources.knowledge.kiro]
+[agents.project-resources.knowledge.kiro]
 source = "file://./docs/kiro"
 description = "Kiro CLI configuration reference for JSON agents"
 autoUpdate = false
 indexType = "best"
 
-[agents.kg-resources.knowledge.facet]
+[agents.project-resources.knowledge.facet]
 source = "file://./docs/facet"
 description = "facet is a serde replacement"
 autoUpdate = false

@@ -1,21 +1,16 @@
-URL Source: https://facet.rs/extend/extension-attributes/
-Scraped: 2026-02-19T21:34:12Z
++++
+title = "Extension Attributes"
+weight = 2
+insert_anchor_links = "heading"
++++
 
----
-
-Title: Extension Attributes - facet
-
-URL Source: https://facet.rs/extend/extension-attributes/
-
-Markdown Content:
 Extension attributes let your crate define custom `#[facet(...)]` attributes with **compile-time validation** and helpful error messages.
 
 This page covers both using extension attributes and creating your own.
 
-Using extension attributes
---------------------------
+## Using extension attributes
 
-```
+```rust,noexec
 use facet::Facet;
 use facet_xml as xml;
 
@@ -30,17 +25,16 @@ struct Server {
 
 The namespace (`xml`) comes from how you import the crate:
 
-```
+```rust,noexec
 use facet_xml as xml;  // Enables xml:: prefix
-use facet_args as args;  // Enables args:: prefix
+use figue as args;  // Enables args:: prefix
 ```
 
-Declaring attributes with define_attr_grammar!
-----------------------------------------------
+## Declaring attributes with `define_attr_grammar!`
 
 Use the [`define_attr_grammar!`](https://docs.rs/facet/latest/facet/macro.define_attr_grammar.html) macro to declare your attribute grammar. Here's how [`facet-xml`](https://docs.rs/facet-xml) does it:
 
-```
+```rust,noexec
 facet::define_attr_grammar! {
     ns "xml";
     crate_path ::facet_xml;
@@ -67,64 +61,71 @@ facet::define_attr_grammar! {
 
 This generates:
 
-1.   An `Attr` enum with variants for each attribute
-2.   Compile-time parsing that validates attribute usage
-3.   Type-safe data storage accessible at runtime
+1. An `Attr` enum with variants for each attribute
+2. Compile-time parsing that validates attribute usage
+3. Type-safe runtime storage (either enum values or direct payload types, depending on variant kind)
 
 ### Grammar components
 
 | Component | Purpose | Example |
-| --- | --- | --- |
+|-----------|---------|---------|
 | `ns "...";` | Namespace for attributes | `ns "xml";` → `#[facet(xml::element)]` |
 | `crate_path ...;` | Path to your crate for macro hygiene | `crate_path ::facet_xml;` |
 | `pub enum Attr { ... }` | The attribute variants | See above |
 
-### Variant types
+### Runtime decoding contract (exhaustive)
 
-#### Unit variants (markers)
+The enum declaration in `define_attr_grammar!` is your runtime contract.
+Facet stores either:
 
-Simple flags with no arguments:
+1. A direct payload (`usize`, `i64`, `&'static str`, `()`, `Shape`, function payloads), or
+2. The generated enum value (`your_ns::Attr`).
 
-```
-pub enum Attr {
-    /// A marker attribute
-    Element,
+Decode with `attr.get_as::<T>()` where `T` matches what is actually stored.
+
+| Variant declaration in your grammar | Stored in `Attr.data` | Decode code |
+|---|---|---|
+| `Marker` | `()` | `attr.get_as::<()>().is_some()` (or key presence only) |
+| `EnvPrefix(&'static str)` | `&'static str` | `attr.get_as::<&'static str>()` |
+| `Min(i64)` | `i64` | `attr.get_as::<i64>()` |
+| `MaxLen(usize)` | `usize` | `attr.get_as::<usize>()` |
+| `Proxy(shape_type)` | `facet::Shape` | `attr.get_as::<facet::Shape>()` |
+| `SkipIf(predicate SkipSerializingIfFn)` | function payload | decode with the function payload type |
+| `Validate(validator ValidatorFn)` | function payload | decode with the function payload type |
+| `Default(make_t ...)` | `Option<facet::DefaultInPlaceFn>` | decode as `Option<facet::DefaultInPlaceFn>` |
+| `FromRef(arbitrary)` | `()` | usually check key presence |
+| `Short(Option<char>)` | `your_ns::Attr` | `attr.get_as::<your_ns::Attr>()` then match variant |
+| `Name(Option<&'static str>)` | `your_ns::Attr` | `attr.get_as::<your_ns::Attr>()` then match variant |
+| `Mode(&'static SomeType)` | `your_ns::Attr` | `attr.get_as::<your_ns::Attr>()` then match variant |
+| `Column(Column)` | `your_ns::Attr` | `attr.get_as::<your_ns::Attr>()` then match variant |
+| `Hook(fn_ptr HookFn)` | `your_ns::Attr` | `attr.get_as::<your_ns::Attr>()` then match variant |
+| `Custom(MyType)` | `your_ns::Attr` | `attr.get_as::<your_ns::Attr>()` then match variant |
+
+`Column(Column)` is not special: `Column` is a struct you define in the same grammar.
+
+```rust
+facet::define_attr_grammar! {
+    ns "myfmt";
+    crate_path ::myfmt;
+
+    pub enum Attr {
+        Column(Column),
+    }
+
+    pub struct Column {
+        pub rename: Option<&'static str>,
+        pub indexed: bool,
+    }
 }
 ```
 
-Usage: `#[facet(xml::element)]`
-
-#### String values
-
-Attributes that take a string:
-
-```
-pub enum Attr {
-    /// Rename to a different name
-    Rename(&'static str),
-}
-```
-
-Usage: `#[facet(rename = "new_name")]`
-
-#### Optional characters
-
-For single-character flags (like CLI short options):
-
-```
-pub enum Attr {
-    /// Short flag, optionally with a character
-    Short(Option<char>),
-}
-```
-
-Usage: `#[facet(args::short)]` or `#[facet(args::short = 'v')]`
+If a variant has `#[storage(flag)]` or `#[storage(field)]`, use the generated dedicated accessor/field as the primary API.
 
 ### Advanced: how built-in attributes work
 
 The built-in facet attributes use additional payload types not typically needed by extension crates. For reference:
 
-```
+```rust,noexec
 // Inside the facet crate itself:
 define_attr_grammar! {
     builtin;
@@ -155,12 +156,11 @@ define_attr_grammar! {
 
 These special payload types enable powerful features but are primarily for core facet development.
 
-Compile-Time validation
------------------------
+## Compile-Time validation
 
 One of the major benefits of `define_attr_grammar!`: **typos are caught at compile time** with helpful suggestions.
 
-```
+```rust,noexec
 #[derive(Facet)]
 struct Parent {
     #[facet(xml::elemnt)]  // Typo!
@@ -179,73 +179,132 @@ error: unknown attribute `elemnt`, did you mean `element`?
 
 The system uses string similarity to suggest corrections.
 
-Querying attributes at runtime
-------------------------------
+## Querying attributes at runtime
 
-When your format crate needs to check for attributes, use the `get_as` method on [`Attr`](https://docs.rs/facet-core/latest/facet_core/struct.Attr.html):
+`Field::attributes` is a slice of [`Attr`](https://docs.rs/facet-core/latest/facet_core/struct.Attr.html).  
+`FieldAttribute` is a type alias to `Attr`.
 
+Use this pipeline every time:
+
+1. Declare the variant in your grammar.
+2. Apply the attribute on the reflected type.
+3. Query by `ns + key`, then decode with the exact runtime type.
+
+### Pipeline: numeric payload (`usize`)
+
+```rust
+use facet::{Facet, StructType, Type, UserType};
+use facet_testattrs as testattrs;
+
+#[derive(Facet)]
+struct User {
+    #[facet(testattrs::max_len = 64)]
+    name: String,
+}
+
+let Type::User(UserType::Struct(StructType { fields, .. })) = User::SHAPE.ty else {
+    panic!("expected struct");
+};
+let field = &fields[0];
+
+let max_len: usize = field
+    .get_attr(Some("testattrs"), "max_len")
+    .and_then(|attr| attr.get_as::<usize>().copied())
+    .expect("testattrs::max_len should decode as usize");
+assert_eq!(max_len, 64);
 ```
-use facet_core::{Field, FieldAttribute, Facet};
-use facet_xml::Attr as XmlAttr;
 
-fn process_field(field: &Field) {
-    for attr in field.attributes {
-        if let FieldAttribute::Extension(ext) = attr {
-            // Check namespace first
-            if ext.ns == Some("xml") {
-                // Get typed attribute data
-                if let Some(xml_attr) = ext.get_as::<XmlAttr>() {
-                    match xml_attr {
-                        XmlAttr::Element => { /* handle element */ }
-                        XmlAttr::Attribute => { /* handle attribute */ }
-                        XmlAttr::Text => { /* handle text content */ }
-                        // ...
-                    }
-                }
-            }
-        }
+Why this is `usize`: the variant is declared as `MaxLen(usize)`, and that payload form is stored directly as `usize`.
+
+Typical use cases:
+- Maximum string/list length constraints during parsing.
+- Emitting schema limits (for example JSON Schema `maxLength`).
+- Pre-validation before allocation-heavy decode paths.
+
+### Pipeline: struct payload (`Column(Column)`)
+
+```rust
+use facet::{Facet, StructType, Type, UserType};
+use facet_testattrs as testattrs;
+
+#[derive(Facet)]
+struct IndexedUser {
+    #[facet(testattrs::column(rename = "user_name", indexed))]
+    username: String,
+}
+
+let Type::User(UserType::Struct(StructType { fields, .. })) = IndexedUser::SHAPE.ty else {
+    panic!("expected struct");
+};
+let field = &fields[0];
+
+let attr = field
+    .get_attr(Some("testattrs"), "column")
+    .expect("column attr should exist");
+
+let decoded = attr
+    .get_as::<testattrs::Attr>()
+    .expect("column payload is wrapped in testattrs::Attr");
+
+match decoded {
+    testattrs::Attr::Column(column) => {
+        assert_eq!(column.rename, Some("user_name"));
+        assert!(column.indexed);
+    }
+    _ => panic!("unexpected variant"),
+}
+```
+
+Typical use cases:
+- Per-field database/index metadata.
+- Format-specific output shape options (renaming, indexing, flags).
+- Rich configuration that is awkward as flat scalar attributes.
+
+### Built-in attributes
+
+For built-ins, use dedicated accessors/fields first:
+
+```rust
+use facet_core::Field;
+
+fn process_builtin(field: &Field) {
+    if let Some(name) = field.rename {
+        println!("renamed to {name}");
+    }
+
+    if field.is_sensitive() {
+        println!("sensitive field");
     }
 }
 ```
 
-For built-in attributes:
+### Runnable references
 
-```
-use facet::builtin::Attr as BuiltinAttr;
+- Numeric/string/unit pipeline:
+  - Run: `cargo run -p facet --example extension_attr_runtime_matrix`
+  - Test: `cargo nextest run -p facet --test main extension_attr_runtime_matrix`
+  - Source: [`facet/examples/extension_attr_runtime_matrix.rs`](https://github.com/facet-rs/facet/blob/main/facet/examples/extension_attr_runtime_matrix.rs)
+- Struct payload pipeline (`Column(Column)`):
+  - Run: `cargo run -p facet --example extension_attr_struct_payload`
+  - Test: `cargo nextest run -p facet --test main extension_attr_struct_payload`
+  - Source: [`facet/examples/extension_attr_struct_payload.rs`](https://github.com/facet-rs/facet/blob/main/facet/examples/extension_attr_struct_payload.rs)
 
-for attr in field.attributes {
-    if let FieldAttribute::Extension(ext) = attr {
-        if ext.is_builtin() {
-            if let Some(builtin) = ext.get_as::<BuiltinAttr>() {
-                match builtin {
-                    BuiltinAttr::Rename(name) => { /* use renamed field */ }
-                    BuiltinAttr::Skip => { /* skip this field */ }
-                    // ...
-                }
-            }
-        }
-    }
-}
-```
+## Namespacing
 
-Namespacing
------------
+- Use short aliases if desired: `use facet_xml as x; #[facet(x::element)]`.
+- Namespaces prevent collisions across format crates.
+- Built-in attributes remain short (`#[facet(rename = "...")]`, etc.).
 
-*   Use short aliases if desired: `use facet_xml as x; #[facet(x::element)]`.
-*   Namespaces prevent collisions across format crates.
-*   Built-in attributes remain short (`#[facet(rename = "...")]`, etc.).
+## Real-World examples
 
-Real-World examples
--------------------
+### figue
 
-### facet-args
+[`figue`](https://docs.rs/figue) provides CLI argument parsing:
 
-[`facet-args`](https://docs.rs/facet-args) provides CLI argument parsing:
-
-```
+```rust,noexec
 facet::define_attr_grammar! {
     ns "args";
-    crate_path ::facet_args;
+    crate_path ::figue;
 
     pub enum Attr {
         /// Marks a field as a positional argument
@@ -262,8 +321,8 @@ facet::define_attr_grammar! {
 
 Usage:
 
-```
-use facet_args as args;
+```rust,noexec
+use figue as args;
 
 #[derive(Facet)]
 struct Cli {
@@ -282,7 +341,7 @@ struct Cli {
 
 [`facet-xml`](https://docs.rs/facet-xml) provides XML-specific attributes:
 
-```
+```rust,noexec
 facet::define_attr_grammar! {
     ns "xml";
     crate_path ::facet_xml;
@@ -301,7 +360,7 @@ facet::define_attr_grammar! {
 
 Usage:
 
-```
+```rust,noexec
 use facet_xml as xml;
 
 #[derive(Facet)]
@@ -317,10 +376,8 @@ struct Person {
 }
 ```
 
-Next steps
-----------
-
-*   Learn what information `Shape` exposes: [Shape](https://facet.rs/extend/shape/).
-*   See how to read values: [Peek](https://facet.rs/extend/peek/).
-*   Build values (strict vs deferred): [Partial](https://facet.rs/extend/partial/).
-*   Put it together for a format crate: [Build a Format Crate](https://facet.rs/extend/format-crate/).
+## Next steps
+- Learn what information `Shape` exposes: [Shape](@/extend/shape.md).
+- See how to read values: [Peek](@/extend/peek.md).
+- Build values (strict vs deferred): [Partial](@/extend/partial.md).
+- Put it together for a format crate: [Build a Format Crate](@/extend/format-crate.md).

@@ -77,7 +77,7 @@ For team projects, create a reusable template that defines project-specific reso
 
 **`.kiro/generators/manifests/kg.toml`** (checked into git):
 ```toml
-[agents.kg-resources]
+[agents.project-resources]
 template = true
 resources = [
   "file://docs/src/**/*.md",
@@ -85,13 +85,13 @@ resources = [
   "file://README.md",
 ]
 
-[agents.kg-resources.knowledge.facet]
+[agents.project-resources.knowledge.facet]
 source = "file://./facet-docs"
 description = "Information about the Rust crates facet-json, facet-toml, facet-diff and other facet libraries"
 autoUpdate = true
 indexType = "best"
 
-[agents.kg-resources.knowledge.kiro]
+[agents.project-resources.knowledge.kiro]
 source = "file://./docs/kiro"
 description = "Kiro CLI configuration reference for JSON agents"
 autoUpdate = true
@@ -101,20 +101,20 @@ indexType = "best"
 **`.kiro/generators/manifests/rust.toml`** (gitignored, personal):
 ```toml
 [agents.rust]
-inherits = ["kg-resources"]
+inherits = ["project-resources"]
 ```
 
 **`.kiro/generators/manifests/super-rust.toml`** (teammate's personal file):
 ```toml
 [agents.super-rust]
-inherits = ["kg-resources"]
+inherits = ["project-resources"]
 ```
 
 ### Why This Works
 
-- `kg-resources` is a template (doesn't generate an agent file)
+- `project-resources` is a template (doesn't generate an agent file)
 - Each developer creates their own manifest file with their preferred agent name
-- Everyone inherits from the shared `kg-resources` template
+- Everyone inherits from the shared `project-resources` template
 - No conflicts: different agent names, different files
 - Project context is shared, personal tooling is individual
 

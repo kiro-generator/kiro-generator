@@ -1,39 +1,72 @@
 # Installation
 
+Pick the path that matches your platform and how much you enjoy compiling things before coffee.
 
-## Cargo
+## Homebrew (macOS)
+
+`kiro-generator` is available through the `kiro-generator/kiro-generator` tap:
 
 ```bash
-cargo install kiro-generator
+brew install kiro-generator/kiro-generator/kiro-generator
 ```
 
-## Arch Linux AUR package
+If you prefer the explicit two-step version:
+
+```bash
+brew tap kiro-generator/kiro-generator
+brew install kiro-generator
+```
+
+Note: the current tap formula installs from the published `arm64-darwin` release asset.
+
+## Arch Linux (AUR)
 
 ```bash
 paru -S kiro-generator
 ```
 
-## Ubuntu/Debian
+If you use `yay`, that works too:
+
 ```bash
-todo
+yay -S kiro-generator
 ```
 
-## Homebrew
+## Debian/Ubuntu
+
+GitHub releases publish `.deb` packages for `amd64` and `arm64`.
+
+Download the matching package, then install it with:
 
 ```bash
-brew install kiro-generator
+sudo apt install ./kiro-generator_<version>-1_<arch>.deb
+```
+
+Example:
+
+```bash
+sudo apt install ./kiro-generator_0.2.2-1_amd64.deb
+```
+
+## Cargo
+
+If you already have a Rust toolchain, this is the simplest cross-platform option:
+
+```bash
+cargo install kiro-generator
 ```
 
 ## From Source
 
-```
+```bash
 git clone https://github.com/kiro-generator/kiro-generator.git
 cd kiro-generator
 cargo install --path .
 ```
 
+
 ## Verify
 
-```
+```bash
 kg --version
+kg --help
 ```
