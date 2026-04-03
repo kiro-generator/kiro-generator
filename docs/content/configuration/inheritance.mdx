@@ -1,4 +1,7 @@
-# Inheritance
+---
+title: "Inheritance"
+description: "See how inherits works in kg, including merge rules, multiple parents, and force-allow behavior."
+---
 
 Agents can inherit configuration from other agents using the `inherits` field.
 
@@ -49,27 +52,27 @@ allowedTools = ["@rustdocs", "@cargo"]
 allowedTools = ["read", "knowledge", "@rustdocs", "@cargo"]
 ```
 
-### Objects (toolsSettings, mcpServers, etc.)
+### Objects (nativeTools, mcpServers, etc.)
 
 Objects are **deep merged**:
 
 **Parent:**
 ```toml
-[agents.default.toolsSettings.shell]
-allowedCommands = ["git status", "git fetch"]
+[agents.default.nativeTools.shell]
+allow = ["git status", "git fetch"]
 autoAllowReadonly = true
 ```
 
 **Child:**
 ```toml
-[agents.rust.toolsSettings.shell]
-allowedCommands = ["cargo .*"]
+[agents.rust.nativeTools.shell]
+allow = ["cargo .*"]
 ```
 
 **Result:**
 ```toml
-[toolsSettings.shell]
-allowedCommands = ["git status", "git fetch", "cargo .*"]
+[nativeTools.shell]
+allow = ["git status", "git fetch", "cargo .*"]
 autoAllowReadonly = true
 ```
 
@@ -109,15 +112,16 @@ Configuration is merged from root to leaf: `base` → `dev` → `rust-dev`
 
 Force properties override permission restrictions in child agents. They ensure specific commands or paths are always allowed, even if a child tries to deny them.
 
-### forceAllowedCommands
+### forceAllow for shell commands
 
 Force specific shell commands to be allowed:
 
 ```toml
 [agents.git-pusher]
 template = true
-[agents.git-pusher.toolsSettings.shell]
-forceAllowedCommands = ["git commit .*", "git push .*"]
+
+[agents.git-pusher.nativeTools.shell]
+forceAllow = ["git commit .*", "git push .*"]
 ```
 
 Child agents cannot deny these commands:
@@ -125,23 +129,26 @@ Child agents cannot deny these commands:
 ```toml
 [agents.dependabot]
 inherits = ["git-pusher"]
-[agents.dependabot.toolsSettings.shell]
-deniedCommands = ["git push .*"]  # Ignored - git push is forced allowed
+
+[agents.dependabot.nativeTools.shell]
+deny = ["git push .*"]  # Ignored - git push is force-allowed
 ```
 
-The forced commands are added to `allowedCommands` and removed from `deniedCommands`.
+The forced commands are added to `allow` and removed from `deny`.
 
-### forceAllowedPaths
+### forceAllow for paths
 
 Force specific paths to be readable or writable:
 
 ```toml
 [agents.cargo-editor]
 template = true
-[agents.cargo-editor.toolsSettings.read]
-forceAllowedPaths = [".*Cargo.toml.*"]
-[agents.cargo-editor.toolsSettings.write]
-forceAllowedPaths = [".*Cargo.toml.*"]
+
+[agents.cargo-editor.nativeTools.read]
+forceAllow = [".*Cargo.toml.*"]
+
+[agents.cargo-editor.nativeTools.write]
+forceAllow = [".*Cargo.toml.*"]
 ```
 
 Child agents must allow access to these paths:
@@ -149,8 +156,9 @@ Child agents must allow access to these paths:
 ```toml
 [agents.dependabot]
 inherits = ["cargo-editor"]
-[agents.dependabot.toolsSettings.write]
-deniedPaths = [".*Cargo.toml.*"]  # Ignored - Cargo.toml is forced allowed
+
+[agents.dependabot.nativeTools.write]
+deny = [".*Cargo.toml.*"]  # Ignored - Cargo.toml is force-allowed
 ```
 
 ### Use Cases

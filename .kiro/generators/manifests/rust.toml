@@ -1,0 +1,6 @@
+[agents.rust]
+description = "kiro-generator specific rust agent"
+inherits = ["project-resources"]
+
+[agents.rust.skills.kg-helper]
+disabled = true

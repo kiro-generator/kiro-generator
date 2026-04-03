@@ -1,4 +1,7 @@
-# Templates
+---
+title: "Templates"
+description: "Use template agents as reusable building blocks without generating standalone JSON files."
+---
 
 Templates are agent configurations that don't generate JSON files. They exist only to be inherited by other agents.
 
@@ -29,14 +32,15 @@ Create a template with git commands:
 [agents.git-readonly]
 template = true
 
-[agents.git-readonly.toolsSettings.execute_bash]
-allowedCommands = [
+[agents.git-readonly.nativeTools.shell]
+allow = [
     "git status .*",
     "git fetch .*",
     "git diff .*",
     "git log .*"
 ]
 autoAllowReadonly = true
+deny = ["git commit .*", "git push .*"]
 ```
 
 Use it in real agents:
@@ -54,20 +58,24 @@ Create a hierarchy of permission templates:
 ```toml
 [agents.git-readonly]
 template = true
-[agents.git-readonly.toolsSettings.execute_bash]
-allowedCommands = ["git status .*", "git fetch .*", "git diff .*"]
+
+[agents.git-readonly.nativeTools.shell]
+allow = ["git status .*", "git fetch .*", "git diff .*"]
+deny = ["git commit .*", "git push .*"]
 
 [agents.git-write]
 template = true
 inherits = ["git-readonly"]
-[agents.git-write.toolsSettings.execute_bash]
-allowedCommands = ["git add .*", "git commit .*"]
+
+[agents.git-write.nativeTools.shell]
+forceAllow = ["git add .*", "git commit .*"]
 
 [agents.git-full]
 template = true
 inherits = ["git-write"]
-[agents.git-full.toolsSettings.execute_bash]
-allowedCommands = ["git push .*", "git pull .*"]
+
+[agents.git-full.nativeTools.shell]
+forceAllow = ["git push .*", "git pull .*"]
 ```
 
 Then use them:

@@ -23,8 +23,17 @@
         ]
       },
       {
-        "group": "migration",
+        "group": "Migration",
         "pages": ["content/migration/guided-migration"]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "content/configuration/structure",
+          "content/configuration/defining-agents",
+          "content/configuration/inheritance",
+          "content/configuration/templates"
+        ]
       }
     ],
     "global": {
