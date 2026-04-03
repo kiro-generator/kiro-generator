@@ -5,7 +5,49 @@ description: "See how inherits works in kg, including merge rules, multiple pare
 
 Agents can inherit configuration from other agents using the `inherits` field.
 
-## Basic Inheritance
+## A relatable example: `dependabot`
+
+This is a good way to think about inheritance in practice.
+
+Start with a reusable git policy that is intentionally conservative:
+
+`~/.kiro/generators/manifests/kg.toml`
+
+```toml
+[agents]
+git-readonly = { template = true }
+dependabot = { inherits = ["git-readonly"] }
+```
+
+`~/.kiro/generators/agents/git-readonly.toml`
+
+```toml
+[nativeTools.shell]
+allow = [
+  "git status .*",
+  "git fetch .*",
+  "git diff .*",
+  "git log .*"
+]
+deny = ["git commit .*", "git push .*"]
+```
+
+Then create a child agent that mostly follows that policy, but needs two extra capabilities:
+
+`~/.kiro/generators/agents/dependabot.toml`
+
+```toml
+[nativeTools.shell]
+forceAllow = ["git commit .*", "git push .*"]
+```
+
+That is a useful inheritance example because it shows the point clearly:
+
+- the parent defines the default behavior
+- the child reuses that behavior instead of copying it
+- the child changes only the specific capability it actually needs
+
+## Basic inheritance
 
 ```toml
 [agents]
@@ -108,7 +150,7 @@ rust-dev = { inherits = ["dev"] }
 
 Configuration is merged from root to leaf: `base` → `dev` → `rust-dev`
 
-## Force Properties
+## Force properties
 
 Force properties override permission restrictions in child agents. They ensure specific commands or paths are always allowed, even if a child tries to deny them.
 
@@ -116,21 +158,19 @@ Force properties override permission restrictions in child agents. They ensure s
 
 Force specific shell commands to be allowed:
 
-```toml
-[agents.git-pusher]
-template = true
+`~/.kiro/generators/agents/dependabot.toml`
 
-[agents.git-pusher.nativeTools.shell]
+```toml
+[nativeTools.shell]
 forceAllow = ["git commit .*", "git push .*"]
 ```
 
 Child agents cannot deny these commands:
 
-```toml
-[agents.dependabot]
-inherits = ["git-pusher"]
+`~/.kiro/generators/agents/dependabot.toml`
 
-[agents.dependabot.nativeTools.shell]
+```toml
+[nativeTools.shell]
 deny = ["git push .*"]  # Ignored - git push is force-allowed
 ```
 

@@ -30,9 +30,17 @@
         "group": "Configuration",
         "pages": [
           "content/configuration/structure",
+          "content/configuration/editor-support",
           "content/configuration/defining-agents",
           "content/configuration/inheritance",
           "content/configuration/templates"
+        ]
+      },
+      {
+        "group": "Advanced",
+        "pages": [
+          "content/advanced/debugging",
+          "content/advanced/systemd-watch"
         ]
       }
     ],

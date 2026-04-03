@@ -1,139 +1,136 @@
 ---
 title: "Templates"
-description: "Use template agents as reusable building blocks without generating standalone JSON files."
+description: "Use template agents as reusable building blocks that add shared context and behavior without generating standalone JSON files."
 ---
 
-Templates are agent configurations that don't generate JSON files. They exist only to be inherited by other agents.
+Templates are one of the main reasons to use `kg`.
 
-## Purpose
+A template is an agent declared with `template = true`. It does not generate a JSON file of its own. It exists only to be inherited by other agents.
 
-Use templates to:
-- Create reusable configuration components
-- Define common tool settings
-- Build agent templates
-- Organize complex inheritance hierarchies
+That makes templates a good fit for shared concerns like:
 
-## Declaration
+- project-specific resources
+- shared knowledge bases
+- reusable shell permissions
+- common MCP or tool configuration
 
-Mark an agent as a template with `template = true`:
+## A real template in this repo: `project-resources`
 
-```toml
-[agents]
-git-base = { template = true }
-```
+This repo already has a strong real-world example:
 
-kg will skip generating `~/.kiro/agents/git-base.json` but the configuration is available for inheritance.
+- [`project-resources.toml`](https://github.com/kiro-generator/kiro-generator/blob/main/.kiro/generators/manifests/project-resources.toml)
+- [`rust.toml`](https://github.com/kiro-generator/kiro-generator/blob/main/.kiro/generators/manifests/rust.toml)
 
-## Example: Git Permissions
-
-Create a template with git commands:
+The local template is defined like this:
 
 ```toml
-[agents.git-readonly]
+[agents.project-resources]
 template = true
 
-[agents.git-readonly.nativeTools.shell]
-allow = [
-    "git status .*",
-    "git fetch .*",
-    "git diff .*",
-    "git log .*"
+[agents.project-resources.resources.rust]
+locations = [
+  "docs/src/SUMMARY.md",
+  "docs/src/config/*.md",
+  "docs/kiro/configuration-reference.md"
 ]
-autoAllowReadonly = true
-deny = ["git commit .*", "git push .*"]
+
+[agents.project-resources.knowledge.kiro]
+source = "file://./resources/kiro"
+description = "Kiro CLI configuration reference for JSON agents"
+autoUpdate = true
+indexType = "best"
 ```
 
-Use it in real agents:
+Then the local project uses that template here:
 
 ```toml
 [agents.rust]
-inherits = ["git-readonly"]
-allowedTools = ["@rustdocs", "@cargo"]
+description = "kiro-generator specific rust agent"
+inherits = ["project-resources"]
+
+[agents.rust.skills.kg-helper]
+disabled = true
 ```
 
-## Example: Permission Levels
+That is the pattern to notice:
 
-Create a hierarchy of permission templates:
+- `project-resources` is reusable
+- it adds project context once
+- `rust` opts into it with a short local override
+- the template does not create its own generated agent file
 
-```toml
-[agents.git-readonly]
-template = true
+## Why this matters
 
-[agents.git-readonly.nativeTools.shell]
-allow = ["git status .*", "git fetch .*", "git diff .*"]
-deny = ["git commit .*", "git push .*"]
+Without templates, the easy path is copy-paste:
 
-[agents.git-write]
-template = true
-inherits = ["git-readonly"]
+- duplicate the same docs and knowledge in multiple agents
+- tweak each agent separately
+- slowly accumulate drift
 
-[agents.git-write.nativeTools.shell]
-forceAllow = ["git add .*", "git commit .*"]
+With a template, the shared project context lives in one place.
 
-[agents.git-full]
-template = true
-inherits = ["git-write"]
+This repo uses that to keep the global `rust` agent intact while layering on project-specific docs and knowledge locally. That is a cleaner composition story than forking the whole agent.
 
-[agents.git-full.nativeTools.shell]
-forceAllow = ["git push .*", "git pull .*"]
+## What templates are good for
+
+Templates work best when they represent one reusable concern.
+
+Good examples:
+
+- a project resource bundle
+- a shared knowledge pack
+- a read-only git shell policy
+- a write-capable review workflow
+
+That usually leads to templates that are easy to reason about and easy to reuse.
+
+## Inspect the result
+
+Use:
+
+```bash
+kg tree details rust
 ```
 
-Then use them:
+In this repo, that shows `rust` inherits from both `default` and `project-resources`.
 
-```toml
-[agents.reviewer]
-inherits = ["git-readonly"]
+The useful point is not just that inheritance exists. It is that you can see exactly which source contributed which fields.
 
-[agents.developer]
-inherits = ["git-write"]
+## Templates and generated output
 
-[agents.maintainer]
-inherits = ["git-full"]
+Templates do not generate standalone JSON files.
+
+Concrete agents that inherit from them still do.
+
+That means `project-resources` contributes configuration, but the generated output you care about is still:
+
+```text
+.kiro/agents/rust.json
 ```
 
-## Validation
+not `.kiro/agents/project-resources.json`.
 
-Templates appear in `kg validate` output but are marked as templates:
+## Validation and confidence
+
+Templates are easiest to trust when you inspect the result.
+
+Use:
 
 ```bash
 kg validate
+kg tree details <agent-name>
+kg diff <agent-name>
 ```
 
-They won't appear in the generated agents directory.
+That lets you answer three different questions:
 
-## Overriding Template Status
+- what will generate?
+- which files contributed to this agent?
+- did my refactor change the final behavior?
 
-You can override a global agent's template status locally. This allows you to reuse global agents as building blocks without generating them locally.
+## Practical advice
 
-**Global manifest** (`~/.kiro/generators/manifests/kg.toml`):
-```toml
-[agents.rust]
-template = false
-allowedTools = ["@rustdocs"]
-```
-
-**Local manifest** (`.kiro/generators/manifests/kg.toml`):
-```toml
-[agents.rust]
-template = true
-allowedTools = ["@cargo"]
-
-[agents.my-rust-dev]
-inherits = ["rust"]
-```
-
-**Result:**
-- Global `rust` agent generates `~/.kiro/agents/rust.json`
-- Local `rust` agent does NOT generate `.kiro/agents/rust.json` (template=true)
-- Local `my-rust-dev` inherits from local `rust` (gets both `@rustdocs` and `@cargo`)
-- Local `my-rust-dev` generates `.kiro/agents/my-rust-dev.json`
-
-This pattern is useful when you want to compose local agents from global ones without polluting your local `.kiro/agents/` directory.
-
-## Best Practices
-
-- Use descriptive names that indicate purpose (`git-readonly`, not `git1`)
-- Keep templates focused on a single concern
-- Document what each template provides
-- Avoid deep template-only inheritance chains (max 2-3 levels)
-- Override template status locally to reuse global agents as composition components
+- Keep templates focused on one concern.
+- Prefer reusable context over duplicated agent bodies.
+- Use templates to add shared project knowledge without forking global agents.
+- Reach for `kg tree details` when you want to prove a template is doing what you think it is.
