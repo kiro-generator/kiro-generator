@@ -17,11 +17,14 @@
       {
         "group": "Getting started",
         "pages": [
-          "index",
-          "install",
-          "quickstart",
-          "guided-migration"
+          "content/getting-started/index",
+          "content/getting-started/install",
+          "content/getting-started/quickstart"
         ]
+      },
+      {
+        "group": "migration",
+        "pages": ["content/migration/guided-migration"]
       }
     ],
     "global": {
