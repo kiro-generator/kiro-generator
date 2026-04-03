@@ -1,0 +1,59 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "almond",
+  "name": "kiro-generator",
+  "description": "Define Kiro custom agents in TOML, validate them, and generate the JSON Kiro expects.",
+  "fonts": {
+    "family": "Inter"
+  },
+  "colors": {
+    "primary": "#8B5CF6",
+    "light": "#C084FC",
+    "dark": "#7C3AED"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting started",
+        "pages": [
+          "index",
+          "install",
+          "quickstart",
+          "guided-migration"
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/kiro-generator/kiro-generator",
+          "icon": "github"
+        },
+        {
+          "anchor": "Kiro docs",
+          "href": "https://kiro.dev/docs/",
+          "icon": "book-open-cover"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/kiro-generator/kiro-generator"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/kiro-generator/kiro-generator"
+    }
+  }
+}

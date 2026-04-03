@@ -1,0 +1,17 @@
+# Mintlify automatically ignores these files and directories:
+# .git, .github, .claude, .agents, .idea, node_modules,
+# README.md, LICENSE.md, CHANGELOG.md, CONTRIBUTING.md
+
+# Draft content
+drafts/
+*.draft.mdx
+
+# Legacy mdbook source kept during selective migration.
+src/
+
+# Unused Mintlify starter content kept only as reference for now.
+development.mdx
+essentials/
+ai-tools/
+api-reference/
+snippets/

@@ -37,8 +37,8 @@ kg tree details rust
 
 shows that `rust` is built from three sources:
 
-- a global agent file: `/home/dougefresh/.kiro/generators/agents/rust.toml`
-- a global manifest: `/home/dougefresh/.kiro/generators/manifests/base.toml`
+- a global agent file: `/home/user/.kiro/generators/agents/rust.toml`
+- a global manifest: `/home/user/.kiro/generators/manifests/base.toml`
 - a local manifest: `.kiro/generators/manifests/rust.toml`
 
 It also shows that the local manifest contributes:
@@ -51,7 +51,7 @@ That is the useful part to notice: the project-specific override for `rust` live
 
 ## What That Looks Like
 
-The local project defines a reusable template in `.kiro/generators/manifests/kg.toml`:
+The local project defines a reusable template in `.kiro/generators/manifests/project-resources.toml`:
 
 ```toml
 [agents.project-resources]

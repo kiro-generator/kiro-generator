@@ -9,13 +9,13 @@ locations = [
 ]
 
 [agents.project-resources.knowledge.kiro]
-source = "file://./docs/kiro"
+source = "file://./resources/kiro"
 description = "Kiro CLI configuration reference for JSON agents"
-autoUpdate = false
+autoUpdate = true
 indexType = "best"
 
 [agents.project-resources.knowledge.facet]
-source = "file://./docs/facet"
+source = "file://./resources/facet"
 description = "facet is a serde replacement"
-autoUpdate = false
+autoUpdate = true
 indexType = "best"

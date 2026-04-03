@@ -1,0 +1,123 @@
+---
+title: "Guided migration"
+description: "Use kg-helper to inspect your current Kiro setup and migrate hand-written JSON agents into TOML."
+---
+
+This is the guided path.
+
+Instead of starting with `kg init --skeleton`, you install the `kg-helper` agent and let it help inspect your current Kiro setup, suggest a TOML layout, and migrate hand-written JSON agents into something more maintainable.
+
+`kg` installs an agent whose first job is to improve the way its future agents are defined. Very normal behavior.
+
+## What `kg init` does
+
+Run:
+
+```bash
+kg init
+```
+
+By default, this installs the `kg-helper` agent to:
+
+```text
+~/.kiro/agents/kg-helper.json
+```
+
+Then start it with:
+
+```bash
+kiro-cli --agent kg-helper
+```
+
+## What the helper actually helps with
+
+The helper is meant for two common situations:
+
+- You already have hand-written Kiro JSON agents and want to migrate them to `kg`
+- You want help designing a sane inheritance and template layout instead of freehanding TOML from scratch
+
+The rough workflow is:
+
+1. Inspect the current setup with `kg tree` and existing agent files
+2. Identify repeated tools, permissions, resources, and MCP servers
+3. Suggest a flat, layered, or composable layout
+4. Create the TOML manifests and agent files
+5. Run `kg diff --format agent` before `kg generate`
+
+## Back up existing agents first
+
+If you already have JSON agents, make a backup before generating anything:
+
+```bash
+cp -r ~/.kiro/agents ~/.kiro/agents.bak
+```
+
+That keeps the migration reversible and makes it easy to compare old JSON with generated JSON afterward.
+
+## Choose a layout
+
+The helper should not blindly transliterate JSON into TOML line-for-line. That would technically work, but it would miss the whole point.
+
+Instead, it should look for repetition and suggest one of these shapes:
+
+- **Flat**: a few agents with little overlap
+- **Layered**: a shared `default` agent plus child agents
+- **Composable**: reusable templates for permissions, tools, resources, or MCP servers
+
+Good candidates for templates:
+
+- Shared git shell rules
+- Shared MCP server definitions
+- Shared resource bundles
+- Permission tiers like read-only vs write-capable agents
+
+## Review before generating
+
+After the helper creates or updates TOML files, preview the result before writing agent JSON:
+
+```bash
+kg diff --format agent
+```
+
+This is the point where you catch bad inheritance, accidental permission changes, and the occasional "why does every agent suddenly think it is a Kubernetes expert?" moment.
+
+## Generate
+
+Once the diff looks right:
+
+```bash
+kg generate
+```
+
+Generated files land in:
+
+- `~/.kiro/agents/` for global agents
+- `.kiro/agents/` for local agents
+
+## Compare against the backup
+
+After generation, compare the new output against your backup:
+
+```bash
+diff ~/.kiro/agents.bak/<agent>.json ~/.kiro/agents/<agent>.json
+```
+
+Some differences are expected if the helper improved the structure. The important question is whether behavior changed in a way you actually wanted.
+
+## When to use this path
+
+Use the guided path when:
+
+- You already have existing Kiro JSON agents
+- You want help designing inheritance instead of inventing it from scratch
+- You want `kg` to inspect the current state before rewriting anything
+
+Use the [Quickstart](/quickstart) path when:
+
+- You want to learn the file layout first
+- You are starting fresh
+- You prefer the direct, manual route
+
+## One last thing
+
+TOML lets you add comments like a civilized person. JSON still thinks silence is a feature.

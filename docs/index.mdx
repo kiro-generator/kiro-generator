@@ -1,0 +1,64 @@
+---
+title: "kiro-generator"
+description: "Manage Kiro custom agents in TOML instead of hand-editing piles of JSON."
+---
+
+`kiro-generator` (`kg`) helps you manage [Kiro](https://kiro.dev/docs/) custom agents without hand-editing piles of JSON.
+
+Define agents in TOML, compose them with inheritance and templates, validate the result, then generate the JSON Kiro expects.
+
+If editing agent JSON by hand has ever felt like doing plumbing with a spoon, this tool exists for you.
+
+<Note>
+  This Mintlify site is being migrated from the old `mdbook` docs. The pages
+  below are the curated first slice, not a full one-to-one port.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Install" icon="download" href="/install">
+    Get `kg` onto your machine with the install path that fits your platform.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Learn the `--skeleton` flow and see the generated file layout.
+  </Card>
+  <Card title="Guided migration" icon="sparkles" href="/guided-migration">
+    Use `kg-helper` to inspect existing agents and migrate them into TOML.
+  </Card>
+</CardGroup>
+
+## Why `kg`?
+
+Kiro agent files are JSON. JSON is fine right up until you want reuse, overrides, shared defaults, or confidence that a larger config change did not quietly break something.
+
+`kg` gives you:
+
+- Reusable agent definitions built from TOML
+- Inheritance and templates for shared configuration
+- Global config in `~/.kiro/generators/` and project-local config in `.kiro/generators/`
+- Validation before generation
+- Helpful inspection commands like `diff`, `tree`, and `schema`
+
+## Basic workflow
+
+Most people will use `kg` like this:
+
+1. Install `kg`
+2. Run `kg init`
+3. Define agents in manifest and agent config files
+4. Run `kg validate`
+5. Run `kg generate`
+6. Use `kg diff`, `kg tree`, or `kg watch` when you need more visibility or automation
+
+## What this first migration covers
+
+- [Install](/install) gets `kg` on your machine
+- [Quickstart](/quickstart) walks through the `--skeleton` path
+- [Guided migration](/guided-migration) covers the `kg-helper` migration flow
+
+Additional mdbook pages will move over selectively instead of being copied wholesale.
+
+## Prerequisites
+
+- [kiro-cli](https://kiro.dev/cli/)
+- A working tolerance for TOML
+- A mild distrust of hand-maintained JSON
