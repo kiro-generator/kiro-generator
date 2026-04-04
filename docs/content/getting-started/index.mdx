@@ -1,11 +1,11 @@
 ---
 title: "Intro"
-description: "Manage Kiro custom agents in TOML instead of hand-editing piles of JSON."
+description: "Manage & compose  Kiro agents in TOML instead of hand-editing piles of JSON."
 ---
 
-`kiro-generator` (`kg`) helps you manage [Kiro](https://kiro.dev/docs/) custom agents without hand-editing piles of JSON.
+`kiro-generator` (`kg`) helps you manage [Kiro](https://kiro.dev/docs/) custom agents without hand-editing a cesspool of JSON files.
 
-Define agents in TOML, compose them with inheritance and templates, validate the result, then generate the JSON Kiro expects.
+Define composable/reusable agents in TOML, then generate the JSON Kiro expects.
 
 If editing agent JSON by hand has ever felt like doing plumbing with a spoon, this tool exists for you.
 
@@ -33,7 +33,7 @@ Kiro agent files are JSON. JSON is fine right up until you want reuse, overrides
 - Validation before generation
 - Helpful inspection commands like `diff`, `tree`, and `schema`
 
-## Basic workflow
+## Basic Workflow
 
 Most people will use `kg` like this:
 
@@ -47,13 +47,11 @@ Most people will use `kg` like this:
 ## What this first migration covers
 
 - [Install](./install) gets `kg` on your machine
-- [Quickstart](./quickstart) walks through the `--skeleton` path
-- [Guided migration](../migration/guided-migration) covers the `kg-helper` migration flow
-
-Additional mdbook pages will move over selectively instead of being copied wholesale.
+- [Quickstart](./quickstart) walks through the DIY path
+- [Guided migration](../migration/guided-migration) covers SKILL.md `kg-helper` migration flow
 
 ## Prerequisites
 
 - [kiro-cli](https://kiro.dev/cli/)
 - A working tolerance for TOML
-- A mild distrust of hand-maintained JSON
+- A mild distrust of hand-maintained JSON configuration

@@ -21,7 +21,7 @@ This repo already has a strong real-world example:
 - [`project-resources.toml`](https://github.com/kiro-generator/kiro-generator/blob/main/.kiro/generators/manifests/project-resources.toml)
 - [`rust.toml`](https://github.com/kiro-generator/kiro-generator/blob/main/.kiro/generators/manifests/rust.toml)
 
-The local template is defined like this:
+The local template is defined like this (see above links for latest version):
 
 ```toml
 [agents.project-resources]
@@ -29,8 +29,8 @@ template = true
 
 [agents.project-resources.resources.rust]
 locations = [
-  "docs/src/SUMMARY.md",
-  "docs/src/config/*.md",
+  "docs/content/configuration/defining-agents.mdx",
+  "docs/content/configuration/inheritance.mdx",
   "docs/kiro/configuration-reference.md"
 ]
 

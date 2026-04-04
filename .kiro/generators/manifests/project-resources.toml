@@ -3,8 +3,8 @@ template = true
 
 [agents.project-resources.resources.rust]
 locations = [
-  "docs/src/SUMMARY.md",
-  "docs/src/config/*.md",
+  "docs/content/configuration/defining-agents.mdx",
+  "docs/content/configuration/inheritance.mdx",
   "docs/kiro/configuration-reference.md"
 ]
 
