@@ -87,10 +87,8 @@ This is the actual agent definition. When `kg` resolves inheritance, `default` g
 Before generating anything, validate it:
 
 ```bash
-kg validate --global
+kg validate
 ```
-
-Use `--global` here to keep the example focused on `~/.kiro/generators/`, even if you run the command from a project that has local `.kiro/generators/` files.
 
 Validation shows the final merged agent configuration that `kg` will generate.
 
@@ -99,7 +97,7 @@ Validation shows the final merged agent configuration that `kg` will generate.
 When validation looks good, generate the Kiro agent files:
 
 ```bash
-kg generate --global
+kg generate
 ```
 
 This writes the generated agent JSON files to:
@@ -116,8 +114,8 @@ Now edit the starter files and repeat the loop:
 
 1. Change `~/.kiro/generators/manifests/kg.toml` if you want to add agents or change inheritance
 2. Change files in `~/.kiro/generators/agents/` if you want to change tools, resources, permissions, or MCP configuration
-3. Run `kg validate --global`
-4. Run `kg generate --global`
+3. Run `kg validate`
+4. Run `kg generate`
 
 That is the whole workflow.
 
