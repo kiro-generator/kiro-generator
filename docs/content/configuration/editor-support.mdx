@@ -1,0 +1,129 @@
+---
+title: "Editor support"
+description: "Use schemas to get autocompletion, validation, and hover docs while editing kg TOML files."
+---
+
+`kg` provides schemas that make editing much nicer.
+
+With editor support configured, you get:
+
+- autocompletion while you type
+- validation before you run `kg validate`
+- hover documentation for available fields
+- fewer typo-driven mistakes
+
+If you edit `kg` config often, this is one of the highest-leverage setup steps.
+
+## Add `$schema` to your files
+
+Use the manifest schema for files under `manifests/`:
+
+```toml
+"$schema" = "https://kiro-generator.io/manifest.json"
+
+[agents]
+default = { inherits = [] }
+```
+
+Use the agent schema for files under `agents/`:
+
+```toml
+"$schema" = "https://kiro-generator.io/agent.json"
+
+description = "Rust development agent"
+allowedTools = ["read", "knowledge", "web_search"]
+```
+
+## Schema URLs
+
+These docs publish the schema files directly:
+
+- `https://kiro-generator.io/manifest.json`
+- `https://kiro-generator.io/agent.json`
+
+You can point your editor or TOML tooling at those URLs directly.
+
+## Generate schemas locally
+
+If you want the schema files from the installed binary instead:
+
+```bash
+kg schema manifest > manifest.json
+kg schema agent > agent.json
+```
+
+That is useful when you want your editor config to match the exact `kg` version on your machine.
+
+## Editor and LSP setup
+
+### taplo (Recommended)
+
+Add to `.taplo.toml` in your project:
+
+```toml
+[schema]
+enabled = true
+
+[[schema.associations]]
+path = "**/.kiro/generators/manifests/*.toml"
+url = "https://kiro-generator.io/manifest.json"
+
+[[schema.associations]]
+path = "**/.kiro/generators/agents/**/*.toml"
+url = "https://kiro-generator.io/agent.json"
+```
+
+### tombi
+
+Add to `tombi.toml` in your project:
+
+```toml
+[[schemas]]
+toml-version = "1.0.0"
+path = "https://kiro-generator.io/manifest.json"
+include = ["**/.kiro/generators/manifests/*.toml"]
+
+[[schemas]]
+toml-version = "1.0.0"
+path = "https://kiro-generator.io/agent.json"
+include = ["**/.kiro/generators/agents/**/*.toml"]
+```
+
+### VS Code
+
+Install the [Even Better TOML](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml) extension.
+
+It uses taplo and will pick up the `$schema` field from your TOML files automatically.
+
+### Neovim
+
+Using `nvim-lspconfig`:
+
+```lua
+require('lspconfig').taplo.setup({
+  settings = {
+    evenBetterToml = {
+      schema = {
+        enabled = true,
+        associations = {
+          ["**/.kiro/generators/manifests/*.toml"] = "https://kiro-generator.io/manifest.json",
+          ["**/.kiro/generators/agents/**/*.toml"] = "https://kiro-generator.io/agent.json"
+        }
+      }
+    }
+  }
+})
+```
+
+## Why this is worth doing
+
+Without schemas, `kg` config is still workable, but you are relying on memory and trial-and-error.
+
+With schemas, your editor can catch mistakes much earlier.
+
+That is especially helpful when you are:
+
+- adding a field you do not use often
+- checking whether a setting belongs in a manifest or agent file
+- exploring native tool configuration
+- editing a large config without wanting to bounce between docs and terminal output

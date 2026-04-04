@@ -1,0 +1,129 @@
+---
+title: "Quickstart"
+description: "Start with the skeleton flow to learn the generated file layout and validation loop."
+---
+
+This guide starts with the `--skeleton` path on purpose.
+
+It is the clearest way to learn how `kg` works: which files it creates, what each file is for, and how the pieces fit together. Once that clicks, the regular `kg init` flow makes a lot more sense too.
+
+## Start with the skeleton
+
+Create the starter configuration:
+
+```bash
+kg init --skeleton
+```
+
+This creates:
+
+```text
+~/.kiro/generators/
+├── manifests/
+│   └── kg.toml
+└── agents/
+    ├── default.toml
+    └── git.toml
+```
+
+That is the core `kg` layout:
+
+- `manifests/` declares which agents exist and how they inherit from each other
+- `agents/` contains the actual configuration for each agent
+
+## Look at the starter files
+
+`kg init --skeleton` gives you a small but working example.
+
+`~/.kiro/generators/manifests/kg.toml`:
+
+```toml
+"$schema" = "https://kiro-generator.io/manifest.json"
+
+# TOML lets you add comments like a civilized person. JSON still thinks silence is a feature.
+# Kiro Generator Manifest
+# Declare your agents and their relationships here
+[agents]
+# git is a simple template what allows and denies access to git CLI commands
+# see agents/git.toml for details
+git = { template = true }
+default = { inherits = ["git"] }  # consume or merge the properties of git agent template
+```
+
+This manifest says:
+
+- `git` is a template agent, so it is reusable but does not generate a final JSON file
+- `default` is a real agent and inherits from `git`
+
+`~/.kiro/generators/agents/git.toml`:
+
+```toml
+"$schema" = "https://kiro-generator.io/agent.json"
+
+[nativeTools.shell]
+allow = ["git status", "git fetch", "git diff .*", "git log .*"]
+deny = ["git commit .*", "git push .*"]
+```
+
+This is the reusable git policy. It gives child agents read-ish git access, while keeping write operations on a shorter leash.
+
+`~/.kiro/generators/agents/default.toml`:
+
+```toml
+"$schema" = "https://kiro-generator.io/agent.json"
+# Default agent configuration
+description = "Default agent"
+tools = ["*"]
+allowedTools = ["read", "knowledge", "web_search"]
+
+[resources.default]
+locations = ["README.md"]
+```
+
+This is the actual agent definition. When `kg` resolves inheritance, `default` gets its own settings plus the shell rules from `git`.
+
+## Validate the configuration
+
+Before generating anything, validate it:
+
+```bash
+kg validate
+```
+
+Validation shows the final merged agent configuration that `kg` will generate.
+
+## Generate the agent JSON
+
+When validation looks good, generate the Kiro agent files:
+
+```bash
+kg generate
+```
+
+This writes the generated agent JSON files to:
+
+```text
+~/.kiro/agents/
+```
+
+In the starter skeleton, `git` is a template, so it is not generated. `default` is the real agent, so that is the one you should expect to see.
+
+## Make your first change
+
+Now edit the starter files and repeat the loop:
+
+1. Change `~/.kiro/generators/manifests/kg.toml` if you want to add agents or change inheritance
+2. Change files in `~/.kiro/generators/agents/` if you want to change tools, resources, permissions, or MCP configuration
+3. Run `kg validate`
+4. Run `kg generate`
+
+That is the whole workflow.
+
+Not glamorous. Very effective.
+
+## Next steps
+
+- If you already have hand-written JSON agents, follow [Guided migration](../migration/guided-migration)
+- If you still need to install `kg`, head back to [Install](./install)
+
+More configuration and reference pages will move over as the old mdbook content gets triaged.

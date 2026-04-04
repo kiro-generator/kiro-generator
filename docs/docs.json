@@ -1,0 +1,79 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "almond",
+  "name": "kiro-generator",
+  "description": "Define Kiro custom agents in TOML, validate them, and generate the JSON Kiro expects.",
+  "fonts": {
+    "family": "Inter"
+  },
+  "colors": {
+    "primary": "#8B5CF6",
+    "light": "#C084FC",
+    "dark": "#7C3AED"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting started",
+        "pages": [
+          "content/getting-started/index",
+          "content/getting-started/install",
+          "content/getting-started/quickstart"
+        ]
+      },
+      {
+        "group": "Migration",
+        "pages": ["content/migration/guided-migration"]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "content/configuration/structure",
+          "content/configuration/editor-support",
+          "content/configuration/defining-agents",
+          "content/configuration/inheritance",
+          "content/configuration/templates"
+        ]
+      },
+      {
+        "group": "Advanced",
+        "pages": [
+          "content/advanced/debugging",
+          "content/advanced/systemd-watch"
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/kiro-generator/kiro-generator",
+          "icon": "github"
+        },
+        {
+          "anchor": "Kiro docs",
+          "href": "https://kiro.dev/docs/",
+          "icon": "book-open-cover"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/kiro-generator/kiro-generator"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/kiro-generator/kiro-generator"
+    }
+  }
+}

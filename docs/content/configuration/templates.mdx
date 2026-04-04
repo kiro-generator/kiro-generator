@@ -1,0 +1,136 @@
+---
+title: "Templates"
+description: "Use template agents as reusable building blocks that add shared context and behavior without generating standalone JSON files."
+---
+
+Templates are one of the main reasons to use `kg`.
+
+A template is an agent declared with `template = true`. It does not generate a JSON file of its own. It exists only to be inherited by other agents.
+
+That makes templates a good fit for shared concerns like:
+
+- project-specific resources
+- shared knowledge bases
+- reusable shell permissions
+- common MCP or tool configuration
+
+## A real template in this repo: `project-resources`
+
+This repo already has a strong real-world example:
+
+- [`project-resources.toml`](https://github.com/kiro-generator/kiro-generator/blob/main/.kiro/generators/manifests/project-resources.toml)
+- [`rust.toml`](https://github.com/kiro-generator/kiro-generator/blob/main/.kiro/generators/manifests/rust.toml)
+
+The local template is defined like this (see above links for latest version):
+
+```toml
+[agents.project-resources]
+template = true
+
+[agents.project-resources.resources.rust]
+locations = [
+  "docs/content/configuration/defining-agents.mdx",
+  "docs/content/configuration/inheritance.mdx",
+  "resources/kiro/configuration-reference.md"
+]
+
+[agents.project-resources.knowledge.kiro]
+source = "file://./resources/kiro"
+description = "Kiro CLI configuration reference for JSON agents"
+autoUpdate = true
+indexType = "best"
+```
+
+Then the local project uses that template here:
+
+```toml
+[agents.rust]
+description = "kiro-generator specific rust agent"
+inherits = ["project-resources"]
+
+[agents.rust.skills.kg-helper]
+disabled = true
+```
+
+That is the pattern to notice:
+
+- `project-resources` is reusable
+- it adds project context once
+- `rust` opts into it with a short local override
+- the template does not create its own generated agent file
+
+## Why this matters
+
+Without templates, the easy path is copy-paste:
+
+- duplicate the same docs and knowledge in multiple agents
+- tweak each agent separately
+- slowly accumulate drift
+
+With a template, the shared project context lives in one place.
+
+This repo uses that to keep the global `rust` agent intact while layering on project-specific docs and knowledge locally. That is a cleaner composition story than forking the whole agent.
+
+## What templates are good for
+
+Templates work best when they represent one reusable concern.
+
+Good examples:
+
+- a project resource bundle
+- a shared knowledge pack
+- a read-only git shell policy
+- a write-capable review workflow
+
+That usually leads to templates that are easy to reason about and easy to reuse.
+
+## Inspect the result
+
+Use:
+
+```bash
+kg tree details rust
+```
+
+In this repo, that shows `rust` inherits from both `default` and `project-resources`.
+
+The useful point is not just that inheritance exists. It is that you can see exactly which source contributed which fields.
+
+## Templates and generated output
+
+Templates do not generate standalone JSON files.
+
+Concrete agents that inherit from them still do.
+
+That means `project-resources` contributes configuration, but the generated output you care about is still:
+
+```text
+.kiro/agents/rust.json
+```
+
+not `.kiro/agents/project-resources.json`.
+
+## Validation and confidence
+
+Templates are easiest to trust when you inspect the result.
+
+Use:
+
+```bash
+kg validate
+kg tree details <agent-name>
+kg diff <agent-name>
+```
+
+That lets you answer three different questions:
+
+- what will generate?
+- which files contributed to this agent?
+- did my refactor change the final behavior?
+
+## Practical advice
+
+- Keep templates focused on one concern.
+- Prefer reusable context over duplicated agent bodies.
+- Use templates to add shared project knowledge without forking global agents.
+- Reach for `kg tree details` when you want to prove a template is doing what you think it is.

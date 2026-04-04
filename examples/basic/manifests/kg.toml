@@ -1,5 +1,6 @@
 "$schema" = "https://kiro-generator.io/manifest.json"
 
+# TOML lets you add comments like a civilized person. JSON still thinks silence is a feature.
 # Kiro Generator Manifest
 # Declare your agents and their relationships here
 [agents]

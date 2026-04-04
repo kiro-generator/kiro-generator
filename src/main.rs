@@ -202,12 +202,18 @@ async fn main() -> Result<()> {
         local_mode = tracing::field::Empty
     );
     let _guard = span.enter();
-    let home_dir = dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?;
     let fs = Fs::new();
 
     if let commands::Command::Init(args) = &cli.command {
-        return init(&fs, &home_dir, args.skeleton, args.force).await;
+        let init_dir = if let Some(dir) = &args.dir {
+            dir.clone()
+        } else {
+            dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?
+        };
+        return init(&fs, &init_dir, args.skeleton, args.force).await;
     }
+
+    let home_dir = dirs::home_dir().ok_or(crate::format_err!("unable to find HOME dir"))?;
 
     if let commands::Command::Schema(schema_cmd) = &cli.command {
         if let commands::SchemaCommand::Agent(args) = &schema_cmd

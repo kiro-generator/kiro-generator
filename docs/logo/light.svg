@@ -1,0 +1,36 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="kg-bg-light" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="kg-sheen-light" x1="14" y1="12" x2="50" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#F5F3FF" stop-opacity="0.10"/>
+    </linearGradient>
+    <filter id="kg-shadow-light" x="0" y="1" width="64" height="63" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="3"/>
+      <feGaussianBlur stdDeviation="2"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.235294 0 0 0 0 0.027451 0 0 0 0 0.392157 0 0 0 0.32 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_kg_light"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_kg_light" result="shape"/>
+    </filter>
+  </defs>
+  <g filter="url(#kg-shadow-light)">
+    <rect x="4" y="4" width="56" height="56" rx="16" fill="#5B21B6"/>
+    <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#kg-bg-light)"/>
+    <rect x="4" y="4" width="56" height="56" rx="16" stroke="#581C87" stroke-opacity="0.55" stroke-width="2.5"/>
+    <rect x="10" y="10" width="44" height="44" rx="12" fill="url(#kg-sheen-light)"/>
+    <path d="M18 18V46" stroke="#4C1D95" stroke-width="9" stroke-linecap="round"/>
+    <path d="M18 32L28 20" stroke="#4C1D95" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18 32L29 45" stroke="#4C1D95" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18 18V46" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+    <path d="M18 32L28 20" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18 32L29 45" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50 24C48.2 20.5 45.2 18 41.5 18C35.2 18 31 24.1 31 32C31 39.9 35.2 46 41.5 46C47 46 51.1 42.5 52 37H44.5" stroke="#4C1D95" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50 24C48.2 20.5 45.2 18 41.5 18C35.2 18 31 24.1 31 32C31 39.9 35.2 46 41.5 46C47 46 51.1 42.5 52 37H44.5" stroke="#FAF5FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

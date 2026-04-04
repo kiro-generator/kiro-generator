@@ -1,0 +1,102 @@
+---
+title: "Directory structure"
+description: "Learn where kg source files live, how global and local config merge, and where generated JSON is written."
+---
+
+`kg` keeps source configuration and generated output separate.
+
+That is the main idea:
+
+- you edit TOML in `generators/`
+- `kg` generates JSON into `agents/`
+- global and local config can both exist at the same time
+
+## Overview
+
+```text
+~/.kiro/generators/          # Global source config
+├── manifests/               # Agent declarations, templates, inheritance
+└── agents/                  # Per-agent config files
+
+.kiro/generators/            # Local project source config
+├── manifests/
+└── agents/
+
+~/.kiro/agents/              # Generated global Kiro JSON
+└── *.json
+
+.kiro/agents/                # Generated local Kiro JSON
+└── *.json
+```
+
+## Source directories
+
+`manifests/` declares which agents exist and how they relate to each other.
+
+```toml
+[agents]
+default = { inherits = [] }
+rust = { inherits = ["default"] }
+```
+
+`agents/` usually holds the heavier per-agent configuration.
+
+```toml
+# ~/.kiro/generators/agents/rust.toml
+description = "Rust development agent"
+allowedTools = ["read", "knowledge", "web_search", "@rustdocs"]
+```
+
+## Precedence
+
+`kg` loads and merges configuration in this order:
+
+1. global manifests: `~/.kiro/generators/manifests/*.toml`
+2. global agents: `~/.kiro/generators/agents/<agent-name>.toml`
+3. local manifests: `.kiro/generators/manifests/*.toml`
+4. local agents: `.kiro/generators/agents/<agent-name>.toml`
+
+Local config merges on top of global config.
+
+Use:
+
+- `--global` to ignore local config
+- `--local` to ignore global config
+
+## Generated output
+
+The TOML files under `generators/` are the source of truth.
+
+Generated JSON is written to:
+
+- `~/.kiro/agents/` for global agents
+- `.kiro/agents/` for local agents
+
+## Initialization
+
+`kg init` installs the `kg-helper` agent:
+
+```text
+~/.kiro/agents/kg-helper.json
+```
+
+`kg init --skeleton` creates starter TOML files:
+
+```text
+~/.kiro/generators/
+├── manifests/
+│   └── kg.toml
+└── agents/
+    ├── default.toml
+    └── git.toml
+```
+
+## Inspect what is loaded
+
+Use these commands when you want to see what `kg` is reading:
+
+```bash
+kg validate
+kg tree summary
+kg tree details rust
+```

@@ -47,6 +47,9 @@ pub struct InitArgs {
     /// installing the kg-helper agent
     #[arg(long)]
     pub skeleton: bool,
+    /// Base directory to initialize instead of using HOME
+    #[arg(long, value_name = "DIR")]
+    pub dir: Option<PathBuf>,
     /// Bypass interactive confirmation prompt (intended for CI automation)
     #[arg(long, hide = true, default_value = "false")]
     pub force: bool,

@@ -1,0 +1,203 @@
+---
+title: "Defining agents"
+description: "See how one real agent is assembled from global config, local manifests, templates, and small project-specific overrides."
+---
+
+In `kg`, an agent is usually defined across more than one TOML source.
+
+That is the idea to keep in your head:
+
+- manifests declare agents, templates, and inheritance
+- agent files hold heavier per-agent configuration
+- global and local config can both contribute to the same final agent
+
+So the useful question is usually not "where is the one true definition?" It is "which sources contribute to this agent?"
+
+## A real example: `rust`
+
+This repo already has a real `rust` agent, and it is a better example than a toy `default` / `rust` setup.
+
+Running:
+
+```bash
+kg tree details rust
+```
+
+shows that `rust` is assembled from three sources:
+
+- a global agent file
+- a global manifest
+- a local manifest in this repo
+
+Here is the useful part of the output:
+
+```json
+{
+  "rust": {
+    "output": ".kiro/agents/rust.json",
+    "description": "kiro-generator specific rust agent",
+    "inherits": ["default", "project-resources"],
+    "sources": [
+      {
+        "source_type": "global-file",
+        "path": "~/.kiro/generators/agents/rust.toml",
+        "modified_fields": ["description", "nativeTools.shell", "resources.rust"]
+      },
+      {
+        "source_type": "global-manifest",
+        "path": "~/.kiro/generators/manifests/base.toml",
+        "modified_fields": ["inherits"]
+      },
+      {
+        "source_type": "local-manifest",
+        "path": ".kiro/generators/manifests/rust.toml",
+        "modified_fields": ["description", "inherits", "skills.kg-helper"]
+      }
+    ]
+  }
+}
+```
+
+That is the core `kg` model in one example:
+
+- the global config provides the baseline Rust agent
+- the local project adds project-specific context
+- the local project also changes behavior with a very small override
+
+## Why this matters
+
+<Tip>
+  The local project does not fork the whole Rust agent. It changes only the
+  parts that matter here.
+</Tip>
+
+In this repo, the local override does two important things:
+
+- it makes `rust` inherit from `project-resources`, which adds project-specific docs and knowledge
+- it disables the `kg-helper` skill for the local `rust` agent
+
+That is a much better story than copy-pasting a whole JSON agent and editing it by hand:
+
+- the global `rust` agent stays intact
+- the project gets its own docs and knowledge
+- one small local override changes behavior cleanly
+- the final composition is inspectable with `kg tree details`
+
+## The repo-owned pieces
+
+The two local files worth inspecting are:
+
+- [`project-resources.toml`](https://github.com/kiro-generator/kiro-generator/blob/main/.kiro/generators/manifests/project-resources.toml)
+- [`rust.toml`](https://github.com/kiro-generator/kiro-generator/blob/main/.kiro/generators/manifests/rust.toml)
+
+The local template adds project-specific context:
+
+```toml
+[agents.project-resources]
+template = true
+
+[agents.project-resources.resources.rust]
+locations = [
+  "docs/content/configuration/defining-agents.mdx",
+  "docs/content/configuration/inheritance.mdx",
+  "resources/kiro/configuration-reference.md"
+]
+
+[agents.project-resources.knowledge.kiro]
+source = "file://./resources/kiro"
+description = "Kiro CLI configuration reference for JSON agents"
+autoUpdate = true
+indexType = "best"
+```
+
+Then the local manifest extends `rust` with a small override:
+
+```toml
+[agents.rust]
+description = "kiro-generator specific rust agent"
+inherits = ["project-resources"]
+
+[agents.rust.skills.kg-helper]
+disabled = true
+```
+
+That is the pattern to notice: the local project adds one reusable template, then applies it with a short inline manifest override.
+
+## Where the baseline comes from
+
+The baseline `rust` agent still comes from global config.
+
+In this environment, the global agent file contributes the Rust-specific shell rule and base resource:
+
+```toml
+description = "General Rust agent"
+
+[resources.rust]
+locations = ["~/.config/agents/prompts/rust.md"]
+
+[nativeTools.shell]
+allow = ["cargo .+"]
+deny = ["cargo publish .*"]
+```
+
+And the global manifest makes `rust` inherit from `default`.
+
+You do not need to keep everything in one file for the agent to stay understandable. `kg tree details rust` is what ties the pieces together.
+
+## Confidence check
+
+This repo also gives you a nice proof point for safe refactoring.
+
+Running:
+
+```bash
+kg diff rust
+```
+
+returns:
+
+```text
+No changes (1 agents checked)
+```
+
+That is the confidence story `kg` is meant to give you:
+
+- improve the source layout
+- rename or reorganize templates
+- add local composition where it helps
+- verify that generated agent behavior did not drift
+
+## When to use manifests vs agent files
+
+Use a manifest when you want to:
+
+- declare an agent or template
+- define inheritance with `inherits`
+- keep short inline config close to the declaration
+- add small local overrides without creating another file
+
+Use `agents/<name>.toml` when:
+
+- the agent has a lot of configuration
+- the config includes larger shell, MCP, hook, or resource sections
+- you want one file per agent for the heavier parts
+
+Those are not rival systems. They merge together into the same final agent.
+
+## Inheritance in practice
+
+Inheritance is part of everyday agent composition in `kg`.
+
+- use `inherits` when an agent should build on another agent or template
+- use multiple parents when one concern is not enough
+- expect arrays to merge, objects to deep-merge, and scalar values to replace earlier ones
+
+When you need the exact merge rules or force-allow behavior, see [Inheritance](/content/configuration/inheritance).
+
+## Practical advice
+
+- Start with the clearest layout, not the cleverest one.
+- Put reusable project context in templates.
+- Use small local manifest overrides before reaching for a full copy.
+- Use `kg tree details <agent-name>` to see where a value comes from.
+- Use `kg diff <agent-name>` to confirm a refactor did not change behavior.

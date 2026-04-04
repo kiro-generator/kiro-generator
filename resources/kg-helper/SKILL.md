@@ -144,8 +144,8 @@ Example JSON output:
         "modified_fields": ["description", "inherits"]
       }
     ],
-    "inherits": ["default", "kg-resources"],
-    "resolved_ancestors": ["kg-resources", "cli", "cli-compress-decompress", "git", "cli-systemd", "knowledge", "resources", "default"]
+    "inherits": ["default", "project-resources"],
+    "resolved_ancestors": ["project-resources", "cli", "cli-compress-decompress", "git", "cli-systemd", "knowledge", "resources", "default"]
   }
 }
 ```

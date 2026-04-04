@@ -1,0 +1,21 @@
+[agents.project-resources]
+template = true
+
+[agents.project-resources.resources.rust]
+locations = [
+  "docs/content/configuration/defining-agents.mdx",
+  "docs/content/configuration/inheritance.mdx",
+  "resources/kiro/configuration-reference.md"
+]
+
+[agents.project-resources.knowledge.kiro]
+source = "file://./resources/kiro"
+description = "Kiro CLI configuration reference for JSON agents"
+autoUpdate = true
+indexType = "best"
+
+[agents.project-resources.knowledge.facet]
+source = "file://./resources/facet"
+description = "facet is a serde replacement"
+autoUpdate = true
+indexType = "best"
