@@ -50,11 +50,6 @@
           "anchor": "GitHub",
           "href": "https://github.com/kiro-generator/kiro-generator",
           "icon": "github"
-        },
-        {
-          "anchor": "Kiro docs",
-          "href": "https://kiro.dev/docs/",
-          "icon": "book-open-cover"
         }
       ]
     }
