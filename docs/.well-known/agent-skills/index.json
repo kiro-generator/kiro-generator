@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "kg-helper",
+      "type": "archive",
+      "description": "Help set up and manage kg (kiro-generator) TOML agent configurations. Use when users ask about kg, migrating JSON agents to kg, or bootstrapping a new kg setup.",
+      "url": "/.well-known/agent-skills/kg-helper.tar.gz",
+      "digest": "sha256:5a7f5bb5c55ea39f0fe8e86c045a6f5ed439c2fe55d3d53250fef074c110cebd"
+    }
+  ]
+}

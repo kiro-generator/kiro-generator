@@ -5,6 +5,25 @@ description: "Install kiro-generator with the package path that fits your platfo
 
 Pick the path that matches your platform and how much you enjoy compiling things before coffee.
 
+## Pre-built Binaries
+
+Download the latest release directly from [GitHub Releases](https://github.com/kiro-generator/kiro-generator/releases/):
+
+| Platform | Asset |
+|---|---|
+| Linux x86_64 | [kg-amd64-linux.tar.gz](https://github.com/kiro-generator/kiro-generator/releases/download/v0.2.2/kg-amd64-linux.tar.gz) |
+| Linux arm64 | [kg-arm64-linux.tar.gz](https://github.com/kiro-generator/kiro-generator/releases/download/v0.2.2/kg-arm64-linux.tar.gz) |
+| macOS arm64 | [kg-arm64-darwin.tar.gz](https://github.com/kiro-generator/kiro-generator/releases/download/v0.2.2/kg-arm64-darwin.tar.gz) |
+
+Extract and place the binary somewhere on your `$PATH`:
+
+```bash
+tar -xzf kg-<platform>.tar.gz
+sudo mv kg /usr/local/bin/
+```
+
+Verify checksums with [SHA256SUMS](https://github.com/kiro-generator/kiro-generator/releases/download/v0.2.2/SHA256SUMS).
+
 ## Homebrew (macOS)
 
 `kiro-generator` is available through the `kiro-generator/kiro-generator` tap:
@@ -36,15 +55,10 @@ yay -S kiro-generator
 
 ## Debian/Ubuntu
 
-GitHub releases publish `.deb` packages for `amd64` and `arm64`.
+Download the matching `.deb` from [GitHub Releases](https://github.com/kiro-generator/kiro-generator/releases/):
 
-Download the matching package, then install it with:
-
-```bash
-sudo apt install ./kiro-generator_<version>-1_<arch>.deb
-```
-
-Example:
+- [kiro-generator_0.2.2-1_amd64.deb](https://github.com/kiro-generator/kiro-generator/releases/download/v0.2.2/kiro-generator_0.2.2-1_amd64.deb)
+- [kiro-generator_0.2.2-1_arm64.deb](https://github.com/kiro-generator/kiro-generator/releases/download/v0.2.2/kiro-generator_0.2.2-1_arm64.deb)
 
 ```bash
 sudo apt install ./kiro-generator_0.2.2-1_amd64.deb

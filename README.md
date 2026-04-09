@@ -43,6 +43,8 @@ See [documentation](https://kiro-generator.io) for detailed guides and examples.
 cargo install kiro-generator
 ```
 
+See install [doc](https://kiro-generator.io/content/getting-started/install) for more options
+
 ---
 
 ## Development

@@ -283,6 +283,22 @@ jobs:
         env:
           RUSTFLAGS: '-Z sanitizer=thread'
 
+  verify-skill:
+    runs-on: ${{ vars.RUNNER }}
+    name: verify skill tarball
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Check kg-helper.tar.gz is up to date
+        run: |
+          tar -czf /tmp/kg-helper.tar.gz -C resources kg-helper
+          EXPECTED=$(sha256sum /tmp/kg-helper.tar.gz | awk '{print $1}')
+          ACTUAL=$(sha256sum docs/.well-known/agent-skills/kg-helper.tar.gz | awk '{print $1}')
+          if [ "$EXPECTED" != "$ACTUAL" ]; then
+            echo "kg-helper.tar.gz is stale. Run: tar -czf docs/.well-known/agent-skills/kg-helper.tar.gz -C resources kg-helper"
+            exit 1
+          fi
+
   extra:
     needs: [config]
     runs-on: ${{ matrix.os }}
