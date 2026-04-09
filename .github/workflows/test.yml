@@ -283,6 +283,15 @@ jobs:
         env:
           RUSTFLAGS: '-Z sanitizer=thread'
 
+  verify-skill:
+    runs-on: ${{ vars.RUNNER }}
+    name: verify skill tarball
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Check kg-helper.tar.gz is up to date
+        run: |
+          ./scripts/check-skill.sh
   extra:
     needs: [config]
     runs-on: ${{ matrix.os }}

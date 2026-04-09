@@ -9,14 +9,11 @@ Ask the user to run `/context show` and verify that one of these skill paths is 
 
 If the skill file exists on disk but is not loaded, ask the user to run `/context add <path>` with the matching path, then verify with `/context show`.
 
-If the skill is not installed anywhere, tell the user to install it into `~/.local/share/kg/` — that path is already listed in this agent's resources, so no JSON edit is needed after installing there.
+If the skill is not installed anywhere, tell the user to install it from the doc site:
 
-To find the latest release tag:
-- `gh release view --repo kiro-generator/kiro-generator --json tagName --jq .tagName`
-- `basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/kiro-generator/kiro-generator/releases/latest)"`
-
-Install the skill bundle:
-`mkdir -p ~/.local/share/kg && curl -fsSL https://github.com/kiro-generator/kiro-generator/releases/download/<TAG>/kg-helper.tar.gz | tar xzf - -C ~/.local/share/kg`
+```bash
+mkdir -p ~/.local/share/kg && curl -fsSL https://kiro-generator.io/.well-known/agent-skills/kg-helper.tar.gz | tar xzf - -C ~/.local/share/kg
+```
 
 After extraction, run `/context add ~/.local/share/kg/kg-helper/SKILL.md` and verify with `/context show`.
 

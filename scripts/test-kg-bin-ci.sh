@@ -35,6 +35,12 @@ $KG tree summary -f json | jq . >/dev/null
 $KG tree details base
 $KG validate | head -2 && $KG generate | head -2 && $KG diff | head -2 && $KG schema agent | head -2
 
+# Verify schemas match checked-in files
+$KG schema manifest >/tmp/manifest.json
+$KG schema agent >/tmp/agent.json
+(cd schemas && sha256sum manifest.json agent.json >/tmp/schemas.sha256)
+(cd /tmp && sha256sum --check schemas.sha256)
+
 rm -rf .kiro/generators .kiro/agents
 mkdir -p ~/.kiro/generators
 cp -a -v fixtures/kiro/generators/* ~/.kiro/generators/
