@@ -8,4 +8,3 @@ sha256sum --check ./skill.sha256
 tarSha="$(jq -r '.skills[0].digest' index.json | cut -d : -f 2)"
 echo "${tarSha} kg-helper.tar.gz" >skill.sha256
 sha256sum --check skill.sha256
-rm -rf shill.sha256
